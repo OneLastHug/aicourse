@@ -86,7 +86,7 @@ export default function Home() {
           <button
             type="submit"
             disabled={loading || !url.trim()}
-            className="inline-flex h-[50px] items-center justify-center gap-1.5 rounded-xl2 bg-brand px-5 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-deep disabled:opacity-50"
+            className="inline-flex h-[50px] items-center justify-center gap-1.5 rounded-lg bg-ink px-6 text-sm font-medium text-white transition-colors hover:bg-ink-soft disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
             {loading ? (
               <>

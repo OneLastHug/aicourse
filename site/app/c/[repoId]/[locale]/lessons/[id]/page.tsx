@@ -4,7 +4,7 @@ import { getCourse } from "@/lib/server/store";
 import { CourseShell } from "@/components/CourseShell";
 import { pick, neighbors } from "@/lib/content";
 import { highlight } from "@/lib/highlight";
-import { difficultyColor, difficultyLabel } from "@/lib/ui";
+import { difficultyLabel, difficultyTheme } from "@/lib/ui";
 import { StepSimulator, type SimStep } from "@/components/StepSimulator";
 import { CompareTable } from "@/components/CompareTable";
 import { References } from "@/components/References";
@@ -72,8 +72,7 @@ export default async function LessonPage({
                 {pick(meta.title, loc)}
               </h1>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-faint dark:text-zinc-500">
-                <span className="flex items-center gap-1.5">
-                  <span className={`h-1.5 w-1.5 rounded-full ${difficultyColor(meta.difficulty)}`} />
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${difficultyTheme(meta.difficulty).chip}`}>
                   {difficultyLabel(meta.difficulty, loc)}
                 </span>
                 <span>·</span>

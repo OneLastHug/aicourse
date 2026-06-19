@@ -27,7 +27,7 @@ export function StepSimulator({ steps }: { steps: SimStep[] }) {
               "rounded-full px-3 py-1 text-xs font-medium transition",
               i === active
                 ? "bg-ink text-white dark:bg-white dark:text-zinc-900"
-                : "border border-line text-ink-soft hover:bg-bg-subtle dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800",
+                : "border border-line bg-white text-ink-soft hover:bg-bg-subtle dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800",
             )}
           >
             <span className="tabular-nums opacity-60">{String(i + 1).padStart(2, "0")}</span>

@@ -2,106 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
-}
+:root { color-scheme: light; }
+html.dark { color-scheme: dark; }
+html, body { height: 100%; }
+body { @apply bg-bg text-ink antialiased; }
+html.dark body { @apply text-zinc-100; background-color: #09090b; }
 
-html.dark {
-  color-scheme: dark;
-}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(120,120,130,0.35); border-radius: 999px; }
+::-webkit-scrollbar-track { background: transparent; }
+::selection { background: rgba(245, 158, 11, 0.22); }
 
-html,
-body {
-  height: 100%;
-}
+/* Body/lead text */
+.lead { @apply text-[1.02rem] leading-relaxed text-ink-soft; }
+html.dark .lead { @apply text-zinc-300; }
 
-body {
-  @apply bg-bg text-ink antialiased;
-  font-feature-settings: "cv11", "ss01";
-}
+/* Card: rounded-xl, zinc border, subtle shadow (ref pattern) */
+.card { @apply rounded-xl border border-line bg-white shadow-sm; }
+html.dark .card { @apply border-zinc-800 bg-zinc-900; }
 
-html.dark body {
-  @apply text-zinc-100;
-  background-color: #0a0a0b;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(120, 120, 130, 0.35);
-  border-radius: 999px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* Selection */
-::selection {
-  background: rgba(232, 93, 44, 0.22);
-}
-
-/* Prose-ish helpers */
-.lead {
-  @apply text-[1.02rem] leading-relaxed text-ink-soft;
-}
-html.dark .lead {
-  @apply text-zinc-300;
-}
-
-.card {
-  @apply rounded-xl2 border border-line bg-white shadow-soft;
-}
-html.dark .card {
-  @apply border-zinc-800 bg-zinc-900/60;
-}
-
+/* Pill chip */
 .chip {
-  @apply inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-0.5 text-xs font-medium text-ink-soft;
+  @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-0.5 text-xs font-medium text-ink-soft;
 }
-html.dark .chip {
-  @apply border-zinc-700 text-zinc-300;
-}
+html.dark .chip { @apply border-zinc-800 bg-zinc-900 text-zinc-300; }
 
-/* Code block */
-.code-wrap pre {
-  @apply m-0 overflow-x-auto rounded-xl2 border border-line p-4 text-[13px] leading-relaxed;
+/* Primary button: high-contrast mono (ref uses zinc-900/white) */
+.btn-primary {
+  @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-ink px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-ink-soft disabled:opacity-50;
 }
-html.dark .code-wrap pre {
-  @apply border-zinc-800;
-}
+html.dark .btn-primary { @apply bg-white text-zinc-900 hover:bg-zinc-200; }
 
-/* Highlighted line inside code */
+/* Code blocks: always dark (zinc-950) like the reference */
+.code-wrap .shiki,
+.code-wrap .shiki span {
+  background-color: transparent !important;
+  font-style: normal !important;
+}
+.code-wrap pre.shiki {
+  @apply my-2 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-[13px] leading-relaxed;
+}
+.code-wrap .line { display: block; min-height: 1.5em; }
 .code-wrap .hl-line {
-  @apply block bg-brand/10 -mx-4 px-4;
-  border-left: 2px solid rgb(232 93 44 / 0.7);
+  @apply block;
+  background-color: rgba(245, 158, 11, 0.12);
+  border-left: 2px solid rgba(245, 158, 11, 0.8);
   margin-left: -1rem;
+  padding-left: 1rem;
 }
 
-/* Smooth step transitions */
-.step-panel {
-  animation: fadeUp 0.3s ease both;
-}
-
-/* Shiki dual-theme (light default, dark via html.dark) */
-.shiki,
-.shiki span {
-  background-color: var(--shiki-light-bg) !important;
-  color: var(--shiki-light) !important;
-}
-html.dark .shiki,
-html.dark .shiki span {
-  background-color: var(--shiki-dark-bg) !important;
-  color: var(--shiki-dark) !important;
-  font-style: var(--shiki-dark-font-style) !important;
-  font-weight: var(--shiki-dark-font-weight) !important;
-  text-decoration: var(--shiki-dark-text-decoration) !important;
-}
-/* line spans as block so hl-line background bleeds nicely */
-.code-wrap .line {
-  display: block;
-  min-height: 1.5em;
-}
-
+.step-panel { animation: fadeUp 0.3s ease both; }
