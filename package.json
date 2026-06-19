@@ -15,7 +15,8 @@
     "test": "tsx --test \"tests/**/*.test.ts\"",
     "learn:sample": "tsx src/index.ts --sample",
     "site:dev": "npm -w site run dev",
-    "site:build": "npm -w site run build"
+    "site:build": "npm -w site run build",
+    "site:start": "npm -w site run start"
   },
   "workspaces": [
     "site"

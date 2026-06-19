@@ -136,3 +136,11 @@ export const DEFAULT_CONFIG: Repo2LearnConfig = {
   noCache: false,
   repo: "",
 };
+
+/** Structured progress event streamed to the web client during generation. */
+export type ProgressEvent =
+  | { type: "stage"; stage: "ingest" | "outline" | "content" | "render" | "done"; label?: string }
+  | { type: "plan"; total: number }
+  | { type: "lesson"; id: string; status: "start" | "ok" | "failed"; label?: string }
+  | { type: "log"; level: "info" | "warn" | "error"; message: string }
+  | { type: "error"; message: string };

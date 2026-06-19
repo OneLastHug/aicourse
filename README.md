@@ -1,112 +1,94 @@
-# Repo2Learn
+# AICourse · Repo2Learn
 
-> 把任意 Git 仓库，变成一个像 [learn.shareai.run](https://learn.shareai.run) 一样精美、分层、可交互、中英双语的教程网站。
-> 一句命令：仓库链接 → codex 扫描拆解 → 子 agent 填充内容 → Next.js 站点。
+> 粘贴一个仓库地址，自动把它变成像 [learn.shareai.run](https://learn.shareai.run) 那样**分层、可交互、中英双语**的教程网站。
+> 后端用 **codex**（gpt-5.5 / xhigh）拉取并拆解仓库，**并发子 agent（≤5）**结合真实代码逐课编写。
 
 ```text
-repo URL ──► [Stage 0 ingest] ──► [Stage 1 分层大纲] ──► [Stage 2 并发填充 ≤5] ──► [Stage 3 渲染] ──► 站点
+首页输入框 ──► 后端拉取仓库 ──► codex 分层拆解(s01→sN) ──► 并发子agent填充(≤5) ──► 实时进度 ──► 教程页
 ```
 
-## 它解决什么问题
+## 它做什么
 
-读源码最痛苦的不是代码本身，而是**不知道该按什么顺序读、每个模块为什么存在**。Repo2Learn 让 codex 像一位资深工程师那样，把一个仓库「从 0 到 1」拆成一组**由浅入深**的知识点（对标参考站的 `s01 → sNN`），每个知识点都结合仓库里的**真实代码**给出：问题 → 工作原理（分步 + 代码）→ 深入 → 对比。
+读源码最痛的不是代码，而是**不知道按什么顺序读、每个模块为什么存在**。AICourse 让 codex 像资深工程师那样，把任意仓库「从 0 到 1」拆成一组**由浅入深**的知识点，每节都结合仓库**真实代码**给出：问题 → 工作原理（分步 + 代码 + 行高亮）→ 深入 → 对比。
 
 ## 特性
 
-- 🧠 **codex 编排**：调用本地 `codex exec`，模型 `gpt-5.5`，思考强度 `xhigh`，子 agent **并发上限 5**。
-- 🧩 **分层拆解**：单次 architect 调用产出有序大纲；并发子 agent 逐课填充。
-- 🪜 **断点续跑**：内容寻址缓存，重跑只补未完成/失败的知识点（`--no-cache` 强制重算）。
-- 🌐 **联网增强**：子 agent 可检索官方文档，生成 Deep Dive 延伸阅读。
-- 🌍 **中英双语** + 深浅色主题，交互式步骤模拟器、行高亮、对比表、进度轨道。
-- 🧪 **可离线**：mock codex 驱动 + 样例仓库，无需 codex 也能跑通全链路并渲染站点。
+- 🌐 **全栈 web 应用**：首页输入框 → 后端按需生成 → SSE 实时进度 → 动态课程页。
+- 🧠 **codex 编排**：本机 `codex exec`，模型 `gpt-5.5`，思考强度 `xhigh`，子 agent **并发上限 5**。
+- 🪜 **分层拆解**：单次 architect 调用产出有序大纲；并发子 agent 逐课填充。
+- 💾 **断点续跑 + 持久化**：内容寻址缓存；生成的课程落盘，重启不丢。
+- 🌍 **中英双语** + 深浅色主题；交互式步骤模拟器、Shiki 语法高亮、对比表、进度轨道。
+- 🧪 **可离线自测**：`R2L_MOCK=1` 用 mock 驱动跑通全链路，无需 codex。
 
-## 快速开始
-
-### 0. 安装依赖
+## 本地开发
 
 ```bash
-cd repo2learn
-npm install          # 安装编排引擎 + Next.js 站点
-# 若 node_modules 来自旧环境导致安装报错，先删除它：rm -rf node_modules（Windows 直接删文件夹）
+npm install
+npm -w site run dev      # http://localhost:3000
 ```
 
-### 1. 离线演示（无需 codex，立刻看效果）
+离线联调后端（不调 codex，秒出一份样例课程，用于验证全链路）：
 
 ```bash
-npm run learn:sample      # 用样例仓库跑全流程，生成站点数据
-npm -w site run dev       # 打开 http://localhost:3000
+R2L_MOCK=1 npm -w site run dev     # 首页随便填一个 github 地址即可
 ```
 
-### 2. 用真实 codex 跑你的仓库
+## 部署到 VPS（Debian + codex）
 
-前提：本机已安装并登录 [codex CLI](https://github.com/openai/codex)（`codex` 在 PATH 中）。
+详见 [`DEPLOY.md`](./DEPLOY.md)。要点：
 
 ```bash
-# 默认即 gpt-5.5 / xhigh / 并发 5
-npx tsx src/index.ts https://github.com/your/repo
-# 或本地路径
-npx tsx src/index.ts ../some-local-project
-
-# 可选覆盖
-npx tsx src/index.ts https://github.com/your/repo \
-  --concurrency 5 --model gpt-5.5 --effort xhigh --target 12
+npm install
+npm -w site run build
+R2L_DATA_DIR=/var/lib/aicourse npm -w site run start
 ```
 
-跑完后重新构建站点：
+- codex 必须装在服务器上并登录；用 systemd/pm2 常驻（**不要 serverless**）。
+- `R2L_DATA_DIR` 放生成的课程（持久化）；不要设 `R2L_MOCK`（默认即真实 codex）。
 
-```bash
-npm -w site run build && npm -w site start
+## 架构
+
 ```
+src/                    编排引擎（TypeScript，被站点导入）
+├─ index.ts             CLI 入口（可无界面直跑）
+├─ types.ts             数据契约 + 进度事件
+├─ config.ts            配置（默认 gpt-5.5 / xhigh / 并发 5）
+├─ codex/               driver 接口 + 真实 CLI 驱动 + mock 驱动 + JSON 解析/校验
+├─ util/                并发限流 · 缓存 · 仓库 ingest · 日志
+├─ prompts/             architect（分层）/ lesson（填充）提示词
+├─ pipeline/            outline · content(并发≤5) · render · run
+└─ sample/              离线样例数据与 mock 响应
+
+site/                   Next.js 全栈站点（App Router + Tailwind + Shiki）
+├─ app/
+│  ├─ page.tsx          首页（仓库地址输入框）
+│  ├─ j/[id]/           生成进度页（SSE）
+│  ├─ c/[repoId]/[locale](/lessons/[id])   动态课程页
+│  └─ api/              generate · jobs · SSE stream · courses
+├─ lib/server/          任务管理 · 课程存储 · 生成编排
+└─ components/          Sidebar · StepSimulator · CompareTable · TopBar …
+
+tests/                  node:test 单测（并发 / 缓存 / 解析 / 流水线）
+```
+
+## codex 调用
+
+```text
+codex exec --model gpt-5.5 -c model_reasoning_effort=xhigh -C <repo> --output-last-message <file> "<prompt>"
+```
+
+> 不同 codex 版本参数名可能略有差异，model/effort/并发/二进制路径均可在 `config/repo2learn.config.ts` 或 `src/types.ts` 覆盖。
 
 ## 命令一览
 
 | 命令 | 说明 |
 |---|---|
-| `npm run dev` / `npm run start` | 运行编排 CLI（tsx 直跑） |
-| `npm run learn:sample` | 离线样例模式 |
-| `npm run test` | 单元测试（并发 / 缓存 / 解析 / 流水线） |
-| `npm run typecheck` | 类型检查 |
 | `npm -w site run dev` | Next.js 开发服务器 |
-| `npm -w site run build` | 生产构建 |
-
-## 架构
-
-详见 [`PLAN.md`](./PLAN.md)。
-
-```
-src/
-├─ index.ts            CLI 入口
-├─ config.ts           配置（默认 gpt-5.5 / xhigh / 并发 5）
-├─ types.ts            数据契约
-├─ codex/              driver 接口 + 真实 CLI 驱动 + mock 驱动 + JSON 解析/校验
-├─ util/               并发限流(pLimit) · 缓存 · 仓库 ingest · 日志
-├─ prompts/            architect（分层）/ lesson（填充）提示词
-├─ pipeline/           outline · content(并发≤5) · render · run
-└─ sample/             离线样例数据与 mock 响应
-site/                  Next.js 站点（App Router + Tailwind + Shiki）
-samples/nano-agent/    样例仓库（演示用）
-tests/                 node:test 单测
-```
-
-## codex 调用说明
-
-引擎用子进程非交互调用 `codex exec`：
-
-```text
-codex exec \
-  --model gpt-5.5 \
-  -c model_reasoning_effort=xhigh \
-  -C <repo-path> \
-  --output-last-message <file> \
-  "<prompt>"
-```
-
-> 不同 codex 版本参数名可能略有差异。model / effort / 并发 / 二进制路径全部可在 [`config/repo2learn.config.ts`](./config/repo2learn.config.ts) 或命令行覆盖。
-> codex 不在当前开发沙箱，因此**真实端到端**需在你本机验证；但流水线逻辑、并发、缓存、解析、渲染、站点全部可用 mock + 样例离线验证。
-
-## 配置示例
-
-见 [`config/repo2learn.config.ts`](./config/repo2learn.config.ts)。
+| `npm -w site run build` / `start` | 生产构建 / 启动 |
+| `npm run test` | 单元测试（并发 / 缓存 / 解析 / 流水线） |
+| `npm run typecheck` | 引擎类型检查 |
+| `npm run dev -- <repo>` | 无界面 CLI 直跑（走 codex） |
+| `npm run learn:sample` | 无界面 CLI 样例模式 |
 
 ## 许可
 

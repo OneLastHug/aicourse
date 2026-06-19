@@ -1,7 +1,9 @@
 node_modules/
 dist/
-.repo2learn/cache/
+.repo2learn/
 site/.next/
 site/out/
+site/data/
+data/
 *.log
 .DS_Store

@@ -14,7 +14,8 @@
     "next-themes": "0.4.6",
     "react": "19.2.7",
     "react-dom": "19.2.7",
-    "shiki": "4.2.0"
+    "shiki": "4.2.0",
+    "repo2learn": "*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

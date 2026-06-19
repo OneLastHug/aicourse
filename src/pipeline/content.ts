@@ -3,6 +3,7 @@ import type {
   Lesson,
   Outline,
   OutlineLesson,
+  ProgressEvent,
   Repo2LearnConfig,
   RepoContext,
 } from "../types";
@@ -27,19 +28,21 @@ export async function runContentStage(args: {
   driver: CodexDriver;
   cfg: Repo2LearnConfig;
   cache: Cache;
+  onProgress?: (e: ProgressEvent) => void;
 }): Promise<Record<string, Lesson>> {
-  const { ctx, outline, driver, cfg, cache } = args;
+  const { ctx, outline, driver, cfg, cache, onProgress } = args;
   const limit = createLimiter(cfg.codex.concurrency);
   log.stage(`Stage 2 · filling ${outline.lessons.length} lessons (concurrency ${cfg.codex.concurrency})`);
 
   const titles = outline.lessons.map((l) => `${l.id} ${l.title.en}`).join("\n");
   const results = await Promise.all(
-    outline.lessons.map((lesson) => limit(() => fillLesson({ lesson, ctx, outline, driver, cfg, cache, titles }))),
+    outline.lessons.map((lesson) =>
+      limit(() => fillLesson({ lesson, ctx, outline, driver, cfg, cache, titles, onProgress })),
+    ),
   );
 
   const map: Record<string, Lesson> = {};
   for (const r of results) map[r.id] = r;
-
   const ok = results.filter((r) => r.status === "ok").length;
   log.ok(`content: ${ok}/${results.length} lessons filled`);
   return map;
@@ -53,8 +56,9 @@ async function fillLesson(args: {
   cfg: Repo2LearnConfig;
   cache: Cache;
   titles: string;
+  onProgress?: (e: ProgressEvent) => void;
 }): Promise<Lesson> {
-  const { lesson, ctx, driver, cfg, cache, titles } = args;
+  const { lesson, ctx, driver, cfg, cache, titles, onProgress } = args;
   const key = cache.key({
     stage: "lesson",
     sha: ctx.sha,
@@ -65,10 +69,11 @@ async function fillLesson(args: {
 
   const cached = await cache.get<Lesson>(key);
   if (cached) {
-    log.step(`lesson ${lesson.id}: cache hit`);
+    onProgress?.({ type: "lesson", id: lesson.id, status: "ok", label: "cache hit" });
     return cached;
   }
 
+  onProgress?.({ type: "lesson", id: lesson.id, status: "start" });
   const prompt = lessonPrompt(ctx, lesson, titles);
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
@@ -77,13 +82,14 @@ async function fillLesson(args: {
       const lessonOut = assertShape(parsed, isLesson, `lesson ${lesson.id}`);
       lessonOut.status = "ok";
       await cache.set(key, lessonOut);
-      log.step(`lesson ${lesson.id}: ok (${res.durationMs}ms)`);
+      onProgress?.({ type: "lesson", id: lesson.id, status: "ok" });
       return lessonOut;
     } catch (e) {
       log.warn(`lesson ${lesson.id} attempt ${attempt} failed: ${(e as Error).message}`);
     }
   }
 
+  onProgress?.({ type: "lesson", id: lesson.id, status: "failed" });
   const failed: Lesson = {
     id: lesson.id,
     problem: lesson.theProblem,
