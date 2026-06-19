@@ -22,7 +22,7 @@ export function TopBar({
       </Link>
       <div className="ml-auto flex items-center gap-2">
         <LangSwitcher />
-        <ThemeToggle />
+        <ThemeToggle locale={locale} />
       </div>
     </header>
   );

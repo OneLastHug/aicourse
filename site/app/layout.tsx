@@ -4,9 +4,7 @@ import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Repo2Learn — layered tutorials from any repo",
-  description:
-    "Turn any repository into a layered, bilingual, interactive tutorial — one mechanism at a time.",
+  title: "Repo2Learn",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -1,22 +1,25 @@
 import Link from "next/link";
 import { pick } from "@/lib/content";
-import { difficultyColor } from "@/lib/ui";
+import { t } from "@/lib/i18n";
+import { difficultyColor, difficultyLabel } from "@/lib/ui";
 import type { Locale, OutlineLesson } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
 export function Sidebar({
   locale,
+  repoId,
   lessons,
   activeId,
 }: {
   locale: Locale;
+  repoId: string;
   lessons: OutlineLesson[];
   activeId?: string;
 }) {
   return (
     <nav className="space-y-1">
       <div className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-faint dark:text-zinc-500">
-        {locale === "zh" ? "学习路径" : "Learning Path"} · s01 → s{String(lessons.length).padStart(2, "0")}
+        {t(locale, "course.path")} · s01 → s{String(lessons.length).padStart(2, "0")}
       </div>
       <ol className="relative">
         <span className="absolute left-[15px] top-2 bottom-2 w-px bg-line dark:bg-zinc-800" aria-hidden />
@@ -25,7 +28,7 @@ export function Sidebar({
           return (
             <li key={l.id} className="relative">
               <Link
-                href={`/${locale}/lessons/${l.id}`}
+                href={`/${locale}/c/${repoId}/lessons/${l.id}`}
                 className={cn(
                   "group relative flex items-start gap-3 rounded-lg px-2 py-2 transition",
                   active ? "bg-bg-subtle dark:bg-zinc-800/60" : "hover:bg-bg-subtle dark:hover:bg-zinc-800/40",
@@ -47,13 +50,11 @@ export function Sidebar({
                   </span>
                   <span className="mt-1 flex items-center gap-2">
                     <span className={cn("h-1.5 w-1.5 rounded-full", difficultyColor(l.difficulty))} />
-                    <span className="text-[11px] capitalize text-ink-faint dark:text-zinc-500">
-                      {l.difficulty}
+                    <span className="text-[11px] text-ink-faint dark:text-zinc-500">
+                      {difficultyLabel(l.difficulty, locale)}
                     </span>
                     <span className="text-[11px] text-ink-faint dark:text-zinc-600">·</span>
-                    <span className="font-mono text-[11px] text-ink-faint dark:text-zinc-500">
-                      {l.id}
-                    </span>
+                    <span className="font-mono text-[11px] text-ink-faint dark:text-zinc-500">{l.id}</span>
                   </span>
                 </span>
               </Link>

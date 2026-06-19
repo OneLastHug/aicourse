@@ -2,30 +2,23 @@
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { t } from "@/lib/i18n";
+import type { Locale } from "@/lib/types";
 
-export function ThemeToggle() {
+export function ThemeToggle({ locale }: { locale: Locale }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-
   const isDark = resolvedTheme === "dark";
 
   return (
     <button
       type="button"
-      aria-label="Toggle theme"
+      aria-label={t(locale, "theme.toggle")}
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className="grid h-9 w-9 place-items-center rounded-lg border border-line text-ink-soft transition hover:bg-bg-subtle dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
     >
-      {mounted ? (
-        isDark ? (
-          <SunIcon />
-        ) : (
-          <MoonIcon />
-        )
-      ) : (
-        <span className="h-4 w-4" />
-      )}
+      {mounted ? (isDark ? <SunIcon /> : <MoonIcon />) : <span className="h-4 w-4" />}
     </button>
   );
 }
@@ -38,7 +31,6 @@ function SunIcon() {
     </svg>
   );
 }
-
 function MoonIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

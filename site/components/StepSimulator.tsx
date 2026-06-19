@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/cn";
+import { t } from "@/lib/i18n";
+import type { Locale } from "@/lib/types";
 
 export type SimStep = {
   title: string;
@@ -10,7 +12,7 @@ export type SimStep = {
   file?: string;
 };
 
-export function StepSimulator({ steps }: { steps: SimStep[] }) {
+export function StepSimulator({ steps, locale }: { steps: SimStep[]; locale: Locale }) {
   const [active, setActive] = useState(0);
   const step = steps[active];
 
@@ -37,7 +39,7 @@ export function StepSimulator({ steps }: { steps: SimStep[] }) {
         <div className="ml-auto flex items-center gap-1.5">
           <button
             type="button"
-            aria-label="Previous step"
+            aria-label={t(locale, "step.prev")}
             onClick={() => setActive((a) => Math.max(0, a - 1))}
             disabled={active === 0}
             className="grid h-7 w-7 place-items-center rounded-md border border-line text-ink-faint transition enabled:hover:bg-bg-subtle disabled:opacity-30 dark:border-zinc-700 dark:text-zinc-400"
@@ -46,7 +48,7 @@ export function StepSimulator({ steps }: { steps: SimStep[] }) {
           </button>
           <button
             type="button"
-            aria-label="Next step"
+            aria-label={t(locale, "step.next")}
             onClick={() => setActive((a) => Math.min(steps.length - 1, a + 1))}
             disabled={active === steps.length - 1}
             className="grid h-7 w-7 place-items-center rounded-md border border-line text-ink-faint transition enabled:hover:bg-bg-subtle disabled:opacity-30 dark:border-zinc-700 dark:text-zinc-400"
