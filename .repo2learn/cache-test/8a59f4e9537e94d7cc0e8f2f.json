@@ -1,0 +1,78 @@
+{
+  "id": "s05",
+  "problem": {
+    "zh": "用户让 agent 改一个不存在的文件。read_file 抛错了。脆弱的 agent 直接崩溃；健壮的 agent 把错误告诉模型，让模型自己想办法。",
+    "en": "The user asks the agent to edit a file that doesn't exist. read_file throws. A fragile agent crashes; a robust agent tells the model about the error and lets it recover."
+  },
+  "howItWorks": [
+    {
+      "title": {
+        "zh": "Step 1 · executeTool 会抛错",
+        "en": "Step 1 · executeTool throws"
+      },
+      "desc": {
+        "zh": "工具失败时，错误是信息，不是终点。我们要捕获它而不是让它冒泡。",
+        "en": "When a tool fails, the error is information, not a dead end. We catch it instead of letting it bubble."
+      },
+      "code": {
+        "file": "src/tools.ts",
+        "language": "ts",
+        "snippet": "export async function executeTool(name, input) {\n  const tool = TOOLS[name];\n  if (!tool) throw new Error(`unknown tool: ${name}`);\n  return tool.run(input); // readFile may throw ENOENT\n}",
+        "highlightLines": [
+          4
+        ]
+      }
+    },
+    {
+      "title": {
+        "zh": "Step 2 · 把错误变成一条消息",
+        "en": "Step 2 · Turn the error into a message"
+      },
+      "desc": {
+        "zh": "在循环里 try/catch，把 error.message 以 tool 结果的身份塞回 messages。模型读到 'file not found' 后，通常会改用 write_file 创建它。",
+        "en": "try/catch in the loop and push error.message back as the tool result. Reading 'file not found', the model typically switches to write_file to create it."
+      },
+      "code": {
+        "file": "src/loop.ts",
+        "language": "ts",
+        "snippet": "    for (const use of toolUses) {\n      try {\n        const result = await executeTool(use.name, use.input);\n        messages.push({ role: \"tool\", tool_use_id: use.id, content: String(result) });\n      } catch (e) {\n        messages.push({ role: \"tool\", tool_use_id: use.id, content: `Error: ${e.message}` });\n      }\n    }",
+        "highlightLines": [
+          6,
+          7
+        ]
+      }
+    }
+  ],
+  "deepDive": {
+    "zh": "自我修正能力是 agent 和脚本的分水岭。把错误喂回去，模型经常能：重试、换路径、修正参数、或向用户求助。生产实践：给错误加结构化分类（可重试 / 致命），避免无限重试循环（加最大重试次数 + 退避）。",
+    "en": "Self-correction is the dividing line between an agent and a script. Fed the error, the model often: retries, picks a different path, fixes its arguments, or asks the user. Production practice: classify errors (retryable / fatal) and cap retries with backoff to avoid infinite loops."
+  },
+  "references": [
+    {
+      "title": "Designing resilient agents (Anthropic)",
+      "url": "https://www.anthropic.com/engineering"
+    }
+  ],
+  "compare": {
+    "rows": [
+      {
+        "label": {
+          "zh": "遇到错误",
+          "en": "On error"
+        },
+        "a": "进程崩溃退出",
+        "b": "错误变成下一轮输入"
+      },
+      {
+        "label": {
+          "zh": "重试",
+          "en": "Retry"
+        },
+        "a": "无上限，可能死循环",
+        "b": "有上限 + 退避"
+      }
+    ]
+  },
+  "loc": 10,
+  "status": "ok"
+}

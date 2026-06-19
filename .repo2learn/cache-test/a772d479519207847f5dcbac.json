@@ -1,0 +1,179 @@
+{
+  "course": {
+    "title": {
+      "zh": "从零构建一个迷你编程 Agent",
+      "en": "Build a Nano Coding Agent from 0 to 1"
+    },
+    "tagline": {
+      "zh": "一次只讲一个机制，亲手拼出一个 Claude Code 风格的智能体。",
+      "en": "One mechanism at a time — assemble a Claude-Code-like agent by hand."
+    },
+    "repo": {
+      "url": "local://nano-agent",
+      "name": "nano-agent",
+      "sha": "sample"
+    }
+  },
+  "lessons": [
+    {
+      "id": "s01",
+      "title": {
+        "zh": "工具调用（Agent 循环）",
+        "en": "Tool Use — the Agent Loop"
+      },
+      "difficulty": "beginner",
+      "theProblem": {
+        "zh": "模型只会说话，怎样才能让它真正去读写文件、执行动作？",
+        "en": "The model can only talk — how do we make it actually read/write files and take action?"
+      },
+      "objective": {
+        "zh": "理解 while 循环如何让模型与工具反复交互，直到任务完成。",
+        "en": "Understand how a while-loop bounces control between the model and tools until the task is done."
+      },
+      "keyFiles": [
+        "src/loop.ts",
+        "src/index.ts"
+      ],
+      "prereq": [],
+      "tags": [
+        "agent-loop",
+        "tool-use"
+      ]
+    },
+    {
+      "id": "s02",
+      "title": {
+        "zh": "系统提示词",
+        "en": "System Prompt"
+      },
+      "difficulty": "beginner",
+      "theProblem": {
+        "zh": "同一个模型，为什么会表现出完全不同的「性格」？",
+        "en": "Same model — why does it behave like a completely different agent?"
+      },
+      "objective": {
+        "zh": "看清系统提示词如何在一开始就塑造 agent 的行为边界。",
+        "en": "See how the system prompt sets the agent's behavior budget before turn one."
+      },
+      "keyFiles": [
+        "src/prompt.ts",
+        "src/model.ts"
+      ],
+      "prereq": [
+        "s01"
+      ],
+      "tags": [
+        "prompting"
+      ]
+    },
+    {
+      "id": "s03",
+      "title": {
+        "zh": "工具注册表",
+        "en": "The Tool Registry"
+      },
+      "difficulty": "intermediate",
+      "theProblem": {
+        "zh": "模型点了 read_file，我们怎么安全地把请求转成一次真正的函数调用？",
+        "en": "When the model calls read_file, how do we safely route that to a real function?"
+      },
+      "objective": {
+        "zh": "把工具建模成「描述 + 异步函数」，并实现统一的执行入口。",
+        "en": "Model a tool as description + async function and build one execution entry point."
+      },
+      "keyFiles": [
+        "src/tools.ts"
+      ],
+      "prereq": [
+        "s01"
+      ],
+      "tags": [
+        "tools",
+        "dispatch"
+      ]
+    },
+    {
+      "id": "s04",
+      "title": {
+        "zh": "消息与上下文",
+        "en": "Messages & Context"
+      },
+      "difficulty": "intermediate",
+      "theProblem": {
+        "zh": "Agent 怎么「记得」自己刚刚做过什么？",
+        "en": "How does the agent remember what it just did?"
+      },
+      "objective": {
+        "zh": "理解 messages 数组如何累积成上下文，并掌握会话记忆的边界。",
+        "en": "Understand how the messages array accumulates into context — and where memory ends."
+      },
+      "keyFiles": [
+        "src/loop.ts",
+        "src/index.ts"
+      ],
+      "prereq": [
+        "s01",
+        "s03"
+      ],
+      "tags": [
+        "context",
+        "memory"
+      ]
+    },
+    {
+      "id": "s05",
+      "title": {
+        "zh": "错误恢复",
+        "en": "Error Recovery"
+      },
+      "difficulty": "advanced",
+      "theProblem": {
+        "zh": "工具抛错了，agent 会崩溃还是自我修正？",
+        "en": "When a tool throws, does the agent crash — or course-correct?"
+      },
+      "objective": {
+        "zh": "把错误变成消息塞回去，让模型基于失败继续推理。",
+        "en": "Turn errors into messages so the model can keep reasoning from the failure."
+      },
+      "keyFiles": [
+        "src/tools.ts",
+        "src/loop.ts"
+      ],
+      "prereq": [
+        "s03",
+        "s04"
+      ],
+      "tags": [
+        "resilience"
+      ]
+    },
+    {
+      "id": "s06",
+      "title": {
+        "zh": "把循环串起来",
+        "en": "Wiring It All Together"
+      },
+      "difficulty": "advanced",
+      "theProblem": {
+        "zh": "零散的模块，如何拼成一个能跑的命令行 agent？",
+        "en": "How do the pieces become a single runnable CLI agent?"
+      },
+      "objective": {
+        "zh": "用入口文件把提示词、循环、工具连成一个可交互的程序。",
+        "en": "Wire prompt + loop + tools into one interactive program via the entry file."
+      },
+      "keyFiles": [
+        "src/index.ts",
+        "src/model.ts"
+      ],
+      "prereq": [
+        "s01",
+        "s02",
+        "s03"
+      ],
+      "tags": [
+        "integration"
+      ]
+    }
+  ]
+}

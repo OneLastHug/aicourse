@@ -1,0 +1,121 @@
+{
+  "id": "s01",
+  "problem": {
+    "zh": "大语言模型本身只会输出文本。我们想要的是一个能读写文件、执行命令的 agent。差距在哪？差距在「循环」——不断把模型的输出喂回工具，再把工具的结果喂回模型，直到模型不再需要工具。",
+    "en": "An LLM only emits text. We want an agent that reads and writes files and runs commands. The missing piece is the loop: feed the model's output into tools, feed tool results back into the model, and keep going until the model stops calling tools."
+  },
+  "howItWorks": [
+    {
+      "title": {
+        "zh": "Step 1 · 不停地调用模型",
+        "en": "Step 1 · Keep calling the model"
+      },
+      "desc": {
+        "zh": "用一个 while (true) 把模型调用包起来。每一轮都把完整对话发回去，让模型看到之前发生了什么。",
+        "en": "Wrap the model call in while (true). Each turn sends the full conversation back so the model sees what happened so far."
+      },
+      "code": {
+        "file": "src/loop.ts",
+        "language": "ts",
+        "snippet": "export async function run({ messages, systemPrompt }) {\n  while (true) {\n    const response = await callModel({ systemPrompt, messages });",
+        "highlightLines": [
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "title": {
+        "zh": "Step 2 · 记录模型的每一条回复",
+        "en": "Step 2 · Record every assistant reply"
+      },
+      "desc": {
+        "zh": "模型的回复要原样追加进 messages，这样下一轮它才「记得」自己说过什么。",
+        "en": "Append the model's reply verbatim to messages so it remembers what it said next turn."
+      },
+      "code": {
+        "file": "src/loop.ts",
+        "language": "ts",
+        "snippet": "    messages.push({ role: \"assistant\", content: response.content });",
+        "highlightLines": [
+          1
+        ]
+      }
+    },
+    {
+      "title": {
+        "zh": "Step 3 · 判断是否结束",
+        "en": "Step 3 · Decide when to stop"
+      },
+      "desc": {
+        "zh": "如果这一轮没有 tool_use 块，说明模型不再需要工具，循环结束——这就是 agent 的「停下」信号。",
+        "en": "If there's no tool_use block this turn, the model needs no more tools and the loop ends — that's the agent's stop signal."
+      },
+      "code": {
+        "file": "src/loop.ts",
+        "language": "ts",
+        "snippet": "    const toolUses = response.content.filter((b) => b.type === \"tool_use\");\n    if (toolUses.length === 0) {\n      return response.content;\n    }",
+        "highlightLines": [
+          1,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "title": {
+        "zh": "Step 4 · 执行工具并把结果喂回去",
+        "en": "Step 4 · Run tools, feed results back"
+      },
+      "desc": {
+        "zh": "对每个工具调用执行真正的函数，把结果以 role: 'tool' 塞回 messages。然后循环回到顶部，模型会读到结果继续推理。",
+        "en": "For each tool call, run the real function and push the result back as a role:'tool' message. The loop returns to the top, the model reads the result, and keeps reasoning."
+      },
+      "code": {
+        "file": "src/loop.ts",
+        "language": "ts",
+        "snippet": "    for (const use of toolUses) {\n      const result = await executeTool(use.name, use.input);\n      messages.push({ role: \"tool\", tool_use_id: use.id, content: String(result) });\n    }",
+        "highlightLines": [
+          2,
+          3
+        ]
+      }
+    }
+  ],
+  "deepDive": {
+    "zh": "这个「模型 ↔ 工具」的循环就是所有 agent 框架的本质——ReAct、function calling、agentic loop 都是它的变体。关键洞察：**上下文不是存储，而是对话本身**。每一步的结果都成为下一步的输入，agent 的「记忆」就是这条不断生长的消息链。代价是上下文长度：长任务需要压缩或摘要，否则窗口会被占满。",
+    "en": "This model↔tools loop is the essence of every agent framework — ReAct, function calling, agentic loops are all variations. The key insight: **context isn't storage, it's the conversation itself**. Each step's result becomes the next step's input; the agent's memory is this ever-growing message chain. The cost is context length: long tasks need compaction or summarization or the window fills up."
+  },
+  "references": [
+    {
+      "title": "Building effective agents (Anthropic)",
+      "url": "https://www.anthropic.com/research/building-effective-agents"
+    },
+    {
+      "title": "ReAct: Synergizing Reasoning and Acting",
+      "url": "https://arxiv.org/abs/2210.03629"
+    }
+  ],
+  "compare": {
+    "rows": [
+      {
+        "label": {
+          "zh": "单次问答",
+          "en": "Single Q&A"
+        },
+        "a": "一问一答，无法行动",
+        "b": "持续循环，可调用工具"
+      },
+      {
+        "label": {
+          "zh": "停止条件",
+          "en": "Stop condition"
+        },
+        "a": "永远跑到超时",
+        "b": "模型主动停止"
+      }
+    ]
+  },
+  "loc": 16,
+  "status": "ok"
+}

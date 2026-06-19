@@ -1,0 +1,96 @@
+{
+  "id": "s06",
+  "problem": {
+    "zh": "我们有了循环、提示词、工具——它们还是散落的模块。最后一步：用一个入口文件把它们拼成一个能 `node src/index.ts '...'` 直接跑起来的命令行 agent。",
+    "en": "We have a loop, a prompt, and tools — but they're scattered modules. The last step: one entry file that wires them into a runnable CLI agent you can launch with node src/index.ts '...'."
+  },
+  "howItWorks": [
+    {
+      "title": {
+        "zh": "Step 1 · 导入各模块",
+        "en": "Step 1 · Import the modules"
+      },
+      "desc": {
+        "zh": "入口文件只做组装：从 loop 拿到 run，从 prompt 拿到 systemPrompt。",
+        "en": "The entry file only assembles: take run from loop, systemPrompt from prompt."
+      },
+      "code": {
+        "file": "src/index.ts",
+        "language": "ts",
+        "snippet": "import { run } from \"./loop.js\";\nimport { systemPrompt } from \"./prompt.js\";",
+        "highlightLines": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "title": {
+        "zh": "Step 2 · 从命令行参数构造初始消息",
+        "en": "Step 2 · Build the first message from argv"
+      },
+      "desc": {
+        "zh": "把命令行第一个参数当作用户的任务，包成第一条消息。",
+        "en": "Treat the first CLI argument as the user's task and wrap it as the first message."
+      },
+      "code": {
+        "file": "src/index.ts",
+        "language": "ts",
+        "snippet": "const messages = [{ role: \"user\", content: process.argv[2] ?? \"say hello\" }];",
+        "highlightLines": [
+          1
+        ]
+      }
+    },
+    {
+      "title": {
+        "zh": "Step 3 · 启动循环",
+        "en": "Step 3 · Kick off the loop"
+      },
+      "desc": {
+        "zh": "把 messages 和 systemPrompt 交给 run，循环接管一切。到此，一个迷你 agent 就能跑了。",
+        "en": "Hand messages + systemPrompt to run and the loop takes over. That's it — a nano agent is live."
+      },
+      "code": {
+        "file": "src/index.ts",
+        "language": "ts",
+        "snippet": "await run({ messages, systemPrompt });",
+        "highlightLines": [
+          1
+        ]
+      }
+    }
+  ],
+  "deepDive": {
+    "zh": "真实的 CLI agent 还需要：流式输出（边生成边打印）、彩色日志、子命令（run / chat / exec）、配置文件、会话持久化。但核心永远是这 ~15 行的循环。理解了它，你就理解了 Claude Code、Cursor、Devin 的骨架。",
+    "en": "A real CLI agent adds streaming, colored logs, subcommands (run / chat / exec), config files, and session persistence. But the core is always this ~15-line loop. Understand it and you understand the skeleton of Claude Code, Cursor, and Devin."
+  },
+  "references": [
+    {
+      "title": "Claude Code overview",
+      "url": "https://docs.anthropic.com/en/docs/claude-code/overview"
+    }
+  ],
+  "compare": {
+    "rows": [
+      {
+        "label": {
+          "zh": "形态",
+          "en": "Form"
+        },
+        "a": "散落的模块文件",
+        "b": "一个可执行 CLI"
+      },
+      {
+        "label": {
+          "zh": "交互",
+          "en": "Interaction"
+        },
+        "a": "需要手写测试调用",
+        "b": "命令行直接对话"
+      }
+    ]
+  },
+  "loc": 8,
+  "status": "ok"
+}

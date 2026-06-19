@@ -1,0 +1,6 @@
+{
+  "name": "nano-agent",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A tiny Claude-Code-like coding agent, built from 0 to 1."
+}

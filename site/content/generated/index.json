@@ -1,0 +1,72 @@
+{
+  "title": {
+    "zh": "从零构建一个迷你编程 Agent",
+    "en": "Build a Nano Coding Agent from 0 to 1"
+  },
+  "tagline": {
+    "zh": "一次只讲一个机制，亲手拼出一个 Claude Code 风格的智能体。",
+    "en": "One mechanism at a time — assemble a Claude-Code-like agent by hand."
+  },
+  "repo": {
+    "url": "local://nano-agent",
+    "name": "nano-agent",
+    "sha": "sample"
+  },
+  "lessonCount": 6,
+  "lessons": [
+    {
+      "id": "s01",
+      "title": {
+        "zh": "工具调用（Agent 循环）",
+        "en": "Tool Use — the Agent Loop"
+      },
+      "difficulty": "beginner",
+      "status": "ok"
+    },
+    {
+      "id": "s02",
+      "title": {
+        "zh": "系统提示词",
+        "en": "System Prompt"
+      },
+      "difficulty": "beginner",
+      "status": "ok"
+    },
+    {
+      "id": "s03",
+      "title": {
+        "zh": "工具注册表",
+        "en": "The Tool Registry"
+      },
+      "difficulty": "intermediate",
+      "status": "ok"
+    },
+    {
+      "id": "s04",
+      "title": {
+        "zh": "消息与上下文",
+        "en": "Messages & Context"
+      },
+      "difficulty": "intermediate",
+      "status": "ok"
+    },
+    {
+      "id": "s05",
+      "title": {
+        "zh": "错误恢复",
+        "en": "Error Recovery"
+      },
+      "difficulty": "advanced",
+      "status": "ok"
+    },
+    {
+      "id": "s06",
+      "title": {
+        "zh": "把循环串起来",
+        "en": "Wiring It All Together"
+      },
+      "difficulty": "advanced",
+      "status": "ok"
+    }
+  ]
+}

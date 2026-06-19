@@ -1,0 +1,80 @@
+{
+  "id": "s02",
+  "problem": {
+    "zh": "同样一个模型，问它同样的问题，为什么有时候像个严谨的工程师、有时候像个话痨？答案在「系统提示词」——它在任何对话开始之前就定下了基调。",
+    "en": "Same model, same question — why is it sometimes a careful engineer and sometimes chatty? The answer is the system prompt, which sets the tone before any conversation begins."
+  },
+  "howItWorks": [
+    {
+      "title": {
+        "zh": "Step 1 · 提示词是一段普通字符串",
+        "en": "Step 1 · The prompt is just a string"
+      },
+      "desc": {
+        "zh": "把行为要求写成一段常量。它会被原样塞进 API 的 system 字段。",
+        "en": "Write the behavioral rules as a constant string. It goes verbatim into the API's system field."
+      },
+      "code": {
+        "file": "src/prompt.ts",
+        "language": "ts",
+        "snippet": "export const systemPrompt = `You are nano-agent, a tiny coding assistant.\n- Read files before editing them.\n- Prefer the smallest possible change.\n- When you are finished, reply with plain text and no tool calls.`;",
+        "highlightLines": [
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    },
+    {
+      "title": {
+        "zh": "Step 2 · 在每次请求里注入它",
+        "en": "Step 2 · Inject it on every request"
+      },
+      "desc": {
+        "zh": "把 systemPrompt 放进请求体。模型在生成第一个字之前，就已经「是」这个 agent 了。",
+        "en": "Put systemPrompt into the request body. Before generating a single token, the model already 'is' this agent."
+      },
+      "code": {
+        "file": "src/model.ts",
+        "language": "ts",
+        "snippet": "  body: JSON.stringify({ system: systemPrompt, messages, model: \"nano-1\" }),",
+        "highlightLines": [
+          1
+        ]
+      }
+    }
+  ],
+  "deepDive": {
+    "zh": "系统提示词是 agent 的「宪法」：它定义角色、约束和风格。生产级 agent 的提示词往往上千字，包含工具说明、安全规则、输出格式。一个小技巧：把最关键的规则放在**开头和结尾**（首因/近因效应），中间放细节。",
+    "en": "The system prompt is the agent's constitution: it defines role, constraints, and style. Production prompts often run thousands of words covering tools, safety, and output format. A useful trick: put the most critical rules at the **start and end** (primacy/recency effects), with details in the middle."
+  },
+  "references": [
+    {
+      "title": "Prompt engineering overview (Anthropic)",
+      "url": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview"
+    }
+  ],
+  "compare": {
+    "rows": [
+      {
+        "label": {
+          "zh": "无提示词",
+          "en": "No prompt"
+        },
+        "a": "行为随机、易跑偏",
+        "b": "角色稳定、可预测"
+      },
+      {
+        "label": {
+          "zh": "位置",
+          "en": "Position"
+        },
+        "a": "混在用户消息里",
+        "b": "独立 system 字段"
+      }
+    ]
+  },
+  "loc": 5,
+  "status": "ok"
+}

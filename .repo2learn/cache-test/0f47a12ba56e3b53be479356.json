@@ -1,0 +1,78 @@
+{
+  "id": "s04",
+  "problem": {
+    "zh": "agent 怎么记得自己三步之前读过哪个文件？它没有数据库——它的「记忆」就是那个不断增长的 messages 数组。",
+    "en": "How does the agent remember which file it read three steps ago? It has no database — its 'memory' is that growing messages array."
+  },
+  "howItWorks": [
+    {
+      "title": {
+        "zh": "Step 1 · 从用户的初始消息开始",
+        "en": "Step 1 · Start from the initial user message"
+      },
+      "desc": {
+        "zh": "入口构造第一条消息。这一条决定了整个任务。",
+        "en": "The entry point builds the first message. This single message defines the whole task."
+      },
+      "code": {
+        "file": "src/index.ts",
+        "language": "ts",
+        "snippet": "const messages = [{ role: \"user\", content: process.argv[2] ?? \"say hello\" }];",
+        "highlightLines": [
+          1
+        ]
+      }
+    },
+    {
+      "title": {
+        "zh": "Step 2 · 每一轮都在追加，从不删除",
+        "en": "Step 2 · Append every turn, never delete"
+      },
+      "desc": {
+        "zh": "assistant 的回复、tool 的结果，全部 push 进同一个数组。下一轮把整个数组发给模型——这就是「上下文」。",
+        "en": "Assistant replies and tool results all push into the same array. Next turn sends the whole array to the model — that IS the context."
+      },
+      "code": {
+        "file": "src/loop.ts",
+        "language": "ts",
+        "snippet": "    messages.push({ role: \"assistant\", content: response.content });\n    ...\n    messages.push({ role: \"tool\", tool_use_id: use.id, content: String(result) });",
+        "highlightLines": [
+          1,
+          3
+        ]
+      }
+    }
+  ],
+  "deepDive": {
+    "zh": "这种「无状态模型 + 有状态上下文」的设计非常强大，但有上限：上下文窗口。长对话必须压缩——滑动窗口、摘要、或把旧内容存到外部记忆（向量库/文件）。**真正的工程难点不在循环，而在管理上下文增长。**",
+    "en": "This 'stateless model + stateful context' design is powerful but bounded: the context window. Long conversations need compaction — sliding window, summarization, or offloading old content to external memory (vector store / files). **The hard engineering isn't the loop — it's managing context growth.**"
+  },
+  "references": [
+    {
+      "title": "Managing context for long agents (Anthropic cookbook)",
+      "url": "https://github.com/anthropics/anthropic-cookbook"
+    }
+  ],
+  "compare": {
+    "rows": [
+      {
+        "label": {
+          "zh": "状态存放",
+          "en": "Where state lives"
+        },
+        "a": "隐藏在模型内部",
+        "b": "显式 messages 数组"
+      },
+      {
+        "label": {
+          "zh": "上限",
+          "en": "Limit"
+        },
+        "a": "理论上无限",
+        "b": "受上下文窗口约束"
+      }
+    ]
+  },
+  "loc": 12,
+  "status": "ok"
+}
