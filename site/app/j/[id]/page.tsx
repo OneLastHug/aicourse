@@ -83,10 +83,7 @@ export default function ProgressPage() {
   const stageIdx = STAGES.findIndex((s) => s.key === stage);
 
   return (
-    <main className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-[-10%] h-[360px] w-[760px] -translate-x-1/2 rounded-full bg-brand/15 blur-[120px]" />
-      </div>
+    <main className="min-h-screen">
 
       <section className="mx-auto max-w-2xl px-5 py-16">
         <div className="chip mb-5">

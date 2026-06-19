@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 const EXAMPLES = [
   { label: "chalk", url: "https://github.com/chalk/chalk" },
   { label: "zod", url: "https://github.com/colinhacks/zod" },
-  { label: "nano-id", url: "https://github.com/ai/nanoid" },
+  { label: "nanoid", url: "https://github.com/ai/nanoid" },
 ];
 
 export default function Home() {
@@ -37,84 +37,56 @@ export default function Home() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden">
-      {/* ambient techy backdrop */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute left-1/2 top-[-10%] h-[420px] w-[820px] -translate-x-1/2 rounded-full bg-brand/20 blur-[120px]" />
-        <div
-          className="absolute inset-0 opacity-[0.18] dark:opacity-[0.25]"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, rgba(120,120,130,.35) 1px, transparent 1px), linear-gradient(to bottom, rgba(120,120,130,.35) 1px, transparent 1px)",
-            backgroundSize: "44px 44px",
-            maskImage: "radial-gradient(ellipse 80% 60% at 50% 35%, black, transparent)",
-            WebkitMaskImage: "radial-gradient(ellipse 80% 60% at 50% 35%, black, transparent)",
-          }}
-        />
-      </div>
-
-      <section className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-5 py-20 text-center">
-        <div className="chip mb-6">
+    <main className="min-h-screen">
+      <section className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-5 py-20 text-center">
+        <div className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-0.5 text-xs font-medium text-ink-faint dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
           <span className="h-1.5 w-1.5 rounded-full bg-brand" />
           repo → layered tutorial · powered by codex
         </div>
-        <h1 className="text-balance text-4xl font-bold leading-[1.08] tracking-tight sm:text-6xl">
-          Turn any repository into a
-          <span className="bg-gradient-to-r from-brand to-amber-500 bg-clip-text text-transparent">
-            {" "}layered tutorial
-          </span>
+
+        <h1 className="text-balance text-3xl font-bold tracking-tight text-ink dark:text-zinc-50 sm:text-5xl lg:text-6xl">
+          Turn any repository into a layered tutorial
         </h1>
-        <p className="mt-5 max-w-xl text-balance text-base text-ink-soft dark:text-zinc-400 sm:text-lg">
+        <p className="mt-4 max-w-xl text-balance text-base text-ink-faint dark:text-zinc-400 sm:text-xl">
           Paste a Git URL. Codex pulls the repo, analyzes its architecture, then
           writes a from-0-to-1, bilingual, interactive course — one mechanism at a time.
         </p>
 
-        <form onSubmit={submit} className="mt-9 flex w-full max-w-xl items-center gap-2">
-          <div className="relative flex-1">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint dark:text-zinc-500">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
-            </span>
-            <input
-              autoFocus
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://github.com/owner/repo"
-              spellCheck={false}
-              className="w-full rounded-xl2 border border-line bg-white/70 py-3.5 pl-10 pr-3 text-sm shadow-soft outline-none transition placeholder:text-ink-faint focus:border-brand focus:ring-2 focus:ring-brand/30 dark:border-zinc-700 dark:bg-zinc-900/60 dark:placeholder:text-zinc-600"
-            />
-          </div>
+        <form onSubmit={submit} className="mt-8 flex w-full max-w-xl items-center gap-2">
+          <input
+            autoFocus
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://github.com/owner/repo"
+            spellCheck={false}
+            className="h-11 w-full rounded-lg border border-line bg-white px-3.5 text-sm outline-none transition placeholder:text-ink-faint focus:border-zinc-400 focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-800 dark:bg-zinc-900 dark:placeholder:text-zinc-600 dark:focus:border-zinc-600"
+          />
           <button
             type="submit"
             disabled={loading || !url.trim()}
-            className="inline-flex h-[50px] items-center justify-center gap-1.5 rounded-lg bg-ink px-6 text-sm font-medium text-white transition-colors hover:bg-ink-soft disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-ink px-5 text-sm font-medium text-white transition-colors hover:bg-ink-soft disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            {loading ? (
-              <>
-                <Spinner /> Starting…
-              </>
-            ) : (
-              <>Generate →</>
-            )}
+            {loading ? (<><Spinner /> Starting…</>) : (<>Generate →</>)}
           </button>
         </form>
 
         {err && <p className="mt-3 text-sm text-rose-500">{err}</p>}
 
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs text-ink-faint dark:text-zinc-500">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-ink-faint dark:text-zinc-500">
           <span>Try:</span>
           {EXAMPLES.map((x) => (
             <button
               key={x.url}
               type="button"
               onClick={() => setUrl(x.url)}
-              className="rounded-full border border-line px-2.5 py-0.5 font-mono transition hover:border-brand/50 hover:text-brand dark:border-zinc-700"
+              className="rounded-md px-2 py-0.5 font-mono text-ink-faint transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
             >
               {x.label}
             </button>
           ))}
         </div>
 
-        <div className="mt-14 grid w-full max-w-2xl grid-cols-1 gap-3 text-left sm:grid-cols-3">
+        <div className="mt-16 grid w-full max-w-2xl grid-cols-1 gap-3 text-left sm:grid-cols-3">
           {[
             { n: "01", t: "Ingest", d: "Clone & map the repo — tree, LOC, key files." },
             { n: "02", t: "Layer", d: "An architect agent plans s01 → sN, easy→hard." },
