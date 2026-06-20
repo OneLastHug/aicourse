@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { extractJson, assertShape, JsonExtractionError } from "../src/codex/parse";
 import { isOutline } from "../src/codex/guards";
-import { sampleOutline } from "../src/sample/fixtures";
+import { sampleCourse } from "../src/sample/fixtures";
 
 test("extracts bare JSON object", () => {
   const out = extractJson('{"a":1,"b":[2,3]}');
@@ -34,7 +34,7 @@ test("throws on missing JSON", () => {
 });
 
 test("sample outline passes the guard", () => {
-  assert.equal(isOutline(sampleOutline), true);
+  assert.equal(isOutline(sampleCourse.outline), true);
 });
 
 test("assertShape rejects bad shapes", () => {

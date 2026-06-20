@@ -1,0 +1,40 @@
+import type { Course, ProgressEvent, Repo2LearnConfig } from "../types";
+import { translatePrompt } from "../prompts/translate";
+import type { CodexDriver } from "../codex/driver";
+import { Cache } from "../util/cache";
+import { extractJson } from "../codex/parse";
+import { flatEnLessons } from "./curriculum";
+import type { EnCourse } from "./validate";
+
+/** Stage 6 — translate the validated English course to bilingual (EN→ZH), whole-course. */
+export async function runTranslateStage(args: {
+  enCourse: EnCourse; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
+}): Promise<Course> {
+  const { enCourse, driver, cfg, cache, onProgress } = args;
+  const flat = flatEnLessons(enCourse.outline);
+  const key = cache.key({ stage: "translate", sha: enCourse.outline.course.repo.sha, n: flat.length, v: 2 });
+  const cached = await cache.get<Course>(key);
+  if (cached) { onProgress?.({ type: "log", level: "info", message: "translate cache hit" }); return cached; }
+
+  const payload = JSON.stringify({
+    course: enCourse.outline.course,
+    sections: enCourse.outline.sections,
+    lessons: flat.map((l) => ({ id: l.id, ...((enCourse.lessons[l.id] as object) ?? {}) })),
+  });
+  const res = await driver.run({ label: "translate", prompt: translatePrompt(payload), cwd: process.cwd() });
+  const course = extractJson<Course>(res.text);
+  flattenOutline(course);
+  await cache.set(key, course);
+  return course;
+}
+
+/** Ensure outline.lessons (flat) is populated from sections, for site backward-compat. */
+export function flattenOutline(course: Course): void {
+  if (!course.outline.sections) return;
+  course.outline.lessons = course.outline.sections.flatMap((s) => s.lessons);
+  for (const l of course.outline.lessons) {
+    if (!course.lessons[l.id]) {
+      course.lessons[l.id] = { id: l.id, problem: l.theProblem, howItWorks: [], deepDive: { zh: "", en: "" }, references: [], compare: { rows: [] }, loc: 0, status: "failed", error: "missing body" };
+    }
+  }
+}

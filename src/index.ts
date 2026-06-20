@@ -107,7 +107,9 @@ async function main(): Promise<void> {
     ? new MockCodexDriver({ responder: sampleResponder, delayMs: 120 })
     : new CliCodexDriver(cfg.codex);
 
-  await runPipeline({ cfg, driver });
+  const course = await runPipeline({ cfg, driver });
+  const { runRenderStage } = await import("./pipeline/render");
+  await runRenderStage({ course, cfg });
   log.ok("Done. Run the site with:  npm -w site run dev");
 }
 

@@ -1,40 +1,49 @@
 /**
- * Core data contracts for Repo2Learn.
+ * Repo2Learn data contracts (v2 — depth-first, English-first).
  *
- * The orchestrator produces these structures; the Next.js site consumes only
- * these structures. Keeping them in one place decouples the two layers and
- * makes the whole pipeline unit-testable offline (via a mock codex driver).
+ * Generation produces English (En*) types → validated → translated to Bi types
+ * (the final Course the site renders). The final Outline carries both `sections`
+ * (layered grouping) and a flattened `lessons` (backward-compat for the site).
  */
 
-/** A bilingual string — every user-facing text field uses this shape. */
-export interface Bi {
-  zh: string;
-  en: string;
-}
-
+/** Bilingual string — every user-facing text field in the FINAL output. */
+export interface Bi { zh: string; en: string; }
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 
-/* Stage 0 — RepoContext (produced locally, no codex) */
-export interface KeyFile {
-  path: string;
-  role: string;
-  excerpt: string;
-}
-
+/* ============================ Repo context (Stage 0) ============================ */
 export interface RepoContext {
   url: string;
   localPath: string;
   sha: string;
   name: string;
   defaultBranch: string;
-  summary: Bi;
+  summary: string; // English summary (README-derived); the architect refines it
   loc: number;
   languages: Record<string, number>;
   tree: string[];
-  keyFiles: KeyFile[];
 }
 
-/* Stage 1 — Outline (the layered breakdown s01..sN) */
+/* ===================== Final (bilingual) output — site reads this ===================== */
+export interface CodeBlock {
+  file: string;
+  language: string;
+  snippet: string;
+  highlightLines: number[];
+  /** Optional "before" snippet for before/after comparisons. */
+  before?: string;
+}
+export interface HowItWorksStep {
+  title: Bi;
+  desc: Bi;
+  code?: CodeBlock;
+  /** Optional before-snippet (alternative to code.before). */
+  beforeCode?: CodeBlock;
+  /** Line-by-line anatomy notes (deep mode). */
+  anatomy?: Bi;
+}
+export interface CompareRow { label: Bi; a: string; b: string; }
+export interface Reference { title: string; url: string; }
+
 export interface OutlineLesson {
   id: string;
   title: Bi;
@@ -45,39 +54,18 @@ export interface OutlineLesson {
   prereq: string[];
   tags: string[];
 }
-
-export interface Outline {
-  course: {
-    title: Bi;
-    tagline: Bi;
-    repo: { url: string; name: string; sha: string };
-  };
+export interface OutlineSection {
+  id: string;
+  title: Bi;
+  summary: Bi;
   lessons: OutlineLesson[];
 }
-
-/* Stage 2 — Lesson (filled per-lesson by a concurrent codex sub-agent) */
-export interface HowItWorksStep {
-  title: Bi;
-  desc: Bi;
-  code?: {
-    file: string;
-    language: string;
-    snippet: string;
-    highlightLines: number[];
-  };
+export interface Outline {
+  course: { title: Bi; tagline: Bi; repo: { url: string; name: string; sha: string }; spine?: Bi };
+  sections: OutlineSection[];
+  /** Flattened lessons across all sections (backward-compat for the site). */
+  lessons: OutlineLesson[];
 }
-
-export interface CompareRow {
-  label: Bi;
-  a: string;
-  b: string;
-}
-
-export interface Reference {
-  title: string;
-  url: string;
-}
-
 export interface Lesson {
   id: string;
   problem: Bi;
@@ -89,14 +77,65 @@ export interface Lesson {
   status: "ok" | "failed";
   error?: string;
 }
+export interface Course { outline: Outline; lessons: Record<string, Lesson>; }
 
-/** The fully assembled course, ready to render. */
-export interface Course {
-  outline: Outline;
-  lessons: Record<string, Lesson>;
+/* ===================== English (generation) types ===================== */
+export interface EnOutlineLesson {
+  id: string;
+  title: string;
+  difficulty: Difficulty;
+  theProblem: string;
+  objective: string;
+  mechanism: string; // one-line: the single mechanism this lesson teaches
+  filesToRead: string[]; // real paths the lesson agent must read in full
+  prereq: string[];
+  tags: string[];
+}
+export interface EnOutlineSection {
+  id: string; // e.g. "layer-1"
+  title: string;
+  summary: string;
+  /** How this layer advances the running example spine. */
+  spine: string;
+  lessons: EnOutlineLesson[];
+}
+export interface EnOutline {
+  course: { title: string; tagline: string; repo: { url: string; name: string; sha: string }; spine: string };
+  sections: EnOutlineSection[];
+}
+export interface EnCode { file: string; language: string; snippet: string; highlightLines: number[]; before?: string; }
+export interface EnStep {
+  title: string;
+  desc: string;
+  code?: EnCode;
+  beforeCode?: EnCode;
+  anatomy?: string;
+}
+export interface EnLesson {
+  id: string;
+  problem: string;
+  howItWorks: EnStep[];
+  deepDive: string;
+  references: Reference[];
+  compare: { rows: { label: string; a: string; b: string }[] };
+  loc: number;
+  filesUsed: string[];
 }
 
-/* Config */
+/* ===================== Validation types ===================== */
+export interface ValidationIssue {
+  severity: "error" | "warning";
+  lessonId?: string;
+  problem: string;
+  fix?: string;
+}
+export interface ValidationResult {
+  passed: boolean;
+  issues: ValidationIssue[];
+  summary: string;
+}
+
+/* ===================== Config ===================== */
 export interface CodexConfig {
   binary: string;
   model: string;
@@ -105,7 +144,6 @@ export interface CodexConfig {
   timeoutMs: number;
   extraArgs: string[];
 }
-
 export interface Repo2LearnConfig {
   codex: CodexConfig;
   languages: ("zh" | "en")[];
@@ -116,16 +154,16 @@ export interface Repo2LearnConfig {
   useMock: boolean;
   noCache: boolean;
   repo: string;
+  /** Run the validation + fix loop. */
+  validate: boolean;
+  /** Max validation fix iterations (0 = no fix loop, just report). */
+  maxFixRounds: number;
 }
 
 export const DEFAULT_CONFIG: Repo2LearnConfig = {
   codex: {
-    binary: "codex",
-    model: "gpt-5.5",
-    reasoningEffort: "xhigh",
-    concurrency: 5,
-    timeoutMs: 300 * 60 * 1000,  // 300 min per codex call
-    extraArgs: [],
+    binary: "codex", model: "gpt-5.5", reasoningEffort: "xhigh",
+    concurrency: 5, timeoutMs: 300 * 60 * 1000, extraArgs: [],
   },
   languages: ["zh", "en"],
   targetLessonCount: 10,
@@ -135,12 +173,15 @@ export const DEFAULT_CONFIG: Repo2LearnConfig = {
   useMock: false,
   noCache: false,
   repo: "",
+  validate: true,
+  maxFixRounds: 1,
 };
 
 /** Structured progress event streamed to the web client during generation. */
 export type ProgressEvent =
-  | { type: "stage"; stage: "ingest" | "outline" | "content" | "render" | "done"; label?: string }
-  | { type: "plan"; total: number; lessons: { id: string; title: Bi; difficulty: Difficulty }[] }
+  | { type: "stage"; stage: "ingest" | "analyze" | "curriculum" | "lessons" | "validate1" | "validate2" | "translate" | "render" | "done"; label?: string }
+  | { type: "plan"; total: number; lessons: { id: string; title: { zh: string; en: string }; difficulty: Difficulty }[] }
   | { type: "lesson"; id: string; status: "start" | "ok" | "failed"; label?: string }
+  | { type: "validation"; round: 1 | 2; passed: boolean; issueCount: number }
   | { type: "log"; level: "info" | "warn" | "error"; message: string }
   | { type: "error"; message: string };

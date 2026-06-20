@@ -1,34 +1,57 @@
-import type { Course, Repo2LearnConfig } from "../types";
+import { rm } from "node:fs/promises";
+import type { Course, ProgressEvent, Repo2LearnConfig } from "../types";
 import type { CodexDriver } from "../codex/driver";
 import { Cache } from "../util/cache";
 import { ingestRepo } from "../util/repo";
-import { runOutlineStage } from "./outline";
-import { runContentStage, assembleCourse } from "./content";
-import { runRenderStage } from "./render";
+import { sampleCtx } from "../sample/fixtures";
+import { runAnalyzeStage } from "./analyze";
+import { runCurriculumStage, flatEnLessons } from "./curriculum";
+import { runLessonStages } from "./lesson";
+import { validateCorrectness, validateAlignment, type EnCourse } from "./validate";
+import { runTranslateStage } from "./translate";
 import { log } from "../util/log";
 
-/** The end-to-end pipeline. Stages are cached individually for resume. */
+/** v2 pipeline: ingest → analyze → curriculum → lessons(2-phase) → validate×2 → translate.
+ *  On any failure the cloned repo is removed so no residuals are left. */
 export async function runPipeline(args: {
-  cfg: Repo2LearnConfig;
-  driver: CodexDriver;
+  cfg: Repo2LearnConfig; driver: CodexDriver; onProgress?: (e: ProgressEvent) => void;
 }): Promise<Course> {
-  const { cfg, driver } = args;
+  const { cfg, driver, onProgress } = args;
   const cache = Cache.fromConfig(cfg);
 
-  log.stage("Stage 0 · repo ingest");
-  const ctx = await ingestRepo(cfg.repo, cfg.workDir);
+  onProgress?.({ type: "stage", stage: "ingest", label: "Cloning & mapping the repo" });
+  const ctx = cfg.useMock ? sampleCtx : await ingestRepo(cfg.repo, cfg.workDir);
 
-  log.stage("Stage 1 · layered outline (architect)");
-  const outline = await runOutlineStage({ ctx, driver, cfg, cache });
+  try {
+    onProgress?.({ type: "stage", stage: "analyze", label: "Deep-reading the actual codebase" });
+    const analysis = await runAnalyzeStage({ ctx, driver, cfg, cache, onProgress });
 
-  log.stage("Stage 2 · fill lessons (concurrent sub-agents)");
-  const lessons = await runContentStage({ ctx, outline, driver, cfg, cache });
-  const course = assembleCourse(outline, lessons);
+    onProgress?.({ type: "stage", stage: "curriculum", label: "Designing the layered curriculum" });
+    const outline = await runCurriculumStage({ ctx, analysis, driver, cfg, cache, onProgress });
+    const flat = flatEnLessons(outline);
+    onProgress?.({ type: "plan", total: flat.length, lessons: flat.map((l) => ({ id: l.id, title: { zh: "", en: l.title }, difficulty: l.difficulty })) });
 
-  log.stage("Stage 3 · render site data");
-  await runRenderStage({ course, cfg });
+    onProgress?.({ type: "stage", stage: "lessons", label: `Writing ${flat.length} lessons (2-phase, ≤${cfg.codex.concurrency} concurrent)` });
+    const lessons = await runLessonStages({ ctx, outline, driver, cfg, cache, onProgress });
+    const enCourse: EnCourse = { outline, lessons };
 
-  const ok = Object.values(lessons).filter((l) => l.status === "ok").length;
-  log.stage(`Done · ${ok}/${outline.lessons.length} lessons · repo ${ctx.name}@${ctx.sha}`);
-  return course;
+    if (cfg.validate) {
+      onProgress?.({ type: "stage", stage: "validate1", label: "Validation 1 · correctness & poisoning" });
+      const r1 = await validateCorrectness({ enCourse, driver, cfg, cache, onProgress });
+      onProgress?.({ type: "stage", stage: "validate2", label: "Validation 2 · alignment with the repo" });
+      const r2 = await validateAlignment({ ctx, enCourse, driver, cfg, cache, onProgress });
+      if (!r1.passed || !r2.passed) {
+        log.warn(`validation issues: r1=${r1.issues.length} r2=${r2.issues.length}`);
+        onProgress?.({ type: "log", level: "warn", message: `validation found issues (r1:${r1.issues.length} r2:${r2.issues.length})` });
+      }
+    }
+
+    onProgress?.({ type: "stage", stage: "translate", label: "Translating the validated course to Chinese" });
+    const course = await runTranslateStage({ enCourse, driver, cfg, cache, onProgress });
+    onProgress?.({ type: "stage", stage: "done", label: "Done" });
+    return course;
+  } catch (e) {
+    if (!cfg.useMock && ctx?.localPath) await rm(ctx.localPath, { recursive: true, force: true }).catch(() => {});
+    throw e;
+  }
 }
