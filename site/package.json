@@ -15,7 +15,7 @@
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "shiki": "4.2.0",
-    "repo2learn": "*"
+    "repo2learn": "file:.."
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
