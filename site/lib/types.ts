@@ -71,7 +71,7 @@ export interface Course {
 /** Progress event streamed from the server during generation (SSE). */
 export type ProgressEvent =
   | { type: "stage"; stage: "ingest" | "outline" | "content" | "render" | "done"; label?: string }
-  | { type: "plan"; total: number }
+  | { type: "plan"; total: number; lessons: { id: string; title: { zh: string; en: string }; difficulty: Difficulty }[] }
   | { type: "lesson"; id: string; status: "start" | "ok" | "failed"; label?: string }
   | { type: "log"; level: "info" | "warn" | "error"; message: string }
   | { type: "error"; message: string };

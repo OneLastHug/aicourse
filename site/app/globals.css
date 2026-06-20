@@ -52,3 +52,14 @@ html.dark .btn-primary { @apply bg-white text-zinc-900 hover:bg-zinc-200; }
 }
 
 .step-panel { animation: fadeUp 0.3s ease both; }
+
+/* Animated sheen for in-progress bars (advances while running) */
+.shimmer-bar {
+  background-image: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.45) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

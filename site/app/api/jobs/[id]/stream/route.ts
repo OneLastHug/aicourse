@@ -4,7 +4,7 @@ import type { ProgressEvent } from "repo2learn/src/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 // Generations can take minutes; keep the stream open generously.
-export const maxDuration = 600;
+export const maxDuration = 18000; // 300 min
 
 function isTerminal(e: ProgressEvent): boolean {
   return (e.type === "stage" && e.stage === "done") || e.type === "error";

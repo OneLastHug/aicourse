@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, readdir } from "node:fs/promises";
+import { mkdir, readFile, writeFile, readdir, rm } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import type { Course } from "repo2learn/src/types";
@@ -62,4 +62,8 @@ export async function listCourses(): Promise<CourseMeta[]> {
   } catch {
     return [];
   }
+}
+
+export async function removeCourse(repoId: string): Promise<void> {
+  await rm(join(COURSES_DIR, repoId), { recursive: true, force: true }).catch(() => {});
 }

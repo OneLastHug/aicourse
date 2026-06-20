@@ -124,7 +124,7 @@ export const DEFAULT_CONFIG: Repo2LearnConfig = {
     model: "gpt-5.5",
     reasoningEffort: "xhigh",
     concurrency: 5,
-    timeoutMs: 10 * 60 * 1000,
+    timeoutMs: 300 * 60 * 1000,  // 300 min per codex call
     extraArgs: [],
   },
   languages: ["zh", "en"],
@@ -140,7 +140,7 @@ export const DEFAULT_CONFIG: Repo2LearnConfig = {
 /** Structured progress event streamed to the web client during generation. */
 export type ProgressEvent =
   | { type: "stage"; stage: "ingest" | "outline" | "content" | "render" | "done"; label?: string }
-  | { type: "plan"; total: number }
+  | { type: "plan"; total: number; lessons: { id: string; title: Bi; difficulty: Difficulty }[] }
   | { type: "lesson"; id: string; status: "start" | "ok" | "failed"; label?: string }
   | { type: "log"; level: "info" | "warn" | "error"; message: string }
   | { type: "error"; message: string };
