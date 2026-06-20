@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { TopBar } from "@/components/TopBar";
@@ -22,7 +22,10 @@ export default function ProgressPage() {
   const [stage, setStage] = useState("queued");
   const [plan, setPlan] = useState<PlanLesson[]>([]);
   const [lessonStatus, setLessonStatus] = useState<Record<string, "start" | "ok" | "failed">>({});
-  const [done, setDone] = useState(0);
+  const done = useMemo(
+    () => Object.values(lessonStatus).filter((s) => s === "ok" || s === "failed").length,
+    [lessonStatus],
+  );
   const [status, setStatus] = useState<Status>("running");
   const [error, setError] = useState<string | null>(null);
   const [activity, setActivity] = useState("");
@@ -43,7 +46,6 @@ export default function ProgressPage() {
       setPlan(e.lessons);
     } else if (e.type === "lesson") {
       setLessonStatus((prev) => ({ ...prev, [e.id]: e.status }));
-      if (e.status === "ok" || e.status === "failed") setDone((d) => d + 1);
     } else if (e.type === "log") {
       const line = "[" + e.level + "] " + e.message;
       setActivity(line);
@@ -65,7 +67,6 @@ export default function ProgressPage() {
         setRepoId(j.repoId || null);
         if (j.startedAt) setStartedAt(j.startedAt);
         setStage(j.stage || "queued");
-        setDone(j.lessonsDone || 0);
         if (j.status === "done") setStatus("done");
         if (j.status === "error") { setStatus("error"); setError(j.error || t(locale, "prog.errorUnknown")); }
         for (const e of (j.events || []) as ProgressEvent[]) applyEvent(e, true);
