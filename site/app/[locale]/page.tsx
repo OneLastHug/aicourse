@@ -29,7 +29,7 @@ export default async function Home({
     <>
       <TopBar title={t(loc, "brand")} locale={loc} />
       <main className="min-h-screen">
-        <section className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-2xl flex-col items-center justify-center px-5 py-16 text-center">
+        <section className="mx-auto flex max-w-2xl flex-col items-center px-5 pt-16 pb-8 text-center">
           <div className="chip mb-6">
             <span className="h-1.5 w-1.5 rounded-full bg-brand" />
             {t(loc, "home.badge")}
