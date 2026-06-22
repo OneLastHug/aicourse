@@ -11,6 +11,10 @@ export async function runTranslateStage(args: {
   enCourse: EnCourse; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
 }): Promise<Course> {
   const { enCourse, driver, cfg, cache, onProgress } = args;
+  // Defensive: if outline or sections are missing, the course can't be translated.
+  if (!enCourse?.outline?.sections?.length) {
+    throw new Error("translate: enCourse.outline.sections is missing or empty (pipeline assembly bug)");
+  }
   const flat = flatEnLessons(enCourse.outline);
   const key = cache.key({ stage: "translate", sha: enCourse.outline.course.repo.sha, n: flat.length, v: 2 });
   const cached = await cache.get<Course>(key);

@@ -45,6 +45,8 @@ class JobManager {
   }
 
   create(repoUrl: string, repoId: string): string {
+    // Clean up old failed records for this repo before starting fresh.
+    void this.cleanupFailedForRepo(repoId);
     const id = randomUUID();
     const now = Date.now();
     const state: JobState = {
@@ -171,6 +173,13 @@ class JobManager {
   }
 
   /** Auto-retry: every 10 min, retry failed jobs whose repo isn't already running/done. */
+  /** Delete all failed job records for a given repo (avoid duplicates on retry). */
+  private async cleanupFailedForRepo(repoId: string): Promise<void> {
+    for (const r of await listJobRecords()) {
+      if (r.repoId === repoId && r.status === "error") await removeJobRecord(r.id).catch(() => {});
+    }
+  }
+
   async autoRetry(): Promise<void> {
     const failed = await this.listFailed();
     if (failed.length === 0) return;

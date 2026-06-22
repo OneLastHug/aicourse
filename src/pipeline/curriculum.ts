@@ -34,4 +34,4 @@ function normalizeEn(o: EnOutline): void {
   });
 }
 
-export function flatEnLessons(o: EnOutline) { return o.sections.flatMap((s) => s.lessons); }
+export function flatEnLessons(o: EnOutline) { return (o?.sections ?? []).flatMap((s) => s?.lessons ?? []); }
