@@ -29,5 +29,8 @@ Return STRICT JSON ONLY (English only):
   "loc": 0,
   "filesUsed": ["real/path"]
 }
-JSON only, English only.`;
+Output RFC 8259 JSON ONLY — start with '{' and end with '}'. Use double quotes for
+every key and string; inside "snippet" escape newlines as \\n, double-quotes as \\"
+and backslashes as \\\\. No single quotes, no comments, no trailing commas, no
+markdown fences, no prose before or after. JSON only, English only.`;
 }

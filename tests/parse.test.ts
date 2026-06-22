@@ -33,6 +33,47 @@ test("throws on missing JSON", () => {
   assert.throws(() => extractJson("no json here at all"), JsonExtractionError);
 });
 
+/* ---- tolerant repair of JS-object-literal-ish output from the model ---- */
+
+test("tolerates unquoted keys (the production lesson:write failure)", () => {
+  const out = extractJson('{ id: "s01", loc: 0 }');
+  assert.deepEqual(out, { id: "s01", loc: 0 });
+});
+
+test("tolerates single-quoted keys and values", () => {
+  const out = extractJson("{ 'id': 's01', 'n': 2 }");
+  assert.deepEqual(out, { id: "s01", n: 2 });
+});
+
+test("tolerates // and /* */ comments", () => {
+  const out = extractJson('{ // header\n "id": "s01" /* trailing */ }');
+  assert.deepEqual(out, { id: "s01" });
+});
+
+test("tolerates trailing commas", () => {
+  const out = extractJson('{ "a": [1, 2, 3,], "b": 4, }');
+  assert.deepEqual(out, { a: [1, 2, 3], b: 4 });
+});
+
+test("repair never alters code inside double-quoted strings", () => {
+  // unquoted key outside, but a snippet that itself contains `key:`, `//`, `,}`, braces
+  const out = extractJson('{ snippet: "const o = { a: 1, }; // note\\nif(x){y}" }');
+  assert.equal(
+    (out as { snippet: string }).snippet,
+    "const o = { a: 1, }; // note\nif(x){y}",
+  );
+});
+
+test("single-quoted value keeps an embedded double quote", () => {
+  const out = extractJson("{ 'msg': 'he said \"hi\"' }");
+  assert.equal((out as { msg: string }).msg, 'he said "hi"');
+});
+
+test("prefers the JSON fence over a leading non-JSON code fence", () => {
+  const out = extractJson('```ts\nconst x = 1\n```\nthen:\n```json\n{"id":"s01"}\n```');
+  assert.deepEqual(out, { id: "s01" });
+});
+
 test("sample outline passes the guard", () => {
   assert.equal(isOutline(sampleCourse.outline), true);
 });
