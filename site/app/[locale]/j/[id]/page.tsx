@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { TopBar } from "@/components/TopBar";
 import { pick } from "@/lib/content";
 import { t } from "@/lib/i18n";
@@ -27,6 +27,18 @@ export default function ProgressPage() {
   const params = useParams<{ locale: string; id: string }>();
   const locale: Locale = params?.locale === "zh" ? "zh" : "en";
   const id = params.id;
+  const router = useRouter();
+  const [retrying, setRetrying] = useState(false);
+  async function retryGen() {
+    if (!repoUrl || retrying) return;
+    setRetrying(true);
+    try {
+      const res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ repoUrl }) });
+      const data = await res.json();
+      if (data.ready) router.push("/" + locale + "/c/" + data.repoId);
+      else if (data.id) router.push("/" + locale + "/j/" + data.id);
+    } catch { setRetrying(false); }
+  }
 
   const [repoUrl, setRepoUrl] = useState("");
   const [repoId, setRepoId] = useState<string | null>(null);
@@ -117,8 +129,8 @@ export default function ProgressPage() {
 
   const stages = [
     { label: t(locale, "stage.ingest"), sub: t(locale, "stage.ingest.d") },
-    { label: t(locale, "stage.architect"), sub: t(locale, "stage.architect.d") },
-    { label: t(locale, "stage.fill"), sub: t(locale, "stage.fill.d") },
+    { label: t(locale, "stage.analyze"), sub: t(locale, "stage.analyze.d") },
+    { label: t(locale, "stage.lessons"), sub: t(locale, "stage.lessons.d") },
     { label: t(locale, "stage.done"), sub: t(locale, "stage.done.d") },
   ];
   // The pipeline emits fine-grained stages; collapse each onto one of the 4 rail
@@ -224,7 +236,13 @@ export default function ProgressPage() {
           {status === "error" && (
             <div className="mt-7">
               <p className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-4 text-sm text-rose-600 dark:text-rose-400">{error || t(locale, "prog.errorUnknown")}</p>
-              <Link href={"/" + locale + "/"} className="mt-3 inline-flex items-center gap-1 text-sm text-ink-faint underline-offset-2 hover:text-brand dark:text-zinc-400">← {t(locale, "brand")}</Link>
+              <div className="mt-3 flex items-center gap-3">
+                <button type="button" onClick={() => retryGen()} disabled={retrying || !repoUrl}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-white transition hover:bg-ink-soft disabled:opacity-50 dark:bg-white dark:text-zinc-900">
+                  {retrying ? <Dot /> : null}{t(locale, "prog.retry")} →
+                </button>
+                <Link href={"/" + locale + "/"} className="text-sm text-ink-faint underline-offset-2 hover:text-brand dark:text-zinc-400">← {t(locale, "brand")}</Link>
+              </div>
             </div>
           )}
         </section>

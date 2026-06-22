@@ -4,7 +4,7 @@ import type { ProgressEvent } from "repo2learn/src/types";
 import { generateCourse } from "./generate";
 import {
   repoIdFor, saveCourse, removeCourse, removeRepoClone, getMeta,
-  saveJobRecord, listJobRecords,
+  saveJobRecord, removeJobRecord, listJobRecords,
   type CourseMeta, type JobRecord,
 } from "./store";
 
@@ -36,13 +36,7 @@ class JobManager {
           r.error = "interrupted (server restarted)";
           r.updatedAt = Date.now();
           await saveJobRecord(r);
-          // A running record means the job never finished, so anything it wrote
-          // is residue from a dead process — drop the clone and any partial
-          // course. Guard the course on meta.json so a previously-completed
-          // course for the same repo (which can't have a running job, per the
-          // generate-route dedupe) is never collateral-damaged.
-          await removeRepoClone(r.repoUrl);
-          if (!(await getMeta(r.repoId))) await removeCourse(r.repoId);
+          // Keep clone + cache so the job can be retried (manual or auto).
         }
       }
     } catch {
@@ -160,11 +154,7 @@ class JobManager {
       await saveCourse(repoId, course, meta);
       await saveJobRecord(job.state);
     } catch (e) {
-      // Failed generation: drop the clone and any partial course so nothing is
-      // left on disk. (The pipeline also removes its checkout, but doing it here
-      // covers failures raised outside the pipeline's own try.)
-      await removeRepoClone(job.state.repoUrl).catch(() => {});
-      await removeCourse(repoId).catch(() => {});
+      // Keep the clone + cache so a retry can resume from the last checkpoint.
       job.state.status = "error";
       job.state.error = (e as Error).message;
       this.emit(id, { type: "error", message: (e as Error).message });
@@ -173,6 +163,46 @@ class JobManager {
       this.runningByRepo.delete(repoId);
     }
   }
+
+  /** List failed jobs (persisted, within 24h) for the dashboard. */
+  async listFailed(): Promise<JobRecord[]> {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    return (await listJobRecords()).filter((r) => r.status === "error" && r.updatedAt > cutoff);
+  }
+
+  /** Auto-retry: every 10 min, retry failed jobs whose repo isn't already running/done. */
+  async autoRetry(): Promise<void> {
+    for (const r of await this.listFailed()) {
+      if (await this.runningIdFor(r.repoId)) continue;  // already running
+      if (await getMeta(r.repoId)) continue;            // already completed
+      console.warn("[repo2learn] auto-retrying failed job: " + r.repoUrl);
+      this.create(r.repoUrl, r.repoId);
+    }
+  }
+
+  /** Auto-cleanup: every 1h, remove jobs stale > 24h (no progress). */
+  async autoCleanup(): Promise<void> {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    for (const r of await listJobRecords()) {
+      if (r.updatedAt < cutoff) {
+        await removeJobRecord(r.id).catch(() => {});
+        if (!(await getMeta(r.repoId))) {
+          await removeRepoClone(r.repoUrl).catch(() => {});
+          await removeCourse(r.repoId).catch(() => {});
+        }
+      }
+    }
+  }
 }
 
 export const jobManager = new JobManager();
+
+// Background timers (single-process next start). Guard against HMR duplicates.
+declare const globalThis: { __r2lTimers?: boolean };
+if (!globalThis.__r2lTimers && process.env.NEXT_RUNTIME === "nodejs") {
+  globalThis.__r2lTimers = true;
+  setInterval(() => { void jobManager.autoRetry(); }, 10 * 60 * 1000);
+  setInterval(() => { void jobManager.autoCleanup(); }, 60 * 60 * 1000);
+  // Run once at startup (after 30s delay to let the server settle).
+  setTimeout(() => { void jobManager.autoRetry(); }, 30_000);
+}
