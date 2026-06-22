@@ -172,12 +172,44 @@ class JobManager {
 
   /** Auto-retry: every 10 min, retry failed jobs whose repo isn't already running/done. */
   async autoRetry(): Promise<void> {
-    for (const r of await this.listFailed()) {
-      if (await this.runningIdFor(r.repoId)) continue;  // already running
-      if (await getMeta(r.repoId)) continue;            // already completed
-      console.warn("[repo2learn] auto-retrying failed job: " + r.repoUrl);
-      this.create(r.repoUrl, r.repoId);
+    const failed = await this.listFailed();
+    if (failed.length === 0) return;
+
+    // Group failed jobs by repoId.
+    const byRepo = new Map<string, JobRecord[]>();
+    for (const r of failed) {
+      const arr = byRepo.get(r.repoId);
+      if (arr) arr.push(r); else byRepo.set(r.repoId, [r]);
     }
+
+    for (const [repoId, records] of byRepo) {
+      // Case 1: a completed course already exists for this repo.
+      // → All failed records are redundant. Delete them (keep the course).
+      if (await getMeta(repoId)) {
+        for (const r of records) await removeJobRecord(r.id).catch(() => {});
+        continue; // don't retry — course is done
+      }
+
+      // Case 2: multiple failed jobs for the same repo.
+      // → Keep the one that progressed the furthest, delete the rest.
+      let keeper = records[0]!;
+      if (records.length > 1) {
+        records.sort((a, b) => this.progressScore(b) - this.progressScore(a));
+        keeper = records[0]!;
+        for (const r of records.slice(1)) await removeJobRecord(r.id).catch(() => {});
+      }
+
+      // Case 3: retry the keeper (if not already running).
+      if (await this.runningIdFor(repoId)) continue;
+      console.warn("[repo2learn] auto-retrying: " + keeper.repoUrl);
+      this.create(keeper.repoUrl, repoId);
+    }
+  }
+
+  /** Higher = more progress. Stage ordinal dominates; lessonsDone breaks ties. */
+  private progressScore(r: JobRecord): number {
+    const order = ["queued","ingest","analyze","curriculum","lessons","validate1","validate2","translate","done"];
+    return (order.indexOf(r.stage) >= 0 ? order.indexOf(r.stage) : 0) * 1000 + r.lessonsDone;
   }
 
   /** Auto-cleanup: every 1h, remove jobs stale > 24h (no progress). */
