@@ -3,7 +3,7 @@ import { validateLessonCorrectnessPrompt } from "../prompts/validateLessonCorrec
 import { validateLessonAlignmentPrompt } from "../prompts/validateLessonAlignment";
 import type { CodexDriver } from "../codex/driver";
 import { Cache } from "../util/cache";
-import { createLimiter } from "../util/concurrency";
+import { getGlobalLimiter } from "../util/concurrency";
 import { extractJson } from "../codex/parse";
 import { isValidationResult } from "../codex/guards";
 import { flatEnLessons } from "./curriculum";
@@ -17,7 +17,7 @@ export async function validateCorrectness(args: {
 }): Promise<ValidationResult> {
   const { enCourse, driver, cfg, onProgress } = args;
   const flat = flatEnLessons(enCourse.outline);
-  const limit = createLimiter(cfg.codex.concurrency);
+  const limit = getGlobalLimiter(cfg.codex.concurrency);
   log.step("validate1: " + flat.length + " lessons (concurrent " + cfg.codex.concurrency + ")");
 
   const results = await Promise.all(flat.map((l) => limit(async () => {
@@ -42,7 +42,7 @@ export async function validateAlignment(args: {
 }): Promise<ValidationResult> {
   const { ctx, enCourse, driver, cfg, onProgress } = args;
   const flat = flatEnLessons(enCourse.outline);
-  const limit = createLimiter(cfg.codex.concurrency);
+  const limit = getGlobalLimiter(cfg.codex.concurrency);
   log.step("validate2: " + flat.length + " lessons (concurrent " + cfg.codex.concurrency + ")");
 
   const results = await Promise.all(flat.map((l) => limit(async () => {

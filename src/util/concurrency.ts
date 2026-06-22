@@ -43,3 +43,11 @@ export function createLimiter(n: number): Limiter {
   Object.defineProperty(limiter, "pending", { get: () => queue.length });
   return limiter as Limiter;
 }
+
+
+/** Global shared limiter — all jobs share one pool of N concurrent slots. */
+export function getGlobalLimiter(n: number): Limiter {
+  const g = globalThis as { __r2lLimiter?: Limiter };
+  if (!g.__r2lLimiter) g.__r2lLimiter = createLimiter(n);
+  return g.__r2lLimiter;
+}

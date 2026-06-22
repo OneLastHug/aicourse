@@ -3,7 +3,7 @@ import { lessonReadPrompt } from "../prompts/lessonRead";
 import { lessonWritePrompt } from "../prompts/lessonWrite";
 import type { CodexDriver } from "../codex/driver";
 import { Cache } from "../util/cache";
-import { createLimiter } from "../util/concurrency";
+import { getGlobalLimiter } from "../util/concurrency";
 import { configFingerprint } from "../config";
 import { codexJson } from "./_call";
 import { isEnLesson } from "../codex/guards";
@@ -16,7 +16,7 @@ export async function runLessonStages(args: {
   const { ctx, outline, driver, cfg, cache, onProgress } = args;
   const flat = flatEnLessons(outline);
   const titles = flat.map((l) => `${l.id} ${l.title} (${l.difficulty})`).join("\n");
-  const limit = createLimiter(cfg.codex.concurrency);
+  const limit = getGlobalLimiter(cfg.codex.concurrency);
   log.stage(`Stage 3 · ${flat.length} lessons (2-phase, concurrency ${cfg.codex.concurrency})`);
   const entries = await Promise.all(flat.map((l) => limit(() => genLesson({ l, ctx, titles, driver, cfg, cache, onProgress }))));
   return Object.fromEntries(entries);
