@@ -68,10 +68,12 @@ export interface Course {
   lessons: Record<string, Lesson>;
 }
 
-/** Progress event streamed from the server during generation (SSE). */
+/** Progress event streamed from the server during generation (SSE).
+ *  Mirrors the `ProgressEvent` union in src/types.ts — keep them in sync. */
 export type ProgressEvent =
-  | { type: "stage"; stage: "ingest" | "outline" | "content" | "render" | "done"; label?: string }
+  | { type: "stage"; stage: "ingest" | "analyze" | "curriculum" | "lessons" | "validate1" | "validate2" | "translate" | "render" | "done"; label?: string }
   | { type: "plan"; total: number; lessons: { id: string; title: { zh: string; en: string }; difficulty: Difficulty }[] }
   | { type: "lesson"; id: string; status: "start" | "ok" | "failed"; label?: string }
+  | { type: "validation"; round: 1 | 2; passed: boolean; issueCount: number }
   | { type: "log"; level: "info" | "warn" | "error"; message: string }
   | { type: "error"; message: string };

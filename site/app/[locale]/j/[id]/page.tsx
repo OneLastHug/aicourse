@@ -12,6 +12,16 @@ import type { Difficulty, Locale, ProgressEvent } from "@/lib/types";
 type Status = "running" | "done" | "error";
 interface PlanLesson { id: string; title: { zh: string; en: string }; difficulty: Difficulty; }
 
+/** Map each pipeline stage key onto one of the 4 rail steps (0..3). The v2
+ *  pipeline emits ingest → analyze → curriculum → lessons → validate1/2 →
+ *  translate → done; old records may still carry outline/content/render. */
+const STAGE_STEP: Record<string, number> = {
+  queued: 0, ingest: 0,
+  outline: 1, analyze: 1, curriculum: 1,
+  content: 2, lessons: 2, validate1: 2, validate2: 2, translate: 2, render: 2,
+  done: 3,
+};
+
 export default function ProgressPage() {
   const params = useParams<{ locale: string; id: string }>();
   const locale: Locale = params?.locale === "zh" ? "zh" : "en";
@@ -98,12 +108,14 @@ export default function ProgressPage() {
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }); }, [log]);
 
   const stages = [
-    { key: "ingest", label: t(locale, "stage.ingest"), sub: t(locale, "stage.ingest.d") },
-    { key: "outline", label: t(locale, "stage.architect"), sub: t(locale, "stage.architect.d") },
-    { key: "content", label: t(locale, "stage.fill"), sub: t(locale, "stage.fill.d") },
-    { key: "done", label: t(locale, "stage.done"), sub: t(locale, "stage.done.d") },
+    { label: t(locale, "stage.ingest"), sub: t(locale, "stage.ingest.d") },
+    { label: t(locale, "stage.architect"), sub: t(locale, "stage.architect.d") },
+    { label: t(locale, "stage.fill"), sub: t(locale, "stage.fill.d") },
+    { label: t(locale, "stage.done"), sub: t(locale, "stage.done.d") },
   ];
-  const stageIdx = stages.findIndex((s) => s.key === stage);
+  // The pipeline emits fine-grained stages; collapse each onto one of the 4 rail
+  // steps. (Old keys outline/content/render kept for replayed legacy job records.)
+  const stageIdx = STAGE_STEP[stage] ?? 0;
   const chip = status === "done" ? t(locale, "prog.ready") : status === "error" ? t(locale, "prog.failed") : t(locale, "prog.generating");
   const h1 = status === "done" ? t(locale, "prog.h1Done") : status === "error" ? t(locale, "prog.failed") : t(locale, "prog.h1Run");
   const total = plan.length;
@@ -132,7 +144,7 @@ export default function ProgressPage() {
             {stages.map((s, i) => {
               const st = status === "error" && i === stageIdx ? "error" : (i < stageIdx || status === "done") ? "done" : i === stageIdx ? "active" : "pending";
               return (
-                <li key={s.key} className="flex items-center gap-3 rounded-lg px-1 py-1.5">
+                <li key={i} className="flex items-center gap-3 rounded-lg px-1 py-1.5">
                   <span className={"grid h-7 w-7 shrink-0 place-items-center rounded-full border text-[11px] font-semibold transition " +
                     (st === "done" ? "border-brand bg-brand text-white" : st === "active" ? "border-brand text-brand" : st === "error" ? "border-rose-500 text-rose-500" : "border-line text-ink-faint dark:border-zinc-700 dark:text-zinc-500")}>
                     {st === "done" ? "✓" : st === "active" ? <Dot /> : st === "error" ? "!" : i + 1}

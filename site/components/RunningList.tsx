@@ -11,18 +11,36 @@ function stageLabel(locale: Locale, stage: string): string {
   const map: Record<string, string> = {
     queued: locale === "zh" ? "排队中" : "queued",
     ingest: t(locale, "stage.ingest"),
+    // analyze + curriculum = the architecting phase
+    analyze: t(locale, "stage.architect"),
+    curriculum: t(locale, "stage.architect"),
     outline: t(locale, "stage.architect"),
+    // writing / validating / translating lessons = the fill phase
+    lessons: t(locale, "stage.fill"),
     content: t(locale, "stage.fill"),
+    validate1: t(locale, "stage.fill"),
+    validate2: t(locale, "stage.fill"),
+    translate: t(locale, "stage.fill"),
+    render: t(locale, "stage.fill"),
     done: t(locale, "stage.done"),
   };
   return map[stage] ?? stage;
 }
 function runningPct(r: RunningItem): number {
-  if (r.stage === "done") return 100;
-  if (r.stage === "content") return r.lessonsTotal > 0 ? 15 + Math.round((r.lessonsDone / r.lessonsTotal) * 80) : 15;
-  if (r.stage === "outline") return 12;
-  if (r.stage === "ingest") return 5;
-  return 2;
+  switch (r.stage) {
+    case "done": return 100;
+    case "translate": return 95;
+    case "validate2": return 92;
+    case "validate1": return 90;
+    case "lessons":
+    case "content":
+      return r.lessonsTotal > 0 ? 20 + Math.round((r.lessonsDone / r.lessonsTotal) * 65) : 20;
+    case "curriculum": return 15;
+    case "analyze":
+    case "outline": return 10;
+    case "ingest": return 5;
+    default: return 2;
+  }
 }
 
 export function RunningList({ locale }: { locale: Locale }) {
