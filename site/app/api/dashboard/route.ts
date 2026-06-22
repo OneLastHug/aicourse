@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const running = jobManager.listRunning().map((s) => ({
+  const running = (await jobManager.listRunningMerged()).map((s) => ({
     id: s.id, repoId: s.repoId, repoUrl: s.repoUrl, stage: s.stage,
     lessonsDone: s.lessonsDone, lessonsTotal: s.lessonsTotal, startedAt: s.startedAt,
   }));

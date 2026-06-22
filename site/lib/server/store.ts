@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile, readdir, rm } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join, isAbsolute } from "node:path";
 import type { Course } from "repo2learn/src/types";
+import { dirNameForUrl } from "repo2learn/src/util/repo";
 
 /** All on-disk state lives under one directory (override with R2L_DATA_DIR). */
 export const DATA_DIR = process.env.R2L_DATA_DIR || join(process.cwd(), "data");
@@ -66,6 +67,12 @@ export async function listCourses(): Promise<CourseMeta[]> {
 
 export async function removeCourse(repoId: string): Promise<void> {
   await rm(join(COURSES_DIR, repoId), { recursive: true, force: true }).catch(() => {});
+}
+
+/** Remove the cloned repo a generation created under WORK_DIR. Used to clean up
+ *  after a failed or interrupted job so no residual checkout is left on disk. */
+export async function removeRepoClone(repoUrl: string): Promise<void> {
+  await rm(join(WORK_DIR, dirNameForUrl(repoUrl)), { recursive: true, force: true }).catch(() => {});
 }
 
 /* ----------------------------- job records ------------------------------- */

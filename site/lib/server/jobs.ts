@@ -3,7 +3,8 @@ import { randomUUID } from "node:crypto";
 import type { ProgressEvent } from "repo2learn/src/types";
 import { generateCourse } from "./generate";
 import {
-  repoIdFor, saveCourse, removeCourse, saveJobRecord, listJobRecords,
+  repoIdFor, saveCourse, removeCourse, removeRepoClone, getMeta,
+  saveJobRecord, listJobRecords,
   type CourseMeta, type JobRecord,
 } from "./store";
 
@@ -35,6 +36,13 @@ class JobManager {
           r.error = "interrupted (server restarted)";
           r.updatedAt = Date.now();
           await saveJobRecord(r);
+          // A running record means the job never finished, so anything it wrote
+          // is residue from a dead process — drop the clone and any partial
+          // course. Guard the course on meta.json so a previously-completed
+          // course for the same repo (which can't have a running job, per the
+          // generate-route dedupe) is never collateral-damaged.
+          await removeRepoClone(r.repoUrl);
+          if (!(await getMeta(r.repoId))) await removeCourse(r.repoId);
         }
       }
     } catch {
@@ -65,8 +73,39 @@ class JobManager {
     return undefined;
   }
 
+  /** Dedupe lookup that also consults persisted records, so a repo whose job is
+   *  tracked on disk (e.g. a different module instance, or before the in-memory
+   *  map is warm) still joins the existing job instead of starting a new one. */
+  async runningIdFor(repoId: string): Promise<string | undefined> {
+    const inMem = this.runningId(repoId);
+    if (inMem) return inMem;
+    for (const r of await listJobRecords()) {
+      if (r.repoId !== repoId || r.status !== "running") continue;
+      const mem = this.get(r.id);
+      if (!mem || mem.status === "running") return r.id;
+    }
+    return undefined;
+  }
+
   listRunning(): JobState[] {
     return [...this.jobs.values()].map((j) => j.state).filter((s) => s.status === "running");
+  }
+
+  /** Running jobs for the dashboard, merging persisted records (durable, visible
+   *  across instances and the source the homepage relies on) with in-memory
+   *  state (freshest stage/progress). In-memory wins on conflict, and a job the
+   *  live process knows has finished is dropped even if its record lags. */
+  async listRunningMerged(): Promise<JobRecord[]> {
+    const byId = new Map<string, JobRecord>();
+    for (const r of await listJobRecords()) {
+      if (r.status === "running") byId.set(r.id, r);
+    }
+    for (const s of this.listRunning()) byId.set(s.id, s);
+    for (const [id] of byId) {
+      const mem = this.get(id);
+      if (mem && mem.status !== "running") byId.delete(id);
+    }
+    return [...byId.values()].sort((a, b) => b.startedAt - a.startedAt);
   }
 
   get(id: string): JobState | undefined {
@@ -116,6 +155,10 @@ class JobManager {
       await saveCourse(repoId, course, meta);
       await saveJobRecord(job.state);
     } catch (e) {
+      // Failed generation: drop the clone and any partial course so nothing is
+      // left on disk. (The pipeline also removes its checkout, but doing it here
+      // covers failures raised outside the pipeline's own try.)
+      await removeRepoClone(job.state.repoUrl).catch(() => {});
       await removeCourse(repoId).catch(() => {});
       job.state.status = "error";
       job.state.error = (e as Error).message;

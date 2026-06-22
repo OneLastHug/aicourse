@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { t } from "@/lib/i18n";
+import { progressPct, etaSeconds, fmtClock } from "@/lib/duration";
 import type { Locale } from "@/lib/types";
 
 interface RunningItem { id: string; repoId: string; repoUrl: string; stage: string; lessonsDone: number; lessonsTotal: number; startedAt: number; }
@@ -26,25 +27,10 @@ function stageLabel(locale: Locale, stage: string): string {
   };
   return map[stage] ?? stage;
 }
-function runningPct(r: RunningItem): number {
-  switch (r.stage) {
-    case "done": return 100;
-    case "translate": return 95;
-    case "validate2": return 92;
-    case "validate1": return 90;
-    case "lessons":
-    case "content":
-      return r.lessonsTotal > 0 ? 20 + Math.round((r.lessonsDone / r.lessonsTotal) * 65) : 20;
-    case "curriculum": return 15;
-    case "analyze":
-    case "outline": return 10;
-    case "ingest": return 5;
-    default: return 2;
-  }
-}
 
 export function RunningList({ locale }: { locale: Locale }) {
   const [running, setRunning] = useState<RunningItem[]>([]);
+  const [now, setNow] = useState<number>(() => Date.now());
   useEffect(() => {
     const f = async () => {
       try { const r = await fetch("/api/dashboard"); if (r.ok) { const d = await r.json(); setRunning(d.running || []); } } catch {}
@@ -53,13 +39,19 @@ export function RunningList({ locale }: { locale: Locale }) {
     const iv = setInterval(f, 3000);
     return () => clearInterval(iv);
   }, []);
+  // tick once a second so the ETA counts down smoothly between polls
+  useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, []);
   if (running.length === 0) return null;
   return (
     <section className="mx-auto max-w-2xl px-5 pb-4">
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-ink-faint dark:text-zinc-500">{t(locale, "home.running")}</h2>
       <div className="space-y-2">
         {running.map((r) => {
-          const pct = runningPct(r);
+          const pct = progressPct(r.stage, r.lessonsDone, r.lessonsTotal);
+          const eta = etaSeconds(r.startedAt, now, r.stage, r.lessonsDone, r.lessonsTotal);
           return (
             <Link key={r.id} href={`/${locale}/j/${r.id}`} className="card relative flex items-center gap-3 overflow-hidden p-3 transition hover:-translate-y-0.5">
               <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle dark:bg-zinc-800"><Dot /><span className="absolute h-9 w-9 animate-ping rounded-lg bg-brand/20" /></span>
@@ -69,6 +61,7 @@ export function RunningList({ locale }: { locale: Locale }) {
                   <span className="capitalize">{stageLabel(locale, r.stage)}</span><span>·</span>
                   <span className="font-mono tabular-nums">{r.lessonsDone}/{r.lessonsTotal || "…"}</span><span>·</span>
                   <span className="font-mono tabular-nums">{pct}%</span>
+                  {eta !== null && (<><span>·</span><span className="font-mono tabular-nums">{t(locale, "prog.remaining")} ~{fmtClock(eta)}</span></>)}
                 </div>
               </div>
               <span className="text-xs font-medium text-brand">{t(locale, "home.viewProgress")} →</span>

@@ -101,7 +101,9 @@ function deriveName(repo: string, localPath: string): string {
   const base = repo.split(/[\/:]/).filter(Boolean).pop() ?? localPath.split(/[\\/]/).pop() ?? "repo";
   return base.replace(/\.git$/, "");
 }
-function dirNameForUrl(url: string): string {
+/** Directory name a repo URL is cloned into under workDir. Exported so the
+ *  server can locate (and clean up) a clone without re-deriving the rule. */
+export function dirNameForUrl(url: string): string {
   const base = url.split(/[\/:]/).filter(Boolean).pop() ?? "repo";
   return base.replace(/\.git$/, "").replace(/[^a-z0-9_-]+/gi, "-");
 }

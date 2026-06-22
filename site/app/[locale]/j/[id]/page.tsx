@@ -7,6 +7,7 @@ import { TopBar } from "@/components/TopBar";
 import { pick } from "@/lib/content";
 import { t } from "@/lib/i18n";
 import { difficultyColor } from "@/lib/ui";
+import { etaSeconds, fmtClock } from "@/lib/duration";
 import type { Difficulty, Locale, ProgressEvent } from "@/lib/types";
 
 type Status = "running" | "done" | "error";
@@ -119,6 +120,8 @@ export default function ProgressPage() {
   const chip = status === "done" ? t(locale, "prog.ready") : status === "error" ? t(locale, "prog.failed") : t(locale, "prog.generating");
   const h1 = status === "done" ? t(locale, "prog.h1Done") : status === "error" ? t(locale, "prog.failed") : t(locale, "prog.h1Run");
   const total = plan.length;
+  // Remaining-time estimate, tied to the elapsed tick so it counts down each second.
+  const eta = status === "running" ? etaSeconds(startedAt, startedAt + elapsed * 1000, stage, done, total) : null;
 
   return (
     <>
@@ -132,7 +135,8 @@ export default function ProgressPage() {
             </div>
             {status === "running" && (
               <div className="ml-auto inline-flex items-center gap-1.5 font-mono text-xs text-ink-faint tabular-nums dark:text-zinc-500">
-                <ClockIcon /> {fmt(elapsed)}
+                <ClockIcon /> {fmtClock(elapsed)}
+                {eta !== null && <span className="text-ink-faint/70 dark:text-zinc-600">· {t(locale, "prog.remaining")} ~{fmtClock(eta)}</span>}
               </div>
             )}
           </div>
@@ -224,9 +228,4 @@ export default function ProgressPage() {
 function Dot() { return <span className="h-2 w-2 animate-pulse rounded-full bg-brand" />; }
 function ClockIcon() {
   return (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>);
-}
-function fmt(s: number): string {
-  const m = Math.floor(s / 60); const sec = s % 60;
-  if (m >= 60) { const h = Math.floor(m / 60); return h + "h " + (m % 60) + "m"; }
-  return m + ":" + String(sec).padStart(2, "0");
 }

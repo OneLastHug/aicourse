@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   if (await getCourse(repoId)) return NextResponse.json({ ready: true, repoId });
 
   // Dedupe: a job is already running for this repo -> join it.
-  const running = jobManager.runningId(repoId);
+  const running = await jobManager.runningIdFor(repoId);
   if (running) return NextResponse.json({ ready: false, id: running, repoId });
 
   const id = jobManager.create(repoUrl, repoId);
