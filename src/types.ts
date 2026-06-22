@@ -163,7 +163,7 @@ export interface Repo2LearnConfig {
 export const DEFAULT_CONFIG: Repo2LearnConfig = {
   codex: {
     binary: "codex", model: "gpt-5.5", reasoningEffort: "xhigh",
-    concurrency: 5, timeoutMs: 300 * 60 * 1000, extraArgs: [],
+    concurrency: 10, timeoutMs: 300 * 60 * 1000, extraArgs: [],
   },
   languages: ["zh", "en"],
   targetLessonCount: 10,
