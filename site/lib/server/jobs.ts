@@ -15,7 +15,7 @@ export interface JobState extends JobRecord {
   events: ProgressEvent[];
 }
 
-interface Job { state: JobState; emitter: EventEmitter; }
+interface Job { state: JobState; emitter: EventEmitter; drafts: Record<string, unknown>; }
 
 class JobManager {
   private jobs = new Map<string, Job>();
@@ -60,7 +60,7 @@ class JobManager {
     };
     const emitter = new EventEmitter();
     emitter.setMaxListeners(100);
-    this.jobs.set(id, { state, emitter });
+    this.jobs.set(id, { state, emitter, drafts: {} });
     this.runningByRepo.set(repoId, id);
     void saveJobRecord(state);
     void this.run(id, repoId);
@@ -116,9 +116,14 @@ class JobManager {
     return this.jobs.get(id)?.emitter;
   }
 
+  getDraft(id: string, lessonId: string): unknown | undefined {
+    return this.jobs.get(id)?.drafts[lessonId];
+  }
+
   private emit(id: string, e: ProgressEvent): void {
     const job = this.jobs.get(id);
     if (!job) return;
+    if (e.type === "lessonDraft") { job.drafts[e.id] = e.body; return; }
     job.state.events.push(e);
     if (e.type === "stage") job.state.stage = e.stage;
     else if (e.type === "plan") job.state.lessonsTotal = e.total;

@@ -40,6 +40,13 @@ export default function ProgressPage() {
   const [status, setStatus] = useState<Status>("running");
   const [error, setError] = useState<string | null>(null);
   const [activity, setActivity] = useState("");
+  const [preview, setPreview] = useState<{ id: string; data: Record<string, unknown> } | null>(null);
+  async function openPreview(lid: string) {
+    try {
+      const r = await fetch("/api/jobs/" + id + "/lessons/" + lid);
+      if (r.ok) setPreview({ id: lid, data: await r.json() });
+    } catch {}
+  }
   const [log, setLog] = useState<string[]>([]);
   const [startedAt, setStartedAt] = useState<number>(Date.now());
   const [elapsed, setElapsed] = useState(0);
@@ -181,7 +188,7 @@ export default function ProgressPage() {
                   const st = lessonStatus[l.id];
                   const state = st === "ok" ? "ok" : st === "failed" ? "failed" : st === "start" ? "run" : "pending";
                   return (
-                    <div key={l.id} className={"card flex items-center gap-3 p-3 transition-all duration-200 " + (state === "pending" ? "opacity-60" : "")}>
+                    <div key={l.id} onClick={state === "ok" ? () => openPreview(l.id) : undefined} className={"card flex items-center gap-3 p-3 transition-all duration-200 " + (state === "ok" ? "cursor-pointer hover:border-brand/40 " : "") + (state === "pending" ? "opacity-60" : "")}>
                       <span className={"grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[11px] font-semibold tabular-nums " +
                         (state === "ok" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                           : state === "failed" ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
@@ -193,6 +200,7 @@ export default function ProgressPage() {
                         <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-ink-faint dark:text-zinc-500">
                           <span className={"h-1.5 w-1.5 rounded-full " + difficultyColor(l.difficulty)} />
                           <span className="font-mono">{l.id}</span>
+                          {state === "ok" && <span className="ml-auto text-brand">{locale === "zh" ? "预览" : "Read"} →</span>}
                         </div>
                       </div>
                     </div>
@@ -220,6 +228,39 @@ export default function ProgressPage() {
             </div>
           )}
         </section>
+      {/* Lesson preview modal */}
+      {preview && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4" onClick={() => setPreview(null)}>
+          <div className="my-8 w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl dark:bg-zinc-900" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <span className="font-mono text-xs text-brand">{preview.id}</span>
+              <button type="button" onClick={() => setPreview(null)} className="grid h-7 w-7 place-items-center rounded-md border border-line text-ink-faint hover:bg-bg-subtle dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800">×</button>
+            </div>
+            <p className="mb-4 text-sm font-medium leading-relaxed text-ink dark:text-zinc-100">{String(preview.data.problem || "")}</p>
+            {((preview.data.howItWorks as Array<Record<string, unknown>>) || []).map((step, i) => {
+              const code = step.code as Record<string, unknown> | undefined;
+              return (
+                <div key={i} className="mb-4">
+                  <div className="mb-1 text-sm font-semibold">{String(step.title || "")}</div>
+                  <p className="mb-2 text-xs leading-relaxed text-ink-faint dark:text-zinc-400">{String(step.desc || "")}</p>
+                  {code?.snippet ? (
+                    <pre className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-[12px] leading-relaxed text-zinc-300">
+                      <code>{String(code.snippet)}</code>
+                    </pre>
+                  ) : null}
+                </div>
+              );
+            })}
+            {preview.data.deepDive ? (
+              <div className="mt-4 border-t border-line pt-4 dark:border-zinc-800">
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-faint dark:text-zinc-500">{locale === "zh" ? "深入" : "Deep Dive"}</div>
+                <p className="whitespace-pre-line text-sm leading-relaxed text-ink-soft dark:text-zinc-300">{String(preview.data.deepDive)}</p>
+              </div>
+            ) : null}
+            <div className="mt-3 text-[11px] text-ink-faint dark:text-zinc-600">{locale === "zh" ? "英文预览（翻译在最后阶段完成）" : "English preview (translation happens in the final stage)"}</div>
+          </div>
+        </div>
+      )}
       </main>
     </>
   );

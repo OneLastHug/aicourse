@@ -38,6 +38,7 @@ async function genLesson(args: {
     prompt: lessonWritePrompt(l, readRes.text),
   });
   await cache.set(key, en);
+  onProgress?.({ type: "lessonDraft", id: l.id, body: en });
   onProgress?.({ type: "lesson", id: l.id, status: "ok" });
   return [l.id, en];
 }
