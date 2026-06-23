@@ -70,8 +70,12 @@ export interface Outline {
 export interface Lesson {
   id: string;
   problem: Bi;
+  /** 解决方案 — the key idea in 1-2 sentences (learn.shareai.run style). */
+  solution?: Bi;
   howItWorks: HowItWorksStep[];
   deepDive: Bi;
+  /** 试一下 — runnable commands / prompts to try, newline-separated (kept verbatim). */
+  tryIt?: Bi;
   references: Reference[];
   compare: { rows: CompareRow[] };
   loc: number;
@@ -115,8 +119,10 @@ export interface ZhStep {
 export interface ZhLesson {
   id: string;
   problem: string;
+  solution?: string;
   howItWorks: ZhStep[];
   deepDive: string;
+  tryIt?: string;
   references: Reference[];
   compare: { rows: { label: string; a: string; b: string }[] };
   loc: number;

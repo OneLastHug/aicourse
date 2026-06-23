@@ -76,7 +76,11 @@ export default async function LessonPage({
 
           <Section label={t(loc, "lesson.problem")} accent>
             <p className="text-lg font-medium leading-relaxed text-ink dark:text-zinc-100">{pick(lesson.problem, loc)}</p>
-            <p className="lead mt-3">{pick(meta.objective, loc)}</p>
+            {lesson.solution && (
+              <blockquote className="mt-4 border-l-4 border-brand/70 bg-bg-subtle px-4 py-3 text-[15px] font-medium text-ink dark:bg-zinc-900 dark:text-zinc-100">
+                {pick(lesson.solution, loc)}
+              </blockquote>
+            )}
           </Section>
 
           <Section label={t(loc, "lesson.how")}>
@@ -92,6 +96,12 @@ export default async function LessonPage({
               </div>
             )}
           </Section>
+
+          {lesson.tryIt && (
+            <Section label={t(loc, "lesson.tryIt")}>
+              <pre className="code-wrap overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-[13px] leading-relaxed text-zinc-300"><code>{pick(lesson.tryIt, loc)}</code></pre>
+            </Section>
+          )}
 
           {lesson.compare.rows.length > 0 && (
             <Section label={t(loc, "lesson.compare")}>

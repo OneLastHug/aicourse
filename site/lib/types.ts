@@ -54,8 +54,10 @@ export interface Reference {
 export interface Lesson {
   id: string;
   problem: Bi;
+  solution?: Bi;
   howItWorks: HowItWorksStep[];
   deepDive: Bi;
+  tryIt?: Bi;
   references: Reference[];
   compare: { rows: CompareRow[] };
   loc: number;
