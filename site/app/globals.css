@@ -33,14 +33,15 @@ html.dark .chip { @apply border-zinc-800 bg-zinc-900 text-zinc-300; }
 }
 html.dark .btn-primary { @apply bg-white text-zinc-900 hover:bg-zinc-200; }
 
-/* Code blocks: always dark (zinc-950) like the reference */
-.code-wrap .shiki,
+/* Code blocks: always dark (zinc-950) like the reference — keep the dark
+   background even in light mode so shiki's light syntax tokens stay readable. */
 .code-wrap .shiki span {
   background-color: transparent !important;
   font-style: normal !important;
 }
 .code-wrap pre.shiki {
-  @apply my-2 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-[13px] leading-relaxed;
+  @apply my-2 overflow-x-auto rounded-xl border border-zinc-800 p-4 text-[13px] leading-relaxed;
+  background-color: #09090b !important;
 }
 .code-wrap .line { display: block; min-height: 1.5em; }
 .code-wrap .hl-line {
