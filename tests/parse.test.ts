@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { extractJson, assertShape, JsonExtractionError } from "../src/codex/parse";
-import { isOutline } from "../src/codex/guards";
+import { isCourse, isOutline } from "../src/codex/guards";
 import { sampleCourse } from "../src/sample/fixtures";
 
 test("extracts bare JSON object", () => {
@@ -81,6 +81,25 @@ test("sample outline passes the guard", () => {
 test("assertShape rejects bad shapes", () => {
   assert.throws(
     () => assertShape({ lessons: "nope" }, isOutline, "outline"),
+    JsonExtractionError,
+  );
+});
+
+test("isCourse accepts the sample translator output", () => {
+  assert.equal(isCourse(sampleCourse), true);
+});
+
+test("isCourse rejects the shapes that crashed translate (missing outline/sections)", () => {
+  // Before the guard, flattenOutline read `course.outline.sections` directly and threw
+  // "Cannot read properties of undefined (reading 'sections')" when the model omitted outline.
+  assert.equal(isCourse({ lessons: {} }), false);                          // no outline
+  assert.equal(isCourse({ outline: null, lessons: {} }), false);           // null outline
+  assert.equal(isCourse({ outline: { course: {} }, lessons: {} }), false); // outline without sections
+});
+
+test("assertShape rejects bad translator output as a translate failure", () => {
+  assert.throws(
+    () => assertShape({ lessons: {} }, isCourse, "translate"),
     JsonExtractionError,
   );
 });

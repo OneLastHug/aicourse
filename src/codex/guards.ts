@@ -1,4 +1,4 @@
-import type { Bi, EnLesson, EnOutline, Lesson, Outline, RepoContext, ValidationResult } from "../types";
+import type { Bi, Course, EnLesson, EnOutline, Lesson, Outline, RepoContext, ValidationResult } from "../types";
 
 export function isStr(v: unknown): v is string { return typeof v === "string"; }
 export function isBi(v: unknown): v is Bi {
@@ -27,6 +27,18 @@ export function isLesson(v: unknown): v is Lesson {
   const l = v as Lesson;
   if (typeof v !== "object" || v === null || !isStr(l.id) || !isBi(l.problem)) return false;
   return Array.isArray(l.howItWorks);
+}
+/** Guard for the translator's bilingual output. Mirrors isEnOutline's strictness
+ *  (id + title on each section/lesson) but on the Bi types. `outline.lessons` is a
+ *  derived field populated by flattenOutline AFTER translation, so it is NOT required
+ *  here — requiring it would reject valid translator output. */
+export function isCourse(v: unknown): v is Course {
+  const c = v as Course;
+  if (typeof v !== "object" || v === null) return false;
+  const o = c.outline;
+  if (typeof o !== "object" || o === null || !o.course || !Array.isArray(o.sections)) return false;
+  if (typeof c.lessons !== "object" || c.lessons === null) return false;
+  return o.sections.every((s) => isStr(s.id) && isBi(s.title) && Array.isArray(s.lessons) && s.lessons.every((l) => isStr(l.id) && isBi(l.title)));
 }
 export function isValidationResult(v: unknown): v is ValidationResult {
   const r = v as ValidationResult;

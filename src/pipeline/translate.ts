@@ -2,8 +2,9 @@ import type { Course, ProgressEvent, Repo2LearnConfig } from "../types";
 import { translatePrompt } from "../prompts/translate";
 import type { CodexDriver } from "../codex/driver";
 import { Cache } from "../util/cache";
-import { extractJson } from "../codex/parse";
 import { flatEnLessons } from "./curriculum";
+import { codexJson } from "./_call";
+import { isCourse } from "../codex/guards";
 import type { EnCourse } from "./validate";
 
 /** Stage 6 — translate the validated English course to bilingual (EN→ZH), whole-course. */
@@ -25,8 +26,13 @@ export async function runTranslateStage(args: {
     sections: enCourse.outline.sections,
     lessons: flat.map((l) => ({ id: l.id, ...((enCourse.lessons[l.id] as object) ?? {}) })),
   });
-  const res = await driver.run({ label: "translate", prompt: translatePrompt(payload), cwd: process.cwd() });
-  const course = extractJson<Course>(res.text);
+  // Validate the translator's output shape (guard) and retry once on failure. A bare
+  // extractJson+cast here previously crashed with "Cannot read properties of undefined
+  // (reading 'sections')" when the model omitted `outline` entirely.
+  const course = await codexJson<Course>({
+    driver, label: "translate", cwd: process.cwd(), guard: isCourse, name: "translate",
+    prompt: translatePrompt(payload),
+  });
   flattenOutline(course);
   await cache.set(key, course);
   return course;
@@ -34,7 +40,7 @@ export async function runTranslateStage(args: {
 
 /** Ensure outline.lessons (flat) is populated from sections, for site backward-compat. */
 export function flattenOutline(course: Course): void {
-  if (!course.outline.sections) return;
+  if (!course?.outline?.sections) return;
   course.outline.lessons = course.outline.sections.flatMap((s) => s.lessons);
   for (const l of course.outline.lessons) {
     if (!course.lessons[l.id]) {
