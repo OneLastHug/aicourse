@@ -1,28 +1,28 @@
-import type { EnOutline, ProgressEvent, Repo2LearnConfig, RepoContext } from "../types";
+import type { ZhOutline, ProgressEvent, Repo2LearnConfig, RepoContext } from "../types";
 import { curriculumPrompt } from "../prompts/curriculum";
 import type { CodexDriver } from "../codex/driver";
 import { Cache } from "../util/cache";
 import { configFingerprint } from "../config";
 import { codexJson } from "./_call";
-import { isEnOutline } from "../codex/guards";
+import { isZhOutline } from "../codex/guards";
 
 export async function runCurriculumStage(args: {
   ctx: RepoContext; analysis: string; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
-}): Promise<EnOutline> {
+}): Promise<ZhOutline> {
   const { ctx, analysis, driver, cfg, cache, onProgress } = args;
   const key = cache.key({ stage: "curriculum", sha: ctx.sha, cfg: configFingerprint(cfg), v: 2 });
-  const cached = await cache.get<EnOutline>(key);
+  const cached = await cache.get<ZhOutline>(key);
   if (cached) { onProgress?.({ type: "log", level: "info", message: "curriculum cache hit" }); return cached; }
   const outline = await codexJson({
-    driver, label: "curriculum", cwd: ctx.localPath, guard: isEnOutline, name: "curriculum",
+    driver, label: "curriculum", cwd: ctx.localPath, guard: isZhOutline, name: "curriculum",
     prompt: curriculumPrompt(ctx, analysis, cfg.targetLessonCount),
   });
-  normalizeEn(outline);
+  normalizeZh(outline);
   await cache.set(key, outline);
   return outline;
 }
 
-function normalizeEn(o: EnOutline): void {
+function normalizeZh(o: ZhOutline): void {
   let n = 0;
   o.sections.forEach((s, si) => {
     s.id = `l${String(si + 1).padStart(2, "0")}`;
@@ -34,4 +34,4 @@ function normalizeEn(o: EnOutline): void {
   });
 }
 
-export function flatEnLessons(o: EnOutline) { return (o?.sections ?? []).flatMap((s) => s?.lessons ?? []); }
+export function flatZhLessons(o: ZhOutline) { return (o?.sections ?? []).flatMap((s) => s?.lessons ?? []); }

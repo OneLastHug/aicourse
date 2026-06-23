@@ -77,6 +77,7 @@ export class CliCodexDriver implements CodexDriver {
       "exec",
       "--model", this.cfg.model,
       "-c", "model_reasoning_effort=" + this.cfg.reasoningEffort,
+      "-c", "model_context_window=" + this.cfg.contextWindow,
       "-C", call.cwd,
       "--output-last-message", outFile,
       ...this.cfg.extraArgs,

@@ -8,8 +8,9 @@ import type { Repo2LearnConfig } from "../src/types";
 export const config: Repo2LearnConfig = {
   codex: {
     binary: "codex",
-    model: "gpt-5.5",
+    model: "gpt-5.4",
     reasoningEffort: "xhigh",
+    contextWindow: 1_000_000,
     concurrency: 10,
     timeoutMs: 10 * 60 * 1000,
     extraArgs: [

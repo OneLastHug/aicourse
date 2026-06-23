@@ -75,7 +75,7 @@ Options:
   --sample                 Offline demo using the mock driver (no codex needed)
   --no-cache               Disable cache; recompute every stage
   --mock                   Use mock driver (alias for sample-style offline runs)
-  --model <id>             codex model            (default: gpt-5.5)
+  --model <id>             codex model            (default: gpt-5.4)
   --effort <level>         reasoning effort       (default: xhigh)
   --concurrency <n>        max concurrent agents   (default: 5)
   --binary <path>          codex CLI path          (default: codex)
