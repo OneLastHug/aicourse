@@ -3,10 +3,10 @@
  * Repo2Learn CLI — turn a repository into a layered bilingual tutorial site.
  *
  * Usage:
- *   repo2learn <repo-url-or-path>           # real run via codex (gpt-5.5 / xhigh)
+ *   repo2learn <repo-url-or-path>           # real run via codex (gpt-5.4 / xhigh)
  *   repo2learn --sample                     # offline demo with the mock driver
  *   repo2learn <repo> --no-cache            # force recompute
- *   repo2learn <repo> --concurrency 5 --model gpt-5.5 --effort xhigh
+ *   repo2learn <repo> --concurrency 5 --model gpt-5.4 --effort xhigh
  */
 import { resolve } from "node:path";
 import { resolveConfig, type Repo2LearnFlags } from "./config";
