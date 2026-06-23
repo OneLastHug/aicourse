@@ -82,6 +82,7 @@ Options:
   --target <n>             target lesson count     (default: 10)
   --workdir <path>         clone work directory
   --out <path>             generated site data dir (default: site/content/generated)
+  R2L_VALIDATE=0|1         env: 0 skip validation, 1 run it (default: 1)
 `);
 }
 

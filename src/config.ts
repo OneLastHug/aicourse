@@ -6,14 +6,16 @@ export type Repo2LearnFlags = Partial<Omit<Repo2LearnConfig, "codex">> & {
 };
 
 /**
- * Load and merge configuration: defaults <- config file <- CLI flags.
+ * Load and merge configuration: defaults <- config file <- env <- CLI flags.
  * The config file (config/repo2learn.config.ts) is optional; for simplicity
- * we read a JSON file if present, else rely on defaults + flags.
+ * we read a JSON file if present, else rely on defaults + flags. Env knobs
+ * (e.g. R2L_VALIDATE) sit between the file and explicit flags.
  */
 export function resolveConfig(flags: Repo2LearnFlags = {}, fileConfig?: Partial<Repo2LearnConfig>): Repo2LearnConfig {
   const merged: Repo2LearnConfig = {
     ...DEFAULT_CONFIG,
     ...fileConfig,
+    ...stripUndefined(envValidateFlag()),
     ...stripUndefined(flags),
     codex: {
       ...DEFAULT_CONFIG.codex,
@@ -22,6 +24,15 @@ export function resolveConfig(flags: Repo2LearnFlags = {}, fileConfig?: Partial<
     },
   };
   return merged;
+}
+
+/** R2L_VALIDATE env knob: "0" disables the validate1/validate2 stages; unset or
+ *  "1" keeps them on (the default). Read here so both the CLI and the site honor it. */
+function envValidateFlag(): Repo2LearnFlags {
+  const v = process.env.R2L_VALIDATE;
+  if (v === "0") return { validate: false };
+  if (v === "1") return { validate: true };
+  return {}; // unset / unknown → leave default (on)
 }
 
 function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
