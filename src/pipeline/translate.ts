@@ -1,13 +1,19 @@
-import type { Course, ProgressEvent, Repo2LearnConfig } from "../types";
-import { translatePrompt } from "../prompts/translate";
+import type { Course, EnLesson, Lesson, Outline, ProgressEvent, Repo2LearnConfig } from "../types";
+import { translateOutlinePrompt, translateLessonPrompt } from "../prompts/translate";
 import type { CodexDriver } from "../codex/driver";
 import { Cache } from "../util/cache";
 import { flatEnLessons } from "./curriculum";
 import { codexJson } from "./_call";
-import { isCourse } from "../codex/guards";
+import { isBiOutline, isLesson } from "../codex/guards";
+import { getGlobalLimiter } from "../util/concurrency";
+import { configFingerprint } from "../config";
+import { log } from "../util/log";
 import type { EnCourse } from "./validate";
 
-/** Stage 6 — translate the validated English course to bilingual (EN→ZH), whole-course. */
+/** Stage 6 — translate the validated English course to bilingual (EN→ZH).
+ *  Split into one outline call + per-lesson body calls (concurrent, cached), so
+ *  each call is small/fast/reliable instead of one giant whole-course call that
+ *  returned an empty last message ("no JSON value found") on large courses. */
 export async function runTranslateStage(args: {
   enCourse: EnCourse; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
 }): Promise<Course> {
@@ -16,25 +22,51 @@ export async function runTranslateStage(args: {
   if (!enCourse?.outline?.sections?.length) {
     throw new Error("translate: enCourse.outline.sections is missing or empty (pipeline assembly bug)");
   }
+  const sha = enCourse.outline.course.repo.sha;
   const flat = flatEnLessons(enCourse.outline);
-  const key = cache.key({ stage: "translate", sha: enCourse.outline.course.repo.sha, n: flat.length, v: 2 });
-  const cached = await cache.get<Course>(key);
-  if (cached) { onProgress?.({ type: "log", level: "info", message: "translate cache hit" }); return cached; }
+  const fp = configFingerprint(cfg);
 
-  const payload = JSON.stringify({
-    course: enCourse.outline.course,
-    sections: enCourse.outline.sections,
-    lessons: flat.map((l) => ({ id: l.id, ...((enCourse.lessons[l.id] as object) ?? {}) })),
-  });
-  // Validate the translator's output shape (guard) and retry once on failure. A bare
-  // extractJson+cast here previously crashed with "Cannot read properties of undefined
-  // (reading 'sections')" when the model omitted `outline` entirely.
-  const course = await codexJson<Course>({
-    driver, label: "translate", cwd: process.cwd(), guard: isCourse, name: "translate",
-    prompt: translatePrompt(payload),
-  });
+  // Fast path: a prior full translate exists.
+  const wholeKey = cache.key({ stage: "translate", sha, n: flat.length, cfg: fp, v: 3 });
+  const cachedCourse = await cache.get<Course>(wholeKey);
+  if (cachedCourse) { onProgress?.({ type: "log", level: "info", message: "translate cache hit" }); return cachedCourse; }
+
+  // 1) Outline (course meta + sections + lesson meta) — one small call, cached.
+  const outlineKey = cache.key({ stage: "translate.outline", sha, cfg: fp, v: 1 });
+  let outline = await cache.get<Outline>(outlineKey);
+  if (!outline) {
+    log.step("translate: outline · " + flat.length + " lessons");
+    outline = await codexJson<Outline>({
+      driver, label: "translate:outline", cwd: process.cwd(), guard: isBiOutline, name: "translate outline",
+      prompt: translateOutlinePrompt(JSON.stringify(enCourse.outline)),
+    });
+    await cache.set(outlineKey, outline);
+  }
+
+  // 2) Each lesson body — concurrent, per-lesson, cached individually so a retry
+  //    only re-translates the lessons that didn't finish.
+  const limit = getGlobalLimiter(cfg.codex.concurrency);
+  log.step("translate: " + flat.length + " lessons (concurrent " + cfg.codex.concurrency + ")");
+  const entries = await Promise.all(flat.map((l) => limit(async () => {
+    const body = enCourse.lessons[l.id] as EnLesson | undefined;
+    if (!body) return null; // flattenOutline synthesizes a placeholder below
+    const lessonKey = cache.key({ stage: "translate.lesson", sha, id: l.id, cfg: fp, v: 1 });
+    const cachedBody = await cache.get<Lesson>(lessonKey);
+    if (cachedBody) return [l.id, cachedBody] as [string, Lesson];
+    const translated = await codexJson<Lesson>({
+      driver, label: `translate:lesson:${l.id}`, cwd: process.cwd(), guard: isLesson, name: `translate lesson ${l.id}`,
+      prompt: translateLessonPrompt(l.id, JSON.stringify(body)),
+    });
+    translated.status = "ok";
+    await cache.set(lessonKey, translated);
+    return [l.id, translated] as [string, Lesson];
+  })));
+  const lessons = Object.fromEntries(entries.filter(Boolean) as [string, Lesson][]);
+
+  // 3) Assemble + flatten (populates outline.lessons flat view, fills missing bodies).
+  const course: Course = { outline, lessons };
   flattenOutline(course);
-  await cache.set(key, course);
+  await cache.set(wholeKey, course);
   return course;
 }
 

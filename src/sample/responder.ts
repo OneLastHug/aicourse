@@ -11,6 +11,8 @@ export function sampleResponder(call: CodexCall): string {
   const w = /^lesson:write:(s\d+)$/.exec(lbl);
   if (w && sampleEnLessons[w[1] as string]) return JSON.stringify(sampleEnLessons[w[1] as string]);
   if (lbl.startsWith("validate1") || lbl.startsWith("validate2")) return JSON.stringify({ passed: true, issues: [], summary: "mock: ok" });
-  if (lbl === "translate") return JSON.stringify(sampleCourse);
+  if (lbl === "translate:outline") return JSON.stringify(sampleCourse.outline);
+  const tl = /^translate:lesson:(s\d+)$/.exec(lbl);
+  if (tl && sampleCourse.lessons[tl[1] as string]) return JSON.stringify(sampleCourse.lessons[tl[1] as string]);
   return "{}";
 }

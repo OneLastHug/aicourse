@@ -3,6 +3,7 @@ import { validateLessonCorrectnessPrompt } from "../prompts/validateLessonCorrec
 import { validateLessonAlignmentPrompt } from "../prompts/validateLessonAlignment";
 import type { CodexDriver } from "../codex/driver";
 import { Cache } from "../util/cache";
+import { configFingerprint } from "../config";
 import { getGlobalLimiter } from "../util/concurrency";
 import { extractJson } from "../codex/parse";
 import { isValidationResult } from "../codex/guards";
@@ -15,18 +16,24 @@ export interface EnCourse { outline: EnOutline; lessons: Record<string, unknown>
 export async function validateCorrectness(args: {
   enCourse: EnCourse; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
 }): Promise<ValidationResult> {
-  const { enCourse, driver, cfg, onProgress } = args;
+  const { enCourse, driver, cfg, cache, onProgress } = args;
   const flat = flatEnLessons(enCourse.outline);
+  const sha = enCourse.outline.course.repo.sha;
+  const fp = configFingerprint(cfg);
   const limit = getGlobalLimiter(cfg.codex.concurrency);
   log.step("validate1: " + flat.length + " lessons (concurrent " + cfg.codex.concurrency + ")");
 
   const results = await Promise.all(flat.map((l) => limit(async () => {
     const body = enCourse.lessons[l.id];
     if (!body) return { passed: true, issues: [], summary: "no body" } as ValidationResult;
+    const key = cache.key({ stage: "validate1", sha, id: l.id, cfg: fp, v: 1 });
+    const cached = await cache.get<ValidationResult>(key);
+    if (cached) return cached;
     try {
       const res = await driver.run({ label: "validate1:" + l.id, prompt: validateLessonCorrectnessPrompt(l.id, JSON.stringify(body)), cwd: process.cwd() });
       const parsed = extractJson<unknown>(res.text);
       if (!isValidationResult(parsed)) return { passed: true, issues: [], summary: "validate1 parse failed (skipped)" };
+      await cache.set(key, parsed);
       return parsed;
     } catch {
       return { passed: true, issues: [], summary: "validation parse failed (skipped)" } as ValidationResult;
@@ -40,18 +47,24 @@ export async function validateCorrectness(args: {
 export async function validateAlignment(args: {
   ctx: RepoContext; enCourse: EnCourse; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
 }): Promise<ValidationResult> {
-  const { ctx, enCourse, driver, cfg, onProgress } = args;
+  const { ctx, enCourse, driver, cfg, cache, onProgress } = args;
   const flat = flatEnLessons(enCourse.outline);
+  const sha = ctx.sha;
+  const fp = configFingerprint(cfg);
   const limit = getGlobalLimiter(cfg.codex.concurrency);
   log.step("validate2: " + flat.length + " lessons (concurrent " + cfg.codex.concurrency + ")");
 
   const results = await Promise.all(flat.map((l) => limit(async () => {
     const body = enCourse.lessons[l.id];
     if (!body) return { passed: true, issues: [], summary: "no body" } as ValidationResult;
+    const key = cache.key({ stage: "validate2", sha, id: l.id, cfg: fp, v: 1 });
+    const cached = await cache.get<ValidationResult>(key);
+    if (cached) return cached;
     try {
       const res = await driver.run({ label: "validate2:" + l.id, prompt: validateLessonAlignmentPrompt(ctx, l.id, JSON.stringify(body)), cwd: ctx.localPath });
       const parsed = extractJson<unknown>(res.text);
       if (!isValidationResult(parsed)) return { passed: true, issues: [], summary: "validate2 parse failed (skipped)" };
+      await cache.set(key, parsed);
       return parsed;
     } catch {
       return { passed: true, issues: [], summary: "alignment parse failed (skipped)" } as ValidationResult;
