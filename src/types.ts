@@ -1,9 +1,10 @@
 /**
- * Repo2Learn data contracts (v2 — depth-first, English-first).
+ * Repo2Learn data contracts (v2 — depth-first, Chinese-first).
  *
- * Generation produces English (En*) types → validated → translated to Bi types
- * (the final Course the site renders). The final Outline carries both `sections`
- * (layered grouping) and a flattened `lessons` (backward-compat for the site).
+ * Generation produces Chinese (Zh*) types → validated → translated to Bi types
+ * (the final Course the site renders; zh is the original, en is translated from
+ * it). The final Outline carries both `sections` (layered grouping) and a
+ * flattened `lessons` (backward-compat for the site).
  */
 
 /** Bilingual string — every user-facing text field in the FINAL output. */
@@ -17,7 +18,7 @@ export interface RepoContext {
   sha: string;
   name: string;
   defaultBranch: string;
-  summary: string; // English summary (README-derived); the architect refines it
+  summary: string; // README-derived summary; the architect refines it
   loc: number;
   languages: Record<string, number>;
   tree: string[];
@@ -79,8 +80,8 @@ export interface Lesson {
 }
 export interface Course { outline: Outline; lessons: Record<string, Lesson>; }
 
-/* ===================== English (generation) types ===================== */
-export interface EnOutlineLesson {
+/* ===================== Chinese (primary generation) types ===================== */
+export interface ZhOutlineLesson {
   id: string;
   title: string;
   difficulty: Difficulty;
@@ -91,30 +92,30 @@ export interface EnOutlineLesson {
   prereq: string[];
   tags: string[];
 }
-export interface EnOutlineSection {
+export interface ZhOutlineSection {
   id: string; // e.g. "layer-1"
   title: string;
   summary: string;
   /** How this layer advances the running example spine. */
   spine: string;
-  lessons: EnOutlineLesson[];
+  lessons: ZhOutlineLesson[];
 }
-export interface EnOutline {
+export interface ZhOutline {
   course: { title: string; tagline: string; repo: { url: string; name: string; sha: string }; spine: string };
-  sections: EnOutlineSection[];
+  sections: ZhOutlineSection[];
 }
-export interface EnCode { file: string; language: string; snippet: string; highlightLines: number[]; before?: string; }
-export interface EnStep {
+export interface ZhCode { file: string; language: string; snippet: string; highlightLines: number[]; before?: string; }
+export interface ZhStep {
   title: string;
   desc: string;
-  code?: EnCode;
-  beforeCode?: EnCode;
+  code?: ZhCode;
+  beforeCode?: ZhCode;
   anatomy?: string;
 }
-export interface EnLesson {
+export interface ZhLesson {
   id: string;
   problem: string;
-  howItWorks: EnStep[];
+  howItWorks: ZhStep[];
   deepDive: string;
   references: Reference[];
   compare: { rows: { label: string; a: string; b: string }[] };
@@ -139,6 +140,8 @@ export interface ValidationResult {
 export interface CodexConfig {
   binary: string;
   model: string;
+  /** Context window explicitly requested via `-c model_context_window=<n>` (1m = 1000000). */
+  contextWindow: number;
   reasoningEffort: string;
   concurrency: number;
   timeoutMs: number;
@@ -162,7 +165,8 @@ export interface Repo2LearnConfig {
 
 export const DEFAULT_CONFIG: Repo2LearnConfig = {
   codex: {
-    binary: "codex", model: "gpt-5.5", reasoningEffort: "xhigh",
+    binary: "codex", model: "gpt-5.4", reasoningEffort: "xhigh",
+    contextWindow: 1_000_000,
     concurrency: 10, timeoutMs: 300 * 60 * 1000, extraArgs: [],
   },
   languages: ["zh", "en"],

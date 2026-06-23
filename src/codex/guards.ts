@@ -1,4 +1,4 @@
-import type { Bi, Course, EnLesson, EnOutline, Lesson, Outline, RepoContext, ValidationResult } from "../types";
+import type { Bi, Course, ZhLesson, ZhOutline, Lesson, Outline, RepoContext, ValidationResult } from "../types";
 
 export function isStr(v: unknown): v is string { return typeof v === "string"; }
 export function isBi(v: unknown): v is Bi {
@@ -8,13 +8,13 @@ export function isRepoContext(v: unknown): v is RepoContext {
   const r = v as RepoContext;
   return typeof v === "object" && v !== null && isStr(r.url) && isStr(r.localPath) && isStr(r.sha) && isStr(r.name) && Array.isArray(r.tree);
 }
-export function isEnOutline(v: unknown): v is EnOutline {
-  const o = v as EnOutline;
+export function isZhOutline(v: unknown): v is ZhOutline {
+  const o = v as ZhOutline;
   if (typeof v !== "object" || v === null || !o.course || !Array.isArray(o.sections)) return false;
   return o.sections.every((s) => isStr(s.id) && isStr(s.title) && Array.isArray(s.lessons) && s.lessons.every((l) => isStr(l.id) && isStr(l.title) && Array.isArray(l.filesToRead)));
 }
-export function isEnLesson(v: unknown): v is EnLesson {
-  const l = v as EnLesson;
+export function isZhLesson(v: unknown): v is ZhLesson {
+  const l = v as ZhLesson;
   return typeof v === "object" && v !== null && isStr(l.id) && isStr(l.problem) && Array.isArray(l.howItWorks);
 }
 export function isOutline(v: unknown): v is Outline {
@@ -36,7 +36,7 @@ export function isLesson(v: unknown): v is Lesson {
   if (typeof v !== "object" || v === null || !isStr(l.id) || !isBi(l.problem)) return false;
   return Array.isArray(l.howItWorks);
 }
-/** Guard for the translator's bilingual output. Mirrors isEnOutline's strictness
+/** Guard for the translator's bilingual output. Mirrors isZhOutline's strictness
  *  (id + title on each section/lesson) but on the Bi types. `outline.lessons` is a
  *  derived field populated by flattenOutline AFTER translation, so it is NOT required
  *  here — requiring it would reject valid translator output. */

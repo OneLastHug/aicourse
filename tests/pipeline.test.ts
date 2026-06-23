@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { resolveConfig } from "../src/config";
 import { MockCodexDriver } from "../src/codex/mock-driver";
 import { sampleResponder } from "../src/sample/responder";
+import { sampleZhLessons } from "../src/sample/fixtures";
 import { runPipeline } from "../src/pipeline/run";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -28,4 +29,6 @@ test("v2 pipeline runs end-to-end (mock): analyze→curriculum→lessons→valid
   assert.equal(typeof l0.problem.zh, "string");
   assert.equal(typeof l0.problem.en, "string");
   assert.ok(l0.howItWorks.length >= 1, "lesson has steps");
+  // Chinese-first: zh is the original generated text, en is translated from it
+  assert.equal(course.lessons["s01"]!.problem.zh, sampleZhLessons.s01!.problem, "zh is the original Chinese");
 });

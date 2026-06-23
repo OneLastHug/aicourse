@@ -1,29 +1,30 @@
-import type { Course, EnLesson, Lesson, Outline, ProgressEvent, Repo2LearnConfig } from "../types";
+import type { Course, ZhLesson, Lesson, Outline, ProgressEvent, Repo2LearnConfig } from "../types";
 import { translateOutlinePrompt, translateLessonPrompt } from "../prompts/translate";
 import type { CodexDriver } from "../codex/driver";
 import { Cache } from "../util/cache";
-import { flatEnLessons } from "./curriculum";
+import { flatZhLessons } from "./curriculum";
 import { codexJson } from "./_call";
 import { isBiOutline, isLesson } from "../codex/guards";
 import { getGlobalLimiter } from "../util/concurrency";
 import { configFingerprint } from "../config";
 import { log } from "../util/log";
-import type { EnCourse } from "./validate";
+import type { ZhCourse } from "./validate";
 
-/** Stage 6 — translate the validated English course to bilingual (EN→ZH).
- *  Split into one outline call + per-lesson body calls (concurrent, cached), so
- *  each call is small/fast/reliable instead of one giant whole-course call that
- *  returned an empty last message ("no JSON value found") on large courses. */
+/** Stage 6 — translate the generated CHINESE course to bilingual (ZH→EN): zh is
+ *  the original Chinese, en is translated from it. Split into one outline call +
+ *  per-lesson body calls (concurrent, cached), so each call is small/fast/reliable
+ *  instead of one giant whole-course call that returned an empty last message
+ *  ("no JSON value found") on large courses. */
 export async function runTranslateStage(args: {
-  enCourse: EnCourse; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
+  zhCourse: ZhCourse; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
 }): Promise<Course> {
-  const { enCourse, driver, cfg, cache, onProgress } = args;
+  const { zhCourse, driver, cfg, cache, onProgress } = args;
   // Defensive: if outline or sections are missing, the course can't be translated.
-  if (!enCourse?.outline?.sections?.length) {
-    throw new Error("translate: enCourse.outline.sections is missing or empty (pipeline assembly bug)");
+  if (!zhCourse?.outline?.sections?.length) {
+    throw new Error("translate: zhCourse.outline.sections is missing or empty (pipeline assembly bug)");
   }
-  const sha = enCourse.outline.course.repo.sha;
-  const flat = flatEnLessons(enCourse.outline);
+  const sha = zhCourse.outline.course.repo.sha;
+  const flat = flatZhLessons(zhCourse.outline);
   const fp = configFingerprint(cfg);
 
   // Fast path: a prior full translate exists.
@@ -38,7 +39,7 @@ export async function runTranslateStage(args: {
     log.step("translate: outline · " + flat.length + " lessons");
     outline = await codexJson<Outline>({
       driver, label: "translate:outline", cwd: process.cwd(), guard: isBiOutline, name: "translate outline",
-      prompt: translateOutlinePrompt(JSON.stringify(enCourse.outline)),
+      prompt: translateOutlinePrompt(JSON.stringify(zhCourse.outline)),
     });
     await cache.set(outlineKey, outline);
   }
@@ -48,7 +49,7 @@ export async function runTranslateStage(args: {
   const limit = getGlobalLimiter(cfg.codex.concurrency);
   log.step("translate: " + flat.length + " lessons (concurrent " + cfg.codex.concurrency + ")");
   const entries = await Promise.all(flat.map((l) => limit(async () => {
-    const body = enCourse.lessons[l.id] as EnLesson | undefined;
+    const body = zhCourse.lessons[l.id] as ZhLesson | undefined;
     if (!body) return null; // flattenOutline synthesizes a placeholder below
     const lessonKey = cache.key({ stage: "translate.lesson", sha, id: l.id, cfg: fp, v: 1 });
     const cachedBody = await cache.get<Lesson>(lessonKey);

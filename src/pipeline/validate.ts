@@ -1,4 +1,4 @@
-import type { EnOutline, ProgressEvent, Repo2LearnConfig, RepoContext, ValidationResult } from "../types";
+import type { ZhOutline, ProgressEvent, Repo2LearnConfig, RepoContext, ValidationResult } from "../types";
 import { validateLessonCorrectnessPrompt } from "../prompts/validateLessonCorrectness";
 import { validateLessonAlignmentPrompt } from "../prompts/validateLessonAlignment";
 import type { CodexDriver } from "../codex/driver";
@@ -7,24 +7,24 @@ import { configFingerprint } from "../config";
 import { getGlobalLimiter } from "../util/concurrency";
 import { extractJson } from "../codex/parse";
 import { isValidationResult } from "../codex/guards";
-import { flatEnLessons } from "./curriculum";
+import { flatZhLessons } from "./curriculum";
 import { log } from "../util/log";
 
-export interface EnCourse { outline: EnOutline; lessons: Record<string, unknown>; }
+export interface ZhCourse { outline: ZhOutline; lessons: Record<string, unknown>; }
 
 /** Round 1 — validate each lesson for correctness & poisoning (concurrent, per-lesson). */
 export async function validateCorrectness(args: {
-  enCourse: EnCourse; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
+  zhCourse: ZhCourse; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
 }): Promise<ValidationResult> {
-  const { enCourse, driver, cfg, cache, onProgress } = args;
-  const flat = flatEnLessons(enCourse.outline);
-  const sha = enCourse.outline.course.repo.sha;
+  const { zhCourse, driver, cfg, cache, onProgress } = args;
+  const flat = flatZhLessons(zhCourse.outline);
+  const sha = zhCourse.outline.course.repo.sha;
   const fp = configFingerprint(cfg);
   const limit = getGlobalLimiter(cfg.codex.concurrency);
   log.step("validate1: " + flat.length + " lessons (concurrent " + cfg.codex.concurrency + ")");
 
   const results = await Promise.all(flat.map((l) => limit(async () => {
-    const body = enCourse.lessons[l.id];
+    const body = zhCourse.lessons[l.id];
     if (!body) return { passed: true, issues: [], summary: "no body" } as ValidationResult;
     const key = cache.key({ stage: "validate1", sha, id: l.id, cfg: fp, v: 1 });
     const cached = await cache.get<ValidationResult>(key);
@@ -45,17 +45,17 @@ export async function validateCorrectness(args: {
 
 /** Round 2 — validate each lesson against the real repo (concurrent, per-lesson). */
 export async function validateAlignment(args: {
-  ctx: RepoContext; enCourse: EnCourse; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
+  ctx: RepoContext; zhCourse: ZhCourse; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
 }): Promise<ValidationResult> {
-  const { ctx, enCourse, driver, cfg, cache, onProgress } = args;
-  const flat = flatEnLessons(enCourse.outline);
+  const { ctx, zhCourse, driver, cfg, cache, onProgress } = args;
+  const flat = flatZhLessons(zhCourse.outline);
   const sha = ctx.sha;
   const fp = configFingerprint(cfg);
   const limit = getGlobalLimiter(cfg.codex.concurrency);
   log.step("validate2: " + flat.length + " lessons (concurrent " + cfg.codex.concurrency + ")");
 
   const results = await Promise.all(flat.map((l) => limit(async () => {
-    const body = enCourse.lessons[l.id];
+    const body = zhCourse.lessons[l.id];
     if (!body) return { passed: true, issues: [], summary: "no body" } as ValidationResult;
     const key = cache.key({ stage: "validate2", sha, id: l.id, cfg: fp, v: 1 });
     const cached = await cache.get<ValidationResult>(key);
