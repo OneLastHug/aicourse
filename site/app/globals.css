@@ -40,7 +40,7 @@ html.dark .btn-primary { @apply bg-white text-zinc-900 hover:bg-zinc-200; }
   font-style: normal !important;
 }
 .code-wrap pre.shiki {
-  @apply my-2 overflow-x-auto rounded-xl border border-zinc-800 p-4 text-[13px] leading-relaxed;
+  @apply my-2 max-w-full overflow-x-auto rounded-xl border border-zinc-800 p-4 text-[13px] leading-relaxed;
   background-color: #09090b !important;
 }
 .code-wrap .line { display: block; min-height: 1.5em; }
