@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { extractJson, assertShape, JsonExtractionError } from "../src/codex/parse";
-import { isCourse, isOutline } from "../src/codex/guards";
+import { isBiOutline, isCourse, isOutline } from "../src/codex/guards";
 import { sampleCourse } from "../src/sample/fixtures";
 
 test("extracts bare JSON object", () => {
@@ -101,5 +101,18 @@ test("assertShape rejects bad translator output as a translate failure", () => {
   assert.throws(
     () => assertShape({ lessons: {} }, isCourse, "translate"),
     JsonExtractionError,
+  );
+});
+
+test("isBiOutline accepts the sample translated outline", () => {
+  assert.equal(isBiOutline(sampleCourse.outline), true);
+});
+
+test("isBiOutline rejects outlines missing sections or with non-bilingual titles", () => {
+  assert.equal(isBiOutline({ course: {} }), false); // no sections
+  assert.equal(isBiOutline({ course: {}, sections: "no" }), false); // sections not array
+  assert.equal(
+    isBiOutline({ course: {}, sections: [{ id: "l01", title: { zh: "", en: "" }, summary: { zh: "", en: "" }, lessons: [{ id: "s01", title: "not bi" }] }] }),
+    false, // lesson.title must be Bi
   );
 });

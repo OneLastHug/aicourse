@@ -23,6 +23,14 @@ export function isOutline(v: unknown): v is Outline {
   const flat = o.lessons;
   return Array.isArray(flat);
 }
+/** Guard for the translated bilingual outline (course meta + sections). `lessons`
+ *  is a derived flat field populated by flattenOutline AFTER translation, so it is
+ *  NOT required here — requiring it would reject valid translator output. */
+export function isBiOutline(v: unknown): v is Outline {
+  const o = v as Outline;
+  if (typeof v !== "object" || v === null || !o.course || !Array.isArray(o.sections)) return false;
+  return o.sections.every((s) => isStr(s.id) && isBi(s.title) && isBi(s.summary) && Array.isArray(s.lessons) && s.lessons.every((l) => isStr(l.id) && isBi(l.title) && isBi(l.theProblem) && isBi(l.objective)));
+}
 export function isLesson(v: unknown): v is Lesson {
   const l = v as Lesson;
   if (typeof v !== "object" || v === null || !isStr(l.id) || !isBi(l.problem)) return false;
