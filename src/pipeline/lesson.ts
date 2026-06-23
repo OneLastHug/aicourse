@@ -28,7 +28,8 @@ async function genLesson(args: {
   const { l, ctx, titles, driver, cfg, cache, onProgress } = args;
   const key = cache.key({ stage: "lesson", sha: ctx.sha, id: l.id, cfg: configFingerprint(cfg), v: 2 });
   const cached = await cache.get<ZhLesson>(key);
-  if (cached) { onProgress?.({ type: "lesson", id: l.id, status: "ok", label: "cache hit" }); return [l.id, cached]; }
+  if (cached) { onProgress?.({ type: "log", level: "info", message: l.id + ": cache hit" }); onProgress?.({ type: "lesson", id: l.id, status: "ok", label: "cache hit" }); return [l.id, cached]; }
+  onProgress?.({ type: "log", level: "info", message: l.id + ": reading files (" + l.filesToRead.length + ")..." });
   onProgress?.({ type: "lesson", id: l.id, status: "start" });
   // 3a READ — free-form JSON text (mechanism understanding); keep raw.
   const readRes = await driver.run({ label: `lesson:read:${l.id}`, prompt: lessonReadPrompt(ctx, l, titles), cwd: ctx.localPath });

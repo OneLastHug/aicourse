@@ -22,6 +22,7 @@ export async function validateCorrectness(args: {
   const fp = configFingerprint(cfg);
   const limit = getGlobalLimiter(cfg.codex.concurrency);
   log.step("validate1: " + flat.length + " lessons (concurrent " + cfg.codex.concurrency + ")");
+  onProgress?.({ type: "log", level: "info", message: "validate-1: checking " + flat.length + " lessons for errors..." });
 
   const results = await Promise.all(flat.map((l) => limit(async () => {
     const body = zhCourse.lessons[l.id];
@@ -53,6 +54,7 @@ export async function validateAlignment(args: {
   const fp = configFingerprint(cfg);
   const limit = getGlobalLimiter(cfg.codex.concurrency);
   log.step("validate2: " + flat.length + " lessons (concurrent " + cfg.codex.concurrency + ")");
+  onProgress?.({ type: "log", level: "info", message: "validate-2: checking " + flat.length + " lessons against repo..." });
 
   const results = await Promise.all(flat.map((l) => limit(async () => {
     const body = zhCourse.lessons[l.id];

@@ -12,7 +12,9 @@ export async function runCurriculumStage(args: {
   const { ctx, analysis, driver, cfg, cache, onProgress } = args;
   const key = cache.key({ stage: "curriculum", sha: ctx.sha, cfg: configFingerprint(cfg), v: 2 });
   const cached = await cache.get<ZhOutline>(key);
-  if (cached) { onProgress?.({ type: "log", level: "info", message: "curriculum cache hit" }); return cached; }
+  if (cached) { onProgress?.({ type: "log", level: "info", message: "curriculum: cache hit" }); return cached; }
+  onProgress?.({ type: "log", level: "info", message: "curriculum: designing layered sections..." });
+  onProgress?.({ type: "log", level: "info", message: "curriculum: codex designing course structure..." });
   const outline = await codexJson({
     driver, label: "curriculum", cwd: ctx.localPath, guard: isZhOutline, name: "curriculum",
     prompt: curriculumPrompt(ctx, analysis, cfg.targetLessonCount),
