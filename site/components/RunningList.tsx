@@ -51,6 +51,7 @@ export function RunningList({ locale }: { locale: Locale }) {
     setRetrying(repoUrl);
     try {
       const res = await fetch("/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ repoUrl }) });
+      if (!res.ok) { setRetrying(null); return; }
       const data = await res.json();
       if (data.ready) router.push("/" + locale + "/c/" + data.repoId);
       else if (data.id) router.push("/" + locale + "/j/" + data.id);

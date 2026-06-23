@@ -29,8 +29,12 @@ export function HomeForm({ locale }: { locale: Locale }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ repoUrl: u }),
       });
+      if (!res.ok) {
+        let msg = "server error (" + res.status + ")";
+        try { const e = await res.json(); msg = e?.error || msg; } catch {}
+        throw new Error(msg);
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "failed to start");
       if (data.ready) router.push(`/${locale}/c/${data.repoId}`);
       else router.push(`/${locale}/j/${data.id}`);
     } catch (e) {
