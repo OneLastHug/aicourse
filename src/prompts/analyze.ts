@@ -28,8 +28,12 @@ STYLE — 精炼是第一要求：
   "coreMechanisms": ["<关键机制，4-10 字，按依赖排序>"],
   "architecture": "<各部分如何配合：模块、数据/控制流、入口、核心设计决策，3-5 句>",
   "layeredTeachingPath": ["<层次主题，2-5 字，由易到难>"],
-  "runningExampleSpine": "<一个可逐课生长的最小版本>",
+  "spineLanguage": "<整套教学 spine 代码统一使用的语言，取仓库主语言；不适合则 python>",
+  "runningExampleSpine": ["<增量蓝图：每节一个机制、后一节是前一节的超集，如 's01: 最小循环'>"],
+  "archDiagram": { "kind": "mermaid", "caption": "<中文标题>", "diagram": "<Mermaid 总架构图文本>" },
   "gotchas": ["<非显而易见、影响教学的点>"]
 }
+
+archDiagram 约束：只画真实存在的模块/数据流（基于你读过的文件）；用 flowchart TD 或 LR；每个节点标签用双引号包裹（如 loop["loop.ts 循环"]）；不要在标签外裸用 () : 等特殊字符。
 每条结论都要基于你实际读过的文件；引用真实路径/符号。JSON only，中文值，精炼。`;
 }

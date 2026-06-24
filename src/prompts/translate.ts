@@ -10,26 +10,26 @@ export function translateOutlinePrompt(zhOutlineJson: string): string {
   return `Translate this Chinese course outline into English, producing a bilingual outline. The Chinese is the ORIGINAL — keep it verbatim; add the English translation alongside.
 
 Rules:
-- Every user-facing text field becomes an object {"zh":"<原始中文>","en":"<English translation>"}: course.title, course.tagline, course.spine, each section.title and section.summary, each lesson.title, lesson.theProblem, lesson.objective.
+- Every user-facing text field becomes an object {"zh":"<原始中文>","en":"<English translation>"}: course.title, course.tagline, course.thesis, course.spine, archDiagram.caption, each section.title and section.summary, each lesson.title, lesson.theProblem, lesson.objective.
 - The "zh" value MUST be the original Chinese text unchanged; "en" is your faithful English translation.
-- ids, difficulty, keyFiles, prereq, tags, and repo.{url,name,sha} stay exactly as-is (not translated).
-- Keep the exact same JSON structure; only leaf text fields become bilingual.
+- archDiagram.diagram (the Mermaid text), ids, difficulty, keyFiles, prereq, tags, and repo.{url,name,sha} stay exactly as-is (NOT translated). If archDiagram is present, keep it (translate only its caption).
+- Keep the exact same JSON structure; only the leaf text fields listed above become bilingual.
 - Do NOT include lesson bodies (howItWorks/deepDive) — outline only.
 
-Return STRICT JSON ONLY — the bilingual outline: { "course": {...}, "sections": [...] }.
+Return STRICT JSON ONLY — the bilingual outline: { "course": {...}, "archDiagram"?: {...}, "sections": [...] }.
 
 CHINESE OUTLINE (JSON):
 ${zhOutlineJson}`;
 }
 
-/** Stage 6b — translate one Chinese lesson body to bilingual (keep code/paths/ids as-is). */
+/** Stage 6b — translate one Chinese lesson body to bilingual (keep code/paths/ids/diagram/spine/badges as-is). */
 export function translateLessonPrompt(lessonId: string, zhLessonJson: string): string {
   return `Translate this Chinese lesson body (${lessonId}) into English, producing a bilingual lesson. The Chinese is the ORIGINAL — keep it verbatim; add the English translation alongside.
 
 Rules:
-- Every user-facing text field becomes an object {"zh":"<原始中文>","en":"<English translation>"}: problem, solution, each howItWorks step's title/desc/anatomy, deepDive, tryIt, each compare.rows label.
+- Every user-facing text field becomes an object {"zh":"<原始中文>","en":"<English translation>"}: principle, problem, solution, diagram.caption, each howItWorks step's title/desc/anatomy, deepDive, tryIt, each compare.rows label.
 - The "zh" value MUST be the original Chinese text unchanged; "en" is your faithful English translation. For tryIt keep each line aligned (same \\n structure).
-- Code snippets (code.snippet/before), file paths, ids, URLs, "language"/"highlightLines", compare.rows a/b, references.title/url, loc, filesUsed stay exactly as-is (not translated).
+- Code snippets (code.snippet/before), code.file/language/highlightLines/isSpine/symbol, diagram.diagram (the Mermaid text), the entire spine object, the entire badges object, file paths, ids, URLs, compare.rows a/b, references.title/url, loc, filesUsed stay exactly as-is (NOT translated).
 - Translate prose faithfully and naturally for an English technical reader; keep all technical precision.
 - Keep the exact same JSON structure; only the leaf text fields listed above become bilingual.
 

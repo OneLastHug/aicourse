@@ -1,11 +1,13 @@
 import type { CodexCall } from "../codex/driver";
-import { sampleAnalysis, sampleCourse, sampleZhLessons, sampleZhOutline } from "./fixtures";
+import { sampleAnalysis, sampleCourse, sampleSpine, sampleZhLessons, sampleZhOutline } from "./fixtures";
 
 /** Routes a mock codex call (v2, Chinese-first) to the right sample fixture by its label. */
 export function sampleResponder(call: CodexCall): string {
   const lbl = call.label;
   if (lbl === "analyze") return JSON.stringify(sampleAnalysis);
   if (lbl === "curriculum") return JSON.stringify(sampleZhOutline);
+  const sp = /^spine:(s\d+)$/.exec(lbl);
+  if (sp && sampleSpine[sp[1] as string]) return JSON.stringify(sampleSpine[sp[1] as string]);
   const r = /^lesson:read:(s\d+)$/.exec(lbl);
   if (r) return JSON.stringify({ mechanism: "(mock) 机制理解", codeRefs: [], insights: [], beforeAfter: "" });
   const w = /^lesson:write:(s\d+)$/.exec(lbl);

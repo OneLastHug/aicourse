@@ -9,6 +9,7 @@ import { difficultyTheme, difficultyLabel } from "@/lib/ui";
 import { StepSimulator, type SimStep } from "@/components/StepSimulator";
 import { CompareTable } from "@/components/CompareTable";
 import { References } from "@/components/References";
+import { Mermaid } from "@/components/Mermaid";
 import type { Course, Locale } from "@/lib/types";
 
 const VALID: Locale[] = ["en", "zh"];
@@ -45,6 +46,8 @@ export default async function LessonPage({
       title: pick(s.title, loc),
       desc: pick(s.desc, loc),
       file: s.code?.file,
+      isSpine: s.code?.isSpine,
+      symbol: s.code?.symbol,
       html: s.code ? await highlight(s.code.snippet, s.code.language, s.code.highlightLines) : null,
     })),
   );
@@ -70,9 +73,18 @@ export default async function LessonPage({
                 {meta.tags.map((tg) => (
                   <span key={tg} className="rounded bg-bg-subtle px-1.5 py-0.5 font-mono dark:bg-zinc-800">#{tg}</span>
                 ))}
+                {lesson.badges?.concepts.map((cpt) => (
+                  <span key={cpt} className="rounded bg-brand/10 px-1.5 py-0.5 font-mono text-brand">{cpt}</span>
+                ))}
               </div>
             </div>
           </div>
+
+          {lesson.principle && (
+            <p className="mt-5 border-l-4 border-brand pl-4 text-lg font-semibold italic leading-relaxed text-ink dark:text-zinc-100">
+              {pick(lesson.principle, loc)}
+            </p>
+          )}
 
           <Section label={t(loc, "lesson.problem")} accent>
             <p className="text-lg font-medium leading-relaxed text-ink dark:text-zinc-100">{pick(lesson.problem, loc)}</p>
@@ -84,6 +96,11 @@ export default async function LessonPage({
           </Section>
 
           <Section label={t(loc, "lesson.how")}>
+            {lesson.diagram && (
+              <div className="mb-4">
+                <Mermaid chart={lesson.diagram.diagram} caption={pick(lesson.diagram.caption, loc)} />
+              </div>
+            )}
             {steps.length ? <StepSimulator steps={steps} locale={loc} /> : <p className="lead">{t(loc, "lesson.nosteps")}</p>}
           </Section>
 

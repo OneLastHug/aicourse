@@ -26,6 +26,7 @@ export const config: Repo2LearnConfig = {
   useMock: false,
   noCache: false,
   repo: "",
+  spine: true,
   validate: true,
   maxFixRounds: 1,
 };

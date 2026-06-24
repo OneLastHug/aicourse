@@ -1,11 +1,12 @@
 import { rm } from "node:fs/promises";
-import type { Course, ProgressEvent, Repo2LearnConfig } from "../types";
+import type { Course, ProgressEvent, Repo2LearnConfig, SpineArtifact } from "../types";
 import type { CodexDriver } from "../codex/driver";
 import { Cache } from "../util/cache";
 import { ingestRepo } from "../util/repo";
 import { sampleCtx } from "../sample/fixtures";
 import { runAnalyzeStage } from "./analyze";
 import { runCurriculumStage, flatZhLessons } from "./curriculum";
+import { runSpineStage } from "./spine";
 import { runLessonStages } from "./lesson";
 import { validateCorrectness, validateAlignment, type ZhCourse } from "./validate";
 import { runTranslateStage } from "./translate";
@@ -31,8 +32,16 @@ export async function runPipeline(args: {
     const flat = flatZhLessons(outline);
     onProgress?.({ type: "plan", total: flat.length, lessons: flat.map((l) => ({ id: l.id, title: { zh: l.title, en: "" }, difficulty: l.difficulty })) });
 
+    // Stage 2.5 — materialize the runnable spine (sequential, superset-per-lesson).
+    // Off (cfg.spine=false) → legacy "explain real source" mode.
+    let spine: Record<string, SpineArtifact> = {};
+    if (cfg.spine) {
+      onProgress?.({ type: "stage", stage: "spine", label: "Materializing the runnable spine (sequential)" });
+      spine = await runSpineStage({ ctx, outline, analysis, driver, cfg, cache, onProgress });
+    }
+
     onProgress?.({ type: "stage", stage: "lessons", label: `Writing ${flat.length} lessons (2-phase, ≤${cfg.codex.concurrency} concurrent)` });
-    const lessons = await runLessonStages({ ctx, outline, driver, cfg, cache, onProgress });
+    const lessons = await runLessonStages({ ctx, outline, spine, driver, cfg, cache, onProgress });
     const zhCourse: ZhCourse = { outline, lessons };
 
     if (cfg.validate) {

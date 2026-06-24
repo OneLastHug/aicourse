@@ -1,7 +1,7 @@
 {
   "title": {
-    "zh": "从零构建一个迷你编程 Agent",
-    "en": "Build a Nano Coding Agent"
+    "zh": "构建迷你 Agent",
+    "en": "Build a Mini Agent"
   },
   "tagline": {
     "zh": "一次只讲一个机制。",
@@ -18,7 +18,7 @@
       "id": "s01",
       "title": {
         "zh": "Agent 循环",
-        "en": "The Agent Loop"
+        "en": "Agent Loop"
       },
       "difficulty": "beginner",
       "status": "ok"
@@ -27,7 +27,7 @@
       "id": "s02",
       "title": {
         "zh": "系统提示词",
-        "en": "The System Prompt"
+        "en": "System Prompt"
       },
       "difficulty": "beginner",
       "status": "ok"

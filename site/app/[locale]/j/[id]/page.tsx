@@ -19,7 +19,7 @@ interface PlanLesson { id: string; title: { zh: string; en: string }; difficulty
 const STAGE_STEP: Record<string, number> = {
   queued: 0, ingest: 0,
   outline: 1, analyze: 1, curriculum: 1,
-  content: 2, lessons: 2, validate1: 2, validate2: 2, translate: 2, render: 2,
+  content: 2, spine: 2, lessons: 2, validate1: 2, validate2: 2, translate: 2, render: 2,
   done: 3,
 };
 
@@ -76,6 +76,10 @@ export default function ProgressPage() {
       setPlan(e.lessons);
     } else if (e.type === "lesson") {
       setLessonStatus((prev) => ({ ...prev, [e.id]: e.status }));
+    } else if (e.type === "spine") {
+      const line = "spine " + e.id + " · " + e.status;
+      setActivity(line);
+      if (!silent) setLog((l) => l.concat([line]));
     } else if (e.type === "log") {
       const line = "[" + e.level + "] " + e.message;
       setActivity(line);

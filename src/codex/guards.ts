@@ -1,4 +1,4 @@
-import type { Bi, Course, ZhLesson, ZhOutline, Lesson, Outline, RepoContext, ValidationResult } from "../types";
+import type { Bi, Course, ZhLesson, ZhOutline, Lesson, Outline, RepoContext, SpineArtifact, ValidationResult } from "../types";
 
 export function isStr(v: unknown): v is string { return typeof v === "string"; }
 export function isBi(v: unknown): v is Bi {
@@ -16,6 +16,12 @@ export function isZhOutline(v: unknown): v is ZhOutline {
 export function isZhLesson(v: unknown): v is ZhLesson {
   const l = v as ZhLesson;
   return typeof v === "object" && v !== null && isStr(l.id) && isStr(l.problem) && Array.isArray(l.howItWorks);
+}
+/** Spine artifact guard — lenient: only the fields the pipeline relies on. Does NOT
+ *  verify the code actually compiles/runs (that is the prompt's goal, not enforced). */
+export function isSpineArtifact(v: unknown): v is SpineArtifact {
+  const s = v as SpineArtifact;
+  return typeof v === "object" && v !== null && isStr(s.path) && isStr(s.language) && isStr(s.code);
 }
 export function isOutline(v: unknown): v is Outline {
   const o = v as Outline;

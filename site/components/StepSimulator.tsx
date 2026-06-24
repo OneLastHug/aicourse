@@ -10,6 +10,8 @@ export type SimStep = {
   desc: string;
   html: string | null;
   file?: string;
+  isSpine?: boolean;
+  symbol?: string;
 };
 
 export function StepSimulator({ steps, locale }: { steps: SimStep[]; locale: Locale }) {
@@ -78,9 +80,17 @@ export function StepSimulator({ steps, locale }: { steps: SimStep[]; locale: Loc
         {step?.html ? (
           <div className="code-wrap">
             {step.file && (
-              <div className="mb-2 flex items-center gap-1.5 font-mono text-[11px] text-ink-faint dark:text-zinc-500">
+              <div className="mb-2 flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-ink-faint dark:text-zinc-500">
                 <FileGlyph />
                 {step.file}
+                {step.isSpine === true && (
+                  <span className="rounded bg-brand/10 px-1.5 py-0.5 font-medium text-brand">{t(locale, "lesson.spineTag")}</span>
+                )}
+                {step.isSpine === false && (
+                  <span className="rounded bg-bg-subtle px-1.5 py-0.5 font-medium dark:bg-zinc-800">
+                    {t(locale, "lesson.realSourceTag")}{step.symbol ? ` · ${step.symbol}` : ""}
+                  </span>
+                )}
               </div>
             )}
             <div dangerouslySetInnerHTML={{ __html: step.html }} />

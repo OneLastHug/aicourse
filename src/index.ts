@@ -40,6 +40,7 @@ function parseArgs(argv: string[]): {
     switch (a) {
       case "--sample": sample = true; break;
       case "--no-cache": flags.noCache = true; break;
+      case "--no-spine": flags.spine = false; break;
       case "--mock": flags.useMock = true; break;
       case "--model": flags.codex = { ...flags.codex, model: take() }; break;
       case "--effort": flags.codex = { ...flags.codex, reasoningEffort: take() }; break;
@@ -74,6 +75,7 @@ Repo2Learn — turn a repo into a layered bilingual tutorial site.
 Options:
   --sample                 Offline demo using the mock driver (no codex needed)
   --no-cache               Disable cache; recompute every stage
+  --no-spine               Skip the runnable-spine stage (legacy explain-real-source mode)
   --mock                   Use mock driver (alias for sample-style offline runs)
   --model <id>             codex model            (default: gpt-5.4)
   --effort <level>         reasoning effort       (default: xhigh)
@@ -83,6 +85,7 @@ Options:
   --workdir <path>         clone work directory
   --out <path>             generated site data dir (default: site/content/generated)
   R2L_VALIDATE=0|1         env: 0 skip validation, 1 run it (default: 1)
+  R2L_SPINE=0|1            env: 0 skip spine materialization, 1 run it (default: 1)
 `);
 }
 

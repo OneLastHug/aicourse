@@ -20,15 +20,17 @@ ${analysis}
 STYLE — 标题与措辞（极重要，模仿 learn.shareai.run）：
 - 课程 title：2-5 字的名词短语，不要句子（如"构建迷你 Agent"，不是"从零开始一步步构建一个迷你编程 Agent 的完整指南"）。
 - tagline：一句短促有力的口号（≤12 字，如"一次只讲一个机制"），不要解释性长句。
+- thesis：贯穿全课的"思想主线"金句（≤24 字，说清这套教程的核心观点，如"所有 agent 都是同一个循环，逐个机制叠上去"）。区别于 tagline（口号）与 spine（代码怎么长）。
 - section.title：2-4 字主题（如"基础""核心""进阶"）；summary 一句话。
 - lesson.title：1-4 字的机制名（如"Agent 循环""工具调用""权限系统"），严禁整句当标题。
 - theProblem：用具体场景/痛点一两句说清"没有它会怎样"，不要复述标题。
 - objective：一句，说清学完能做什么。
 - mechanism：4-10 字点明这一节的核心机制。
 
-返回 STRICT JSON ONLY，所有面向用户的文本用中文（id/difficulty/repo/paths 保持原样）：
+返回 STRICT JSON ONLY，所有面向用户的文本用中文（id/difficulty/repo/paths 保持原样）。若 ANALYSIS 含 archDiagram，原样复制到顶层 archDiagram（mermaid 文本一字不改）：
 {
-  "course": { "title": "...", "tagline": "...", "repo": {"url":"${ctx.url}","name":"${ctx.name}","sha":"${ctx.sha}"}, "spine": "<随每节生长的运行示例>" },
+  "course": { "title": "...", "tagline": "...", "thesis": "<思想主线金句>", "repo": {"url":"${ctx.url}","name":"${ctx.name}","sha":"${ctx.sha}"}, "spine": "<随每节生长的运行示例>" },
+  "archDiagram": { "kind": "mermaid", "caption": "<中文标题>", "diagram": "<从 ANALYSIS 原样复制的 mermaid 文本>" },
   "sections": [
     { "id": "l01", "title": "...", "summary": "...", "spine": "<本层如何推进 spine>",
       "lessons": [

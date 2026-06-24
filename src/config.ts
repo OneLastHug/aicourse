@@ -16,6 +16,7 @@ export function resolveConfig(flags: Repo2LearnFlags = {}, fileConfig?: Partial<
     ...DEFAULT_CONFIG,
     ...fileConfig,
     ...stripUndefined(envValidateFlag()),
+    ...stripUndefined(envSpineFlag()),
     ...stripUndefined(flags),
     codex: {
       ...DEFAULT_CONFIG.codex,
@@ -33,6 +34,15 @@ function envValidateFlag(): Repo2LearnFlags {
   if (v === "0") return { validate: false };
   if (v === "1") return { validate: true };
   return {}; // unset / unknown → leave default (on)
+}
+
+/** R2L_SPINE env knob: "0" disables the spine materialization stage (falls back to
+ *  the legacy "explain real source" mode); unset or "1" keeps it on (the default). */
+function envSpineFlag(): Repo2LearnFlags {
+  const v = process.env.R2L_SPINE;
+  if (v === "0") return { spine: false };
+  if (v === "1") return { spine: true };
+  return {};
 }
 
 function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {

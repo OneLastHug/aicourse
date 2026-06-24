@@ -1,40 +1,57 @@
-import type { ZhOutlineLesson } from "../types";
+import type { SpineArtifact, ZhOutlineLesson } from "../types";
 
-/** Stage 3b — write the rich CHINESE lesson body using the read result.
- *  Mirrors learn.shareai.run: 问题 / 解决方案 / 工作原理(分步) / 深入 / 试一下 / 对比. */
-export function lessonWritePrompt(lesson: ZhOutlineLesson, readResult: string): string {
-  return `写分层教程的某一节（learn.shareai.run 水准）——用简体中文。用项目真实代码逐行讲清这一个机制。
+/** Stage 3b — write the rich CHINESE lesson body using the read result + (optional)
+ *  the runnable spine snapshot. Mirrors learn.shareai.run: 金句 / 问题 / 解决方案 /
+ *  机制图 / 工作原理(分步, 讲 spine + 对照真实源码) / 深入 / 试一下 / 对比 / 徽章. */
+export function lessonWritePrompt(lesson: ZhOutlineLesson, readResult: string, spine?: SpineArtifact): string {
+  const spineBlock = spine
+    ? `本节的"教学 spine"可运行代码（path: ${spine.path}，language: ${spine.language}）——howItWorks 主体就讲它：
+\`\`\`
+${spine.code}
+\`\`\``
+    : `（本节没有 spine 代码：直接用真实仓库源码来讲，howItWorks 的 code 省略 isSpine 字段。）`;
+  return `写分层教程的某一节（learn.shareai.run 水准）——用简体中文。${spine ? "用本节的教学 spine 代码逐行讲清这一个机制，最后对照真实仓库源码。" : "用项目真实代码逐行讲清这一个机制。"}
 
 LESSON: ${lesson.id} — ${lesson.title}
+机制：${lesson.mechanism}
+真实文件：${(lesson.filesToRead ?? []).join(", ") || "（READ RESULT 里有）"}
 READ RESULT（从真实代码里读到的）:
 ${readResult}
 
+${spineBlock}
+
 文风与结构（极重要，逐项遵守）：
 - 总原则：精炼、口语、有信息量。禁套话/客套/无信息量句子（"我们可以看到""值得注意的是""在本节中我们将探讨""综上所述"全部删除）。
+- principle：本节金句，一句话点破原理（≤20 字），像能记住、能引用的一句话。
 - problem：用具体场景说"没有它会怎样"或痛点直觉，2-4 句，不复述标题。
 - solution：一句话点破核心思路（≤30 字），让人秒懂"原来如此"。
-- howItWorks：4-7 步，每步标题是 2-6 字短语（如"调用模型""判断结束"），不是句子；desc 一两句解释该步；每步配真实代码（quote 整个函数/表达式，关键行号放 highlightLines）。可用 anatomy 做逐行注解，用 beforeCode 做 before/after。
-- deepDive：讲"为什么这样设计/权衡/被否决的替代方案/历史/性能或安全"，但必须**分点或分段有结构**，不要一大段流水账；引用权威网页（title+url）。
-- tryIt：几条可运行的命令或提示词，每条一行（\\n 分隔），让人能上手试。
+- diagram：一张 Mermaid 图描绘本节机制（数据流/状态/结构）。约束：flowchart 方向用 TD 或 LR；每个节点标签用双引号包裹（如 A["调用模型"]）；不要在标签外裸用 () : 等特殊字符；产出真实、能解析的 mermaid 文本。
+- howItWorks：4-7 步，每步标题是 2-6 字短语（如"调用模型""判断结束"），不是句子；desc 一两句解释该步。${spine ? "主体步骤讲 spine 代码（code.file 用 spine 的 path，code.isSpine=true，snippet 引 spine 代码片段，关键行号放 highlightLines）；最后追加一步「对照真实源码」（code.isSpine=false，code.file 用真实仓库路径，code.symbol 填真实函数/类名，desc 说清真实实现比 spine 多了哪些工程细节）。" : "每步配真实代码（quote 整个函数/表达式，关键行号放 highlightLines）。可用 anatomy 做逐行注解，用 beforeCode 做 before/after。"}
+- deepDive：讲"为什么这样设计/权衡/被否决的替代方案/历史/性能或安全"，必须**分点或分段有结构**，不要流水账；引用权威网页（title+url）。
+- tryIt：几条可运行的命令或提示词，每条一行（\\n 分隔）。${spine?.runCmd ? `第一条可用 spine 的运行命令：${spine.runCmd}。` : ""}
 - compare：一张表，把本方案 vs 朴素/显然方案对比，rows 的 a/b 是短语不是长句。
+- badges：{ loc: ${spine ? "本节 spine 代码行数" : "本节涉及代码行数"}, difficulty: "${lesson.difficulty}", concepts: [2-4 个英文/技术概念标签] }。
 
-单点深度：这一节只深挖这一个机制；不跑题、不重复其它节。但要把它讲透（不止"是什么"，还要"为什么、边界、坑"）。
+单点深度：这一节只深挖这一个机制；不跑题、不重复其它节，但要讲透（不止"是什么"，还要"为什么、边界、坑"）。
 
-返回 STRICT JSON ONLY。problem/solution/howItWorks(标题+描述+解剖)/deepDive/tryIt/compare(label+a+b) 用中文；code、文件路径、ids、language、highlightLines、references 的 title+url 保持原样：
+返回 STRICT JSON ONLY。principle/problem/solution、howItWorks 的 title+desc+anatomy、deepDive/tryIt、compare 的 label、diagram.caption 用中文；code、文件路径、ids、language、highlightLines、isSpine、symbol、diagram.diagram(mermaid 文本)、references 的 title+url、badges.concepts 保持原样：
 {
   "id": "${lesson.id}",
+  "principle": "...",
   "problem": "...",
   "solution": "...",
+  "diagram": {"kind":"mermaid","caption":"...","diagram":"flowchart TD\\n  A[\\"...\\"] --> B[\\"...\\"]"},
   "howItWorks": [
-    { "title": "...", "desc": "...", "code": {"file":"real/path","language":"ts","snippet":"<real code>","highlightLines":[3,4]},
-      "anatomy": "<optional 逐行注解>", "beforeCode": {"file":"...","language":"...","snippet":"...","highlightLines":[]} }
+    { "title": "...", "desc": "...", "code": {"file":"${spine ? spine.path : "real/path"}","language":"${spine ? spine.language : "ts"}","snippet":"<code>","highlightLines":[1]${spine ? ',"isSpine":true' : ""}}, "anatomy": "<optional>" }${spine ? `,
+    { "title": "对照真实源码", "desc": "...", "code": {"file":"real/path","language":"ts","snippet":"<real code>","highlightLines":[1],"isSpine":false,"symbol":"realFn"} }` : ""}
   ],
   "deepDive": "...",
-  "tryIt": "命令1\\n命令2\\n命令3",
+  "tryIt": "命令1\\n命令2",
   "references": [{"title":"...","url":"https://..."}],
   "compare": {"rows":[{"label":"...","a":"朴素做法","b":"本节方案"}]},
+  "badges": {"loc":0,"difficulty":"${lesson.difficulty}","concepts":["..."]},
   "loc": 0,
   "filesUsed": ["real/path"]
 }
-输出 RFC 8259 JSON ONLY——以 '{' 开头、'}' 结尾。所有 key 和 string 用双引号；"snippet" 内换行写 \\n、双引号写 \\"、反斜杠写 \\\\。无单引号、无注释、无尾逗号、无 markdown 围栏、无 JSON 前后文字。JSON only，中文，精炼有结构。`;
+输出 RFC 8259 JSON ONLY——以 '{' 开头、'}' 结尾。所有 key 和 string 用双引号；"snippet" 与 "diagram" 内换行写 \\n、双引号写 \\"、反斜杠写 \\\\。无单引号、无注释、无尾逗号、无 markdown 围栏、无 JSON 前后文字。JSON only，中文，精炼有结构。`;
 }

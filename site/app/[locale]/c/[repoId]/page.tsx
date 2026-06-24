@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCourse } from "@/lib/server/store";
 import { CourseShell } from "@/components/CourseShell";
+import { Mermaid } from "@/components/Mermaid";
 import { pick } from "@/lib/content";
 import { t } from "@/lib/i18n";
 import { difficultyTheme, difficultyLabel } from "@/lib/ui";
@@ -34,6 +35,11 @@ export default async function CourseHome({
             {pick(c.title, loc)}
           </h1>
           <p className="lead mt-4 text-lg">{pick(c.tagline, loc)}</p>
+          {c.thesis && (
+            <p className="mt-3 text-balance border-l-4 border-brand pl-4 text-base font-semibold italic text-ink dark:text-zinc-100">
+              {pick(c.thesis, loc)}
+            </p>
+          )}
           <div className="mt-6 flex flex-wrap items-center gap-2.5 text-sm">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-0.5 text-xs font-medium text-ink-faint dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">{c.repo.name}@{c.repo.sha}</span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-2.5 py-0.5 text-xs font-medium text-ink-faint dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">{course.outline.lessons.length} {t(loc, "course.unit")}</span>
@@ -45,6 +51,12 @@ export default async function CourseHome({
             )}
           </div>
         </section>
+
+        {course.outline.archDiagram && (
+          <section className="mx-auto mt-10 max-w-3xl">
+            <Mermaid chart={course.outline.archDiagram.diagram} caption={pick(course.outline.archDiagram.caption, loc)} />
+          </section>
+        )}
 
         <section className="mx-auto mt-12 max-w-5xl">
           <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-ink-faint dark:text-zinc-500">
