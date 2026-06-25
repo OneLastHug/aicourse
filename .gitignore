@@ -7,3 +7,4 @@ site/data/
 data/
 *.log
 .DS_Store
+*.stackdump
