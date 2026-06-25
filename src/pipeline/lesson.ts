@@ -29,7 +29,7 @@ async function genLesson(args: {
   // v3: lessonWrite now consumes the spine snapshot + emits principle/diagram/badges
   // + a "compare with real source" step. The cache key includes the spine code so a
   // changed spine re-triggers the write.
-  const key = cache.key({ stage: "lesson", sha: ctx.sha, id: l.id, spine: spine ? spine.code : "none", cfg: configFingerprint(cfg), v: 3 });
+  const key = cache.key({ stage: "lesson", sha: ctx.sha, id: l.id, spine: spine ? spine.code : "none", cfg: configFingerprint(cfg), v: 4 });
   const cached = await cache.get<ZhLesson>(key);
   if (cached) { onProgress?.({ type: "lesson", id: l.id, status: "ok", label: "cache hit" }); return [l.id, cached]; }
   onProgress?.({ type: "lesson", id: l.id, status: "start" });

@@ -26,6 +26,7 @@ STYLE — 标题与措辞（极重要，模仿 learn.shareai.run）：
 - theProblem：用具体场景/痛点一两句说清"没有它会怎样"，不要复述标题。
 - objective：一句，说清学完能做什么。
 - mechanism：4-10 字点明这一节的核心机制。
+- 中英混排要自然（像国内资深工程师写技术博客）：开发者习惯说英文的术语就保留英文——token、prompt、agent、hook、commit、merge、API、SDK、CLI、tool_use、payload 等，别硬译成生僻中文（不要把 token 写成「词元」、hook 写成「钩子」）；已约定俗成的词正常用中文（循环、上下文、缓存、回调、权限、并发）。判断标准：你怎么跟同事口头讲，就怎么写。
 
 返回 STRICT JSON ONLY，所有面向用户的文本用中文（id/difficulty/repo/paths 保持原样）。若 ANALYSIS 含 archDiagram，原样复制到顶层 archDiagram（mermaid 文本一字不改）：
 {
