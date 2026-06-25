@@ -91,6 +91,7 @@ export interface Lesson {
   spine?: SpineArtifact;
   howItWorks: HowItWorksStep[];
   deepDive: Bi;
+  deepSource?: Bi;
   tryIt?: Bi;
   references: Reference[];
   compare: { rows: CompareRow[] };

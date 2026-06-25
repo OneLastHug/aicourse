@@ -27,11 +27,11 @@ export function translateLessonPrompt(lessonId: string, zhLessonJson: string): s
   return `Translate this Chinese lesson body (${lessonId}) into English, producing a bilingual lesson. The Chinese is the ORIGINAL — keep it verbatim; add the English translation alongside.
 
 Rules:
-- Every user-facing text field becomes an object {"zh":"<原始中文>","en":"<English translation>"}: principle, problem, solution, diagram.caption, each howItWorks step's title/desc/anatomy, deepDive, tryIt, each compare.rows label.
+- Every user-facing text field becomes an object {"zh":"<原始中文>","en":"<English translation>"}: principle, problem, solution, diagram.caption, each howItWorks step's title/desc/anatomy, deepDive, deepSource, tryIt, each compare.rows label.
 - The "zh" value MUST be the original Chinese text unchanged; "en" is your faithful English translation. For tryIt keep each line aligned (same \\n structure).
 - Code snippets (code.snippet/before), code.file/language/highlightLines/isSpine/symbol, diagram.diagram (the Mermaid text), the entire spine object, the entire badges object, file paths, ids, URLs, compare.rows a/b, references.title/url, loc, filesUsed stay exactly as-is (NOT translated).
 - Translate prose faithfully and naturally for an English technical reader; keep all technical precision.
-- deepDive may contain Markdown (## subheadings, - bullets, **bold**, \`code\`) — keep all those markers, translate only the text.
+- deepDive and deepSource may contain Markdown (## subheadings, - bullets, **bold**, \`code\`, and | tables |) — keep ALL those markers and table structure intact, translate only the text.
 - Keep the exact same JSON structure; only the leaf text fields listed above become bilingual.
 
 Return STRICT JSON ONLY — the bilingual lesson body.

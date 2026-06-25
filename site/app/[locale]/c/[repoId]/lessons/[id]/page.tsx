@@ -145,6 +145,12 @@ export default async function LessonPage({
             )}
           </Section>
 
+          {lesson.deepSource && (
+            <Section label={t(loc, "lesson.source")}>
+              <Prose text={pick(lesson.deepSource, loc)} className="lead text-[15px]" />
+            </Section>
+          )}
+
           {lesson.tryIt && (
             <Section label={t(loc, "lesson.tryIt")}>
               <pre className="code-wrap overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-[13px] leading-relaxed text-zinc-300"><code>{pick(lesson.tryIt, loc)}</code></pre>

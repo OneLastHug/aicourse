@@ -108,6 +108,8 @@ export interface Lesson {
   spine?: SpineArtifact;
   howItWorks: HowItWorksStep[];
   deepDive: Bi;
+  /** 深入源码 — real-implementation deep dive (Markdown, may include comparison tables). */
+  deepSource?: Bi;
   /** 试一下 — runnable commands / prompts to try, newline-separated (kept verbatim). */
   tryIt?: Bi;
   references: Reference[];
@@ -162,6 +164,7 @@ export interface ZhLesson {
   spine?: SpineArtifact;
   howItWorks: ZhStep[];
   deepDive: string;
+  deepSource?: string;
   tryIt?: string;
   references: Reference[];
   compare: { rows: { label: string; a: string; b: string }[] };

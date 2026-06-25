@@ -27,6 +27,17 @@ function renderInline(text: string, kp: string): ReactNode[] {
 
 const SPECIAL = /^(#{2,4}\s|\s*[-*]\s|\s*\d+\.\s|\s*>\s?)/;
 
+/** A GitHub-style table row: `| a | b |`. */
+function isTableRow(s: string): boolean {
+  return /^\s*\|.*\|\s*$/.test(s);
+}
+function isTableSep(s: string): boolean {
+  return /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(s) && s.includes("-");
+}
+function splitRow(s: string): string[] {
+  return s.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+}
+
 /** Minimal, safe Markdown subset renderer: ## / ### headings, - / 1. lists,
  *  > blockquotes, **bold**, `code`, paragraphs. Plain prose (no markup) renders
  *  as paragraphs unchanged, so it is safe to use on any text field. */
@@ -52,6 +63,37 @@ export function Prose({ text, className }: { text: string; className?: string })
         ),
       );
       key++; i++; continue;
+    }
+
+    // GitHub-style table: header row, separator row, then body rows.
+    if (isTableRow(line) && i + 1 < lines.length && isTableSep(at(i + 1))) {
+      const header = splitRow(line);
+      i += 2; // skip header + separator
+      const body: string[][] = [];
+      while (i < lines.length && isTableRow(at(i)) && !isTableSep(at(i))) { body.push(splitRow(at(i))); i++; }
+      blocks.push(
+        <div key={key} className="my-3 overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-line dark:border-zinc-700">
+                {header.map((c, j) => (
+                  <th key={j} className="px-3 py-1.5 text-left font-semibold text-ink dark:text-zinc-200">{renderInline(c, `th${key}-${j}`)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {body.map((row, r) => (
+                <tr key={r} className="border-b border-line/60 dark:border-zinc-800">
+                  {row.map((c, j) => (
+                    <td key={j} className="px-3 py-1.5 align-top text-ink-soft dark:text-zinc-300">{renderInline(c, `td${key}-${r}-${j}`)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
+      );
+      key++; continue;
     }
 
     if (/^\s*[-*]\s+/.test(line)) {

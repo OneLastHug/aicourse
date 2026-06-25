@@ -28,14 +28,15 @@ ${spineBlock}
 - solution：一句话点破核心思路（≤30 字），让人秒懂"原来如此"。
 - diagram：一张 Mermaid 图描绘本节机制（数据流/状态/结构）。约束：flowchart 方向用 TD 或 LR；每个节点标签用双引号包裹（如 A["调用模型"]）；不要在标签外裸用 () : 等特殊字符；产出真实、能解析的 mermaid 文本。
 - howItWorks：5-8 步，每步标题是 2-6 字短语（如"调用模型""判断结束"），不是句子；desc 一两句解释该步。${spine ? "主体步骤讲 spine 代码（code.file 用 spine 的 path，code.isSpine=true，snippet 引 spine 代码片段，关键行号放 highlightLines）；最后追加一步「对照真实源码」（code.isSpine=false，code.file 用真实仓库路径，code.symbol 填真实函数/类名，desc 说清真实实现比 spine 多了哪些工程细节）。" : "每步配真实代码（quote 整个函数/表达式，关键行号放 highlightLines）。可用 anatomy 做逐行注解，用 beforeCode 做 before/after。"}
-- deepDive：**全节最能体现深度的部分，要写足写透（约 300-600 字）**，用 markdown 结构化：分 2-4 个 \`## 小标题\`，每段几句话。务必覆盖这四点：① **为什么这么设计**（动机、它比朴素做法好在哪）；② **取舍与被否决的替代方案**；③ **与真实实现的差距**——${spine ? "教学 spine 刻意简化/省略了什么、为什么这么简化合理；对照真实仓库点出真实实现多出的机制（可用 \`- \` 列点）" : "若你讲的就是真实代码，点出它为应对生产做了哪些额外处理"}；④ **边界与坑**。允许 \`**强调**\`、\`- 列点\`、\`\`\`行内代码\`\`\`。引用 2+ 权威网页放进 references。
+- deepDive：讲设计与权衡（约 250-450 字），用 markdown 分 2-3 个 \`## 小标题\`：① **为什么这么设计**（动机、比朴素做法好在哪）；② **取舍与被否决的替代方案**；③ **边界与坑**。允许 \`**强调**\`、\`- 列点\`、\`\`\`行内代码\`\`\`。引用 2+ 权威网页放进 references。
+- deepSource（深入源码，**本节深度的重头戏**）：带读者看真实仓库里这个机制到底怎么实现，约 250-500 字 markdown。必须包含：① 一段点明真实实现的关键文件/函数与控制流（引真实路径/符号）；② **至少 1 张 markdown 对照表** \`| 维度 | ${spine ? "教学 spine" : "教学版"} | 真实实现 |\`，逐行点出真实实现多出的机制（错误处理、并发、权限、边界、配置等）；③ 每条简化补一句"为什么这么简化对教学是合理的"。表格单元格要短。若实在没有真实源码可对照，可省略本字段。
 - tryIt：几条可运行的命令或提示词，每条一行（\\n 分隔）。${spine?.runCmd ? `第一条可用 spine 的运行命令：${spine.runCmd}。` : ""}
 - compare：一张表，把本方案 vs 朴素/显然方案对比，rows 的 a/b 是短语不是长句。
 - badges：{ loc: ${spine ? "本节 spine 代码行数" : "本节涉及代码行数"}, difficulty: "${lesson.difficulty}", concepts: [2-4 个英文/技术概念标签] }。
 
 单点深度：这一节只深挖这一个机制；不跑题、不重复其它节，但要讲透（不止"是什么"，还要"为什么、边界、坑"）。
 
-返回 STRICT JSON ONLY。principle/problem/solution、howItWorks 的 title+desc+anatomy、deepDive/tryIt、compare 的 label、diagram.caption 用中文；code、文件路径、ids、language、highlightLines、isSpine、symbol、diagram.diagram(mermaid 文本)、references 的 title+url、badges.concepts 保持原样：
+返回 STRICT JSON ONLY。principle/problem/solution、howItWorks 的 title+desc+anatomy、deepDive/deepSource/tryIt、compare 的 label、diagram.caption 用中文；code、文件路径、ids、language、highlightLines、isSpine、symbol、diagram.diagram(mermaid 文本)、references 的 title+url、badges.concepts 保持原样：
 {
   "id": "${lesson.id}",
   "principle": "...",
@@ -46,7 +47,8 @@ ${spineBlock}
     { "title": "...", "desc": "...", "code": {"file":"${spine ? spine.path : "real/path"}","language":"${spine ? spine.language : "ts"}","snippet":"<code>","highlightLines":[1]${spine ? ',"isSpine":true' : ""}}, "anatomy": "<optional>" }${spine ? `,
     { "title": "对照真实源码", "desc": "...", "code": {"file":"real/path","language":"ts","snippet":"<real code>","highlightLines":[1],"isSpine":false,"symbol":"realFn"} }` : ""}
   ],
-  "deepDive": "...",
+  "deepDive": "## 为什么这么设计\\n...\\n\\n## 取舍\\n...\\n\\n## 边界与坑\\n...",
+  "deepSource": "真实实现见 \`real/path\` 的 \`realFn\`：...\\n\\n| 维度 | 教学版 | 真实实现 |\\n| --- | --- | --- |\\n| 错误处理 | 省略 | 重试+降级 |",
   "tryIt": "命令1\\n命令2",
   "references": [{"title":"...","url":"https://..."}],
   "compare": {"rows":[{"label":"...","a":"朴素做法","b":"本节方案"}]},
