@@ -55,6 +55,14 @@ export default async function LessonPage({
   );
   const { prev, next, index, total } = neighbors(course.outline.lessons, id);
 
+  // "Changes from previous lesson" — render the spine snapshot with the lines that
+  // grew this lesson highlighted. Only when there is a previous lesson + marked lines.
+  const sp = lesson.spine;
+  const changesHtml =
+    sp?.prevLessonId && sp.addedLines && sp.addedLines.length
+      ? await highlight(sp.code, sp.language, sp.addedLines)
+      : null;
+
   return (
     <CourseShell course={course} locale={loc} repoId={repoId} activeId={id}>
       <article className="animate-fadeUp px-5 py-8 sm:px-8 lg:px-12">
@@ -112,6 +120,20 @@ export default async function LessonPage({
             )}
             {steps.length ? <StepSimulator steps={steps} locale={loc} /> : <p className="lead">{t(loc, "lesson.nosteps")}</p>}
           </Section>
+
+          {changesHtml && sp && (
+            <Section label={t(loc, "lesson.changes")}>
+              <div className="mb-2 flex items-center gap-2 text-xs text-ink-faint dark:text-zinc-500">
+                <span className="font-mono">{sp.prevLessonId} → {id}</span>
+                <span>·</span>
+                <span>{t(loc, "lesson.changesHint")}</span>
+              </div>
+              <div className="code-wrap overflow-x-auto rounded-xl" dangerouslySetInnerHTML={{ __html: changesHtml }} />
+              {sp.runCmd && (
+                <div className="mt-2 font-mono text-[11px] text-ink-faint dark:text-zinc-500">$ {sp.runCmd}</div>
+              )}
+            </Section>
+          )}
 
           <Section label={t(loc, "lesson.deep")}>
             <Prose text={pick(lesson.deepDive, loc)} className="lead text-[15px]" />
