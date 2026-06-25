@@ -27,8 +27,8 @@ ${spineBlock}
 - problem：用具体场景说"没有它会怎样"或痛点直觉，2-4 句，不复述标题。
 - solution：一句话点破核心思路（≤30 字），让人秒懂"原来如此"。
 - diagram：一张 Mermaid 图描绘本节机制（数据流/状态/结构）。约束：flowchart 方向用 TD 或 LR；每个节点标签用双引号包裹（如 A["调用模型"]）；不要在标签外裸用 () : 等特殊字符；产出真实、能解析的 mermaid 文本。
-- howItWorks：4-7 步，每步标题是 2-6 字短语（如"调用模型""判断结束"），不是句子；desc 一两句解释该步。${spine ? "主体步骤讲 spine 代码（code.file 用 spine 的 path，code.isSpine=true，snippet 引 spine 代码片段，关键行号放 highlightLines）；最后追加一步「对照真实源码」（code.isSpine=false，code.file 用真实仓库路径，code.symbol 填真实函数/类名，desc 说清真实实现比 spine 多了哪些工程细节）。" : "每步配真实代码（quote 整个函数/表达式，关键行号放 highlightLines）。可用 anatomy 做逐行注解，用 beforeCode 做 before/after。"}
-- deepDive：讲"为什么这样设计/权衡/被否决的替代方案/历史/性能或安全"，必须**分点或分段有结构**，不要流水账；引用权威网页（title+url）。
+- howItWorks：5-8 步，每步标题是 2-6 字短语（如"调用模型""判断结束"），不是句子；desc 一两句解释该步。${spine ? "主体步骤讲 spine 代码（code.file 用 spine 的 path，code.isSpine=true，snippet 引 spine 代码片段，关键行号放 highlightLines）；最后追加一步「对照真实源码」（code.isSpine=false，code.file 用真实仓库路径，code.symbol 填真实函数/类名，desc 说清真实实现比 spine 多了哪些工程细节）。" : "每步配真实代码（quote 整个函数/表达式，关键行号放 highlightLines）。可用 anatomy 做逐行注解，用 beforeCode 做 before/after。"}
+- deepDive：**全节最能体现深度的部分，要写足写透（约 300-600 字）**，用 markdown 结构化：分 2-4 个 \`## 小标题\`，每段几句话。务必覆盖这四点：① **为什么这么设计**（动机、它比朴素做法好在哪）；② **取舍与被否决的替代方案**；③ **与真实实现的差距**——${spine ? "教学 spine 刻意简化/省略了什么、为什么这么简化合理；对照真实仓库点出真实实现多出的机制（可用 \`- \` 列点）" : "若你讲的就是真实代码，点出它为应对生产做了哪些额外处理"}；④ **边界与坑**。允许 \`**强调**\`、\`- 列点\`、\`\`\`行内代码\`\`\`。引用 2+ 权威网页放进 references。
 - tryIt：几条可运行的命令或提示词，每条一行（\\n 分隔）。${spine?.runCmd ? `第一条可用 spine 的运行命令：${spine.runCmd}。` : ""}
 - compare：一张表，把本方案 vs 朴素/显然方案对比，rows 的 a/b 是短语不是长句。
 - badges：{ loc: ${spine ? "本节 spine 代码行数" : "本节涉及代码行数"}, difficulty: "${lesson.difficulty}", concepts: [2-4 个英文/技术概念标签] }。

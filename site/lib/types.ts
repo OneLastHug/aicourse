@@ -18,6 +18,13 @@ export interface OutlineLesson {
   tags: string[];
 }
 
+export interface OutlineSection {
+  id: string;
+  title: Bi;
+  summary: Bi;
+  lessons: OutlineLesson[];
+}
+
 /** Mermaid diagram — diagram text is language-neutral, only caption is bilingual. */
 export interface Diagram { kind: "mermaid"; caption: Bi; diagram: string; }
 
@@ -44,6 +51,7 @@ export interface Outline {
     thesis?: Bi;
   };
   archDiagram?: Diagram;
+  sections?: OutlineSection[];
   lessons: OutlineLesson[];
 }
 

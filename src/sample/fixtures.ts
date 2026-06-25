@@ -120,7 +120,23 @@ export const sampleZhLessons: Record<string, ZhLesson> = {
       { title: "判断结束", desc: "没有 tool_use 就返回，否则把模型回答追加进消息。", code: { file: "s01_agent_loop/code.ts", language: "ts", snippet: "if (toolUses.length === 0) return reply;", highlightLines: [1], isSpine: true } },
       { title: "对照真实源码", desc: "真实仓库里循环在 loop.ts 的 loop() 中，还多了工具结果回传与错误处理。", code: { file: "src/loop.ts", language: "ts", snippet: "while (true) {\n  const response = await callModel({ systemPrompt, messages });", highlightLines: [1, 2], isSpine: false, symbol: "loop" } },
     ],
-    deepDive: "模型↔工具的循环是所有 agent 框架的本质。上下文即对话本身；长任务需要压缩。模型负责决策（调不调、调哪个），harness 负责执行（跑了就把结果喂回去）。后面所有机制都在这个循环上叠加，循环本身始终不变。",
+    deepDive: `## 为什么是循环
+模型只会输出文本；没有循环，它只能「说」不能「做」。把模型调用放进 while，让它读到工具结果后继续决策，才把"对话"变成"执行"。
+
+## 取舍
+- 用"是否还有 tool_use"判断停止，而不是让模型显式说"我做完了"——更稳，不依赖措辞。
+- 教学版一次只跑一个工具、不做并行，换来代码清晰。
+
+## 与真实实现的差距
+真实仓库在循环外还包了不少东西：
+- 工具结果要以 \`role:"tool"\` 消息回传，并处理报错与重试。
+- 上下文过长要做 compaction 压缩。
+- 加了超时、中断、权限校验。
+
+这些都挂在循环外围，循环本身始终不变。
+
+## 边界与坑
+模型可能反复调用同一个工具陷入死循环——真实实现会加步数上限或重复检测。`,
     tryIt: "npx tsx s01_agent_loop/code.ts\n试试：让模型列出当前目录的 Python 文件\n观察：模型什么时候调工具（循环继续），什么时候不调（结束）",
     references: [{ title: "Building effective agents", url: "https://www.anthropic.com/research/building-effective-agents" }],
     compare: { rows: [{ label: "停止条件", a: "运行到超时", b: "模型自行停止" }] },
@@ -137,7 +153,18 @@ export const sampleZhLessons: Record<string, ZhLesson> = {
       { title: "常量字符串", desc: "规则写成常量，循环里把它作为 systemPrompt 传给模型。", code: { file: "s02_system_prompt/code.ts", language: "ts", snippet: 'const systemPrompt = "You are nano-agent. Use tools to read and write files.";', highlightLines: [1], isSpine: true } },
       { title: "对照真实源码", desc: "真实仓库把系统提示词单独放在 prompt.ts，便于迭代与拼接。", code: { file: "src/prompt.ts", language: "ts", snippet: 'export const systemPrompt = "You are nano-agent."; ', highlightLines: [1], isSpine: false, symbol: "systemPrompt" } },
     ],
-    deepDive: "系统提示词是 agent 的宪法。关键规则放在开头和结尾，中间放次要约束。改动它会显著改变行为，却几乎不增加代码——杠杆比极高。",
+    deepDive: `## 为什么放在 system
+system 字段在第一轮之前就定下基调，权重高于普通用户消息。把行为规则放这里，比每轮重复叮嘱更省 token、更稳定。
+
+## 取舍
+- 写成常量 vs 模板拼接：常量简单、可读；真实项目常按工具集/权限动态拼接。
+- 关键规则放开头和结尾——模型对首尾更敏感。
+
+## 与真实实现的差距
+真实仓库的 system prompt 往往上千行，按场景拼接工具说明、安全边界、环境信息；教学版只留一句，够说明"它如何设定行为"。
+
+## 边界与坑
+改一句话就可能显著改变行为，却几乎不增加代码——杠杆极高，也意味着容易踩坑，需要回归测试。`,
     tryIt: "改 systemPrompt 的内容，看模型行为如何变化\n把关键规则同时放在开头和结尾，对比效果",
     references: [],
     compare: { rows: [] },
@@ -175,7 +202,39 @@ export const sampleCourse: Course = {
         { title: { zh: "判断结束", en: "Check for stop" }, desc: { zh: "没有 tool_use 就返回，否则把模型回答追加进消息。", en: "Return if there's no tool_use; otherwise append the model's reply." }, code: { file: "s01_agent_loop/code.ts", language: "ts", snippet: "if (toolUses.length === 0) return reply;", highlightLines: [1], isSpine: true } },
         { title: { zh: "对照真实源码", en: "Compare with the real source" }, desc: { zh: "真实仓库里循环在 loop.ts 的 loop() 中，还多了工具结果回传与错误处理。", en: "In the real repo the loop lives in loop.ts's loop(), with tool-result feedback and error handling added." }, code: { file: "src/loop.ts", language: "ts", snippet: "while (true) {\n  const response = await callModel({ systemPrompt, messages });", highlightLines: [1, 2], isSpine: false, symbol: "loop" } },
       ],
-      deepDive: { zh: "模型↔工具的循环是所有 agent 框架的本质。上下文即对话本身；长任务需要压缩。模型负责决策（调不调、调哪个），harness 负责执行（跑了就把结果喂回去）。后面所有机制都在这个循环上叠加，循环本身始终不变。", en: "The model↔tools loop is the essence of every agent framework. Context is the conversation itself; long tasks need compaction. The model decides; the harness executes and feeds results back. Later mechanisms all stack on this loop — the loop itself never changes." },
+      deepDive: { zh: `## 为什么是循环
+模型只会输出文本；没有循环，它只能「说」不能「做」。把模型调用放进 while，让它读到工具结果后继续决策，才把"对话"变成"执行"。
+
+## 取舍
+- 用"是否还有 tool_use"判断停止，而不是让模型显式说"我做完了"——更稳，不依赖措辞。
+- 教学版一次只跑一个工具、不做并行，换来代码清晰。
+
+## 与真实实现的差距
+真实仓库在循环外还包了不少东西：
+- 工具结果要以 \`role:"tool"\` 消息回传，并处理报错与重试。
+- 上下文过长要做 compaction 压缩。
+- 加了超时、中断、权限校验。
+
+这些都挂在循环外围，循环本身始终不变。
+
+## 边界与坑
+模型可能反复调用同一个工具陷入死循环——真实实现会加步数上限或重复检测。`, en: `## Why a loop
+An LLM only emits text; without a loop it can only "talk", not "act". Wrapping the model call in a while loop — so it reads tool results and keeps deciding — is what turns a conversation into execution.
+
+## Trade-offs
+- Stop on "no more tool_use" rather than asking the model to say "I'm done" — sturdier, not wording-dependent.
+- The teaching version runs one tool at a time, no parallelism, trading throughput for clarity.
+
+## Gap from the real implementation
+The real repo wraps a lot around this loop:
+- Tool results must be fed back as \`role:"tool"\` messages, with error handling and retries.
+- Long context needs compaction.
+- Timeouts, cancellation, and permission checks are added.
+
+All of it hangs around the loop — the loop itself never changes.
+
+## Edges & gotchas
+The model can loop forever calling the same tool — the real implementation adds a step cap or repeat detection.` },
       tryIt: { zh: "npx tsx s01_agent_loop/code.ts\n试试：让模型列出当前目录的 Python 文件\n观察：模型什么时候调工具（循环继续），什么时候不调（结束）", en: "npx tsx s01_agent_loop/code.ts\nTry: ask the model to list Python files in this directory\nWatch: when does it call a tool (loop continues) vs not (loop ends)?" },
       references: [{ title: "Building effective agents", url: "https://www.anthropic.com/research/building-effective-agents" }],
       compare: { rows: [{ label: { zh: "停止条件", en: "Stop condition" }, a: "运行到超时", b: "模型自行停止" }] },
@@ -192,7 +251,29 @@ export const sampleCourse: Course = {
         { title: { zh: "常量字符串", en: "A constant string" }, desc: { zh: "规则写成常量，循环里把它作为 systemPrompt 传给模型。", en: "Rules as a constant, passed into the loop as systemPrompt." }, code: { file: "s02_system_prompt/code.ts", language: "ts", snippet: 'const systemPrompt = "You are nano-agent. Use tools to read and write files.";', highlightLines: [1], isSpine: true } },
         { title: { zh: "对照真实源码", en: "Compare with the real source" }, desc: { zh: "真实仓库把系统提示词单独放在 prompt.ts，便于迭代与拼接。", en: "The real repo keeps the system prompt in its own prompt.ts for easy iteration and composition." }, code: { file: "src/prompt.ts", language: "ts", snippet: 'export const systemPrompt = "You are nano-agent."; ', highlightLines: [1], isSpine: false, symbol: "systemPrompt" } },
       ],
-      deepDive: { zh: "系统提示词是 agent 的宪法。关键规则放在开头和结尾，中间放次要约束。改动它会显著改变行为，却几乎不增加代码——杠杆比极高。", en: "The system prompt is the agent's constitution. Put critical rules at the start and end; minor constraints in the middle. A small edit shifts behavior dramatically at near-zero code cost — huge leverage." },
+      deepDive: { zh: `## 为什么放在 system
+system 字段在第一轮之前就定下基调，权重高于普通用户消息。把行为规则放这里，比每轮重复叮嘱更省 token、更稳定。
+
+## 取舍
+- 写成常量 vs 模板拼接：常量简单、可读；真实项目常按工具集/权限动态拼接。
+- 关键规则放开头和结尾——模型对首尾更敏感。
+
+## 与真实实现的差距
+真实仓库的 system prompt 往往上千行，按场景拼接工具说明、安全边界、环境信息；教学版只留一句，够说明"它如何设定行为"。
+
+## 边界与坑
+改一句话就可能显著改变行为，却几乎不增加代码——杠杆极高，也意味着容易踩坑，需要回归测试。`, en: `## Why put it in system
+The system field sets the tone before turn one and outweighs ordinary user messages. Putting behavioral rules here is cheaper (tokens) and steadier than re-stating them every turn.
+
+## Trade-offs
+- Constant vs templated: a constant is simple and readable; real projects assemble it dynamically by toolset/permissions.
+- Put key rules at the start AND end — models weight the edges more.
+
+## Gap from the real implementation
+A real repo's system prompt is often thousands of lines, composing tool docs, safety boundaries, and environment info per scenario; the teaching version keeps one line — enough to show "how it sets behavior".
+
+## Edges & gotchas
+One sentence can shift behavior dramatically at near-zero code cost — huge leverage, but also easy to break, so it needs regression tests.` },
       tryIt: { zh: "改 systemPrompt 的内容，看模型行为如何变化\n把关键规则同时放在开头和结尾，对比效果", en: "Edit systemPrompt and watch behavior change\nPut a key rule at both the start and the end; compare" },
       references: [], compare: { rows: [] }, loc: 14, badges: { loc: 14, difficulty: "beginner", concepts: ["system-prompt", "behavior"] }, status: "ok",
     },

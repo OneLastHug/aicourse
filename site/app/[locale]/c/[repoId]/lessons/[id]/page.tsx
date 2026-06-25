@@ -10,6 +10,8 @@ import { StepSimulator, type SimStep } from "@/components/StepSimulator";
 import { CompareTable } from "@/components/CompareTable";
 import { References } from "@/components/References";
 import { Mermaid } from "@/components/Mermaid";
+import { ProgressRail } from "@/components/ProgressRail";
+import { Prose } from "@/components/Prose";
 import type { Course, Locale } from "@/lib/types";
 
 const VALID: Locale[] = ["en", "zh"];
@@ -62,6 +64,7 @@ export default async function LessonPage({
             <span>/</span>
             <span className="font-mono">{id}</span>
           </div>
+          <ProgressRail lessons={course.outline.lessons} activeId={id} locale={loc} repoId={repoId} />
           <div className="flex items-center gap-3">
             <span className="grid h-12 w-12 place-items-center rounded-xl bg-brand font-mono text-base font-bold text-white">{String(index + 1).padStart(2, "0")}</span>
             <div>
@@ -85,6 +88,12 @@ export default async function LessonPage({
               {pick(lesson.principle, loc)}
             </p>
           )}
+          {meta.objective && (
+            <p className="mt-3 flex items-start gap-2 text-sm text-ink-soft dark:text-zinc-400">
+              <span className="mt-0.5 shrink-0 rounded bg-bg-subtle px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-ink-faint dark:bg-zinc-800 dark:text-zinc-500">{t(loc, "lesson.objective")}</span>
+              <span>{pick(meta.objective, loc)}</span>
+            </p>
+          )}
 
           <Section label={t(loc, "lesson.problem")} accent>
             <p className="text-lg font-medium leading-relaxed text-ink dark:text-zinc-100">{pick(lesson.problem, loc)}</p>
@@ -105,7 +114,7 @@ export default async function LessonPage({
           </Section>
 
           <Section label={t(loc, "lesson.deep")}>
-            <p className="lead whitespace-pre-line">{pick(lesson.deepDive, loc)}</p>
+            <Prose text={pick(lesson.deepDive, loc)} className="lead text-[15px]" />
             {lesson.references.length > 0 && (
               <div className="mt-5">
                 <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-faint dark:text-zinc-500">{t(loc, "lesson.further")}</div>
@@ -123,6 +132,19 @@ export default async function LessonPage({
           {lesson.compare.rows.length > 0 && (
             <Section label={t(loc, "lesson.compare")}>
               <CompareTable rows={lesson.compare.rows} locale={loc} />
+            </Section>
+          )}
+
+          {next && (
+            <Section label={t(loc, "lesson.whatsNext")}>
+              <Link href={`/${loc}/c/${repoId}/lessons/${next.id}`} className="card group flex items-start gap-3 p-4 transition hover:-translate-y-0.5">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle font-mono text-xs font-semibold text-ink-faint dark:bg-zinc-800 dark:text-zinc-400">{next.id}</span>
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-semibold group-hover:text-brand">{pick(next.title, loc)}</span>
+                  <span className="mt-0.5 line-clamp-2 text-xs text-ink-faint dark:text-zinc-500">{pick(next.theProblem, loc)}</span>
+                </span>
+                <span className="ml-auto self-center text-ink-faint group-hover:text-brand dark:text-zinc-600">→</span>
+              </Link>
             </Section>
           )}
 

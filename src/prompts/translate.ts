@@ -31,6 +31,7 @@ Rules:
 - The "zh" value MUST be the original Chinese text unchanged; "en" is your faithful English translation. For tryIt keep each line aligned (same \\n structure).
 - Code snippets (code.snippet/before), code.file/language/highlightLines/isSpine/symbol, diagram.diagram (the Mermaid text), the entire spine object, the entire badges object, file paths, ids, URLs, compare.rows a/b, references.title/url, loc, filesUsed stay exactly as-is (NOT translated).
 - Translate prose faithfully and naturally for an English technical reader; keep all technical precision.
+- deepDive may contain Markdown (## subheadings, - bullets, **bold**, \`code\`) — keep all those markers, translate only the text.
 - Keep the exact same JSON structure; only the leaf text fields listed above become bilingual.
 
 Return STRICT JSON ONLY — the bilingual lesson body.

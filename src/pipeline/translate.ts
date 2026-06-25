@@ -28,7 +28,7 @@ export async function runTranslateStage(args: {
   const fp = configFingerprint(cfg);
 
   // Fast path: a prior full translate exists.
-  const wholeKey = cache.key({ stage: "translate", sha, n: flat.length, cfg: fp, v: 4 });
+  const wholeKey = cache.key({ stage: "translate", sha, n: flat.length, cfg: fp, v: 5 });
   const cachedCourse = await cache.get<Course>(wholeKey);
   if (cachedCourse) { onProgress?.({ type: "log", level: "info", message: "translate cache hit" }); return cachedCourse; }
 
@@ -51,7 +51,7 @@ export async function runTranslateStage(args: {
   const entries = await Promise.all(flat.map((l) => limit(async () => {
     const body = zhCourse.lessons[l.id] as ZhLesson | undefined;
     if (!body) return null; // flattenOutline synthesizes a placeholder below
-    const lessonKey = cache.key({ stage: "translate.lesson", sha, id: l.id, cfg: fp, v: 2 });
+    const lessonKey = cache.key({ stage: "translate.lesson", sha, id: l.id, cfg: fp, v: 3 });
     const cachedBody = await cache.get<Lesson>(lessonKey);
     if (cachedBody) return [l.id, cachedBody] as [string, Lesson];
     const translated = await codexJson<Lesson>({
