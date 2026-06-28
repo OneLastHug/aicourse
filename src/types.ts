@@ -22,16 +22,63 @@ export interface Diagram { kind: "mermaid"; caption: Bi; diagram: string; }
  *  translation unchanged. Each lesson's code is a superset of the previous one. */
 export interface SpineArtifact {
   lessonId: string;
-  path: string;            // logical in-site path, e.g. "s01_agent_loop/code.py"
+  path: string;
   language: string;
-  code: string;            // full runnable snapshot = previous lesson + one mechanism
+  code: string;
   runCmd?: string;
-  addedLines?: number[];   // lines added/changed vs the previous lesson (for future diff UI)
-  prevLessonId?: string;   // undefined = first lesson (grown from scratch)
+  addedLines?: number[];
+  prevLessonId?: string;
 }
 
 /** Per-lesson badges. `concepts` are language-neutral tech tags (not translated). */
 export interface LessonBadges { loc: number; difficulty: Difficulty; concepts: string[]; }
+
+export interface ZhTryIt {
+  setup?: string[];
+  commands: string[];
+  observe: string[];
+}
+export interface TryIt {
+  setup?: Bi[];
+  commands: Bi[];
+  observe: Bi[];
+}
+
+export interface ZhReference {
+  title: string;
+  url: string;
+  kind?: "official" | "spec" | "paper" | "blog" | "other";
+  whyUsed?: string;
+}
+export interface Reference {
+  title: string;
+  url: string;
+  kind?: "official" | "spec" | "paper" | "blog" | "other";
+  whyUsed?: Bi;
+}
+
+export interface ZhSourceCompareGap {
+  dimension: string;
+  simplified: string;
+  real: string;
+  whySimplified: string;
+}
+export interface SourceCompareGap {
+  dimension: Bi;
+  simplified: Bi;
+  real: Bi;
+  whySimplified: Bi;
+}
+export interface ZhSourceCompare {
+  simplified?: string;
+  real?: string;
+  gaps: ZhSourceCompareGap[];
+}
+export interface SourceCompare {
+  simplified?: Bi;
+  real?: Bi;
+  gaps: SourceCompareGap[];
+}
 
 /* ============================ Repo context (Stage 0) ============================ */
 export interface RepoContext {
@@ -40,7 +87,7 @@ export interface RepoContext {
   sha: string;
   name: string;
   defaultBranch: string;
-  summary: string; // README-derived summary; the architect refines it
+  summary: string;
   loc: number;
   languages: Record<string, number>;
   tree: string[];
@@ -52,24 +99,18 @@ export interface CodeBlock {
   language: string;
   snippet: string;
   highlightLines: number[];
-  /** Optional "before" snippet for before/after comparisons. */
   before?: string;
-  /** true = simplified spine (teaching) code; false/absent = real repo source. */
   isSpine?: boolean;
-  /** Real-source anchor (function/class name) for the "dive into source" step. */
   symbol?: string;
 }
 export interface HowItWorksStep {
   title: Bi;
   desc: Bi;
   code?: CodeBlock;
-  /** Optional before-snippet (alternative to code.before). */
   beforeCode?: CodeBlock;
-  /** Line-by-line anatomy notes (deep mode). */
   anatomy?: Bi;
 }
 export interface CompareRow { label: Bi; a: string; b: string; }
-export interface Reference { title: string; url: string; }
 
 export interface OutlineLesson {
   id: string;
@@ -77,6 +118,10 @@ export interface OutlineLesson {
   difficulty: Difficulty;
   theProblem: Bi;
   objective: Bi;
+  mechanism?: Bi;
+  whyNow?: Bi;
+  missingBefore?: Bi;
+  nextPressure?: Bi;
   keyFiles: string[];
   prereq: string[];
   tags: string[];
@@ -85,33 +130,40 @@ export interface OutlineSection {
   id: string;
   title: Bi;
   summary: Bi;
+  spine?: Bi;
+  role?: Bi;
+  transitionIn?: Bi;
+  transitionOut?: Bi;
   lessons: OutlineLesson[];
 }
 export interface Outline {
-  course: { title: Bi; tagline: Bi; repo: { url: string; name: string; sha: string }; spine?: Bi; thesis?: Bi };
-  /** Whole-course architecture diagram (analyze stage). */
+  course: {
+    title: Bi;
+    tagline: Bi;
+    repo: { url: string; name: string; sha: string };
+    spine?: Bi;
+    thesis?: Bi;
+    audience?: Bi;
+    whyThisOrder?: Bi;
+  };
   archDiagram?: Diagram;
   sections: OutlineSection[];
-  /** Flattened lessons across all sections (backward-compat for the site). */
   lessons: OutlineLesson[];
 }
 export interface Lesson {
   id: string;
-  /** 金句 — the memorable one-line principle of this lesson (learn.shareai.run style). */
   principle?: Bi;
+  teachingScope?: Bi;
   problem: Bi;
-  /** 解决方案 — the key idea in 1-2 sentences (learn.shareai.run style). */
   solution?: Bi;
-  /** This lesson's mechanism diagram. */
   diagram?: Diagram;
-  /** Runnable teaching-code snapshot for this lesson (language-neutral). */
   spine?: SpineArtifact;
   howItWorks: HowItWorksStep[];
   deepDive: Bi;
-  /** 深入源码 — real-implementation deep dive (Markdown, may include comparison tables). */
   deepSource?: Bi;
-  /** 试一下 — runnable commands / prompts to try, newline-separated (kept verbatim). */
-  tryIt?: Bi;
+  sourceCompare?: SourceCompare;
+  tryIt?: TryIt;
+  whatsNext?: Bi;
   references: Reference[];
   compare: { rows: CompareRow[] };
   loc: number;
@@ -128,22 +180,34 @@ export interface ZhOutlineLesson {
   difficulty: Difficulty;
   theProblem: string;
   objective: string;
-  mechanism: string; // one-line: the single mechanism this lesson teaches
-  filesToRead: string[]; // real paths the lesson agent must read in full
+  mechanism: string;
+  whyNow?: string;
+  missingBefore?: string;
+  nextPressure?: string;
+  filesToRead: string[];
   prereq: string[];
   tags: string[];
 }
 export interface ZhOutlineSection {
-  id: string; // e.g. "layer-1"
+  id: string;
   title: string;
   summary: string;
-  /** How this layer advances the running example spine. */
   spine: string;
+  role?: string;
+  transitionIn?: string;
+  transitionOut?: string;
   lessons: ZhOutlineLesson[];
 }
 export interface ZhOutline {
-  course: { title: string; tagline: string; repo: { url: string; name: string; sha: string }; spine: string; thesis?: string };
-  /** Whole-course architecture diagram (from analyze, passed through curriculum). */
+  course: {
+    title: string;
+    tagline: string;
+    repo: { url: string; name: string; sha: string };
+    spine: string;
+    thesis?: string;
+    audience?: string;
+    whyThisOrder?: string;
+  };
   archDiagram?: ZhDiagram;
   sections: ZhOutlineSection[];
 }
@@ -158,6 +222,7 @@ export interface ZhStep {
 export interface ZhLesson {
   id: string;
   principle?: string;
+  teachingScope?: string;
   problem: string;
   solution?: string;
   diagram?: ZhDiagram;
@@ -165,8 +230,10 @@ export interface ZhLesson {
   howItWorks: ZhStep[];
   deepDive: string;
   deepSource?: string;
-  tryIt?: string;
-  references: Reference[];
+  sourceCompare?: ZhSourceCompare;
+  tryIt?: ZhTryIt;
+  whatsNext?: string;
+  references: ZhReference[];
   compare: { rows: { label: string; a: string; b: string }[] };
   loc: number;
   badges?: LessonBadges;
@@ -190,15 +257,21 @@ export interface ValidationResult {
 export interface CodexConfig {
   binary: string;
   model: string;
-  /** Context window explicitly requested via `-c model_context_window=<n>` (1m = 1000000). */
   contextWindow: number;
   reasoningEffort: string;
   concurrency: number;
   timeoutMs: number;
   extraArgs: string[];
 }
+export interface ResearchConfig {
+  enabled: boolean;
+  mode: "off" | "limited";
+  allowedSources: string[];
+  maxReferencesPerLesson: number;
+}
 export interface Repo2LearnConfig {
   codex: CodexConfig;
+  research: ResearchConfig;
   languages: ("zh" | "en")[];
   targetLessonCount: number;
   siteContentDir: string;
@@ -207,11 +280,8 @@ export interface Repo2LearnConfig {
   useMock: boolean;
   noCache: boolean;
   repo: string;
-  /** Materialize the runnable spine (per-lesson growing teaching code). Off = legacy "explain real source" mode. */
   spine: boolean;
-  /** Run the validation + fix loop. */
   validate: boolean;
-  /** Max validation fix iterations (0 = no fix loop, just report). */
   maxFixRounds: number;
 }
 
@@ -220,6 +290,12 @@ export const DEFAULT_CONFIG: Repo2LearnConfig = {
     binary: "codex", model: "gpt-5.4", reasoningEffort: "xhigh",
     contextWindow: 1_000_000,
     concurrency: 10, timeoutMs: 300 * 60 * 1000, extraArgs: [],
+  },
+  research: {
+    enabled: false,
+    mode: "off",
+    allowedSources: ["official", "spec", "paper", "blog"],
+    maxReferencesPerLesson: 3,
   },
   languages: ["zh", "en"],
   targetLessonCount: 10,
@@ -243,4 +319,4 @@ export type ProgressEvent =
   | { type: "validation"; round: 1 | 2; passed: boolean; issueCount: number }
   | { type: "log"; level: "info" | "warn" | "error"; message: string }
   | { type: "lessonDraft"; id: string; body: unknown }
-| { type: "error"; message: string };
+  | { type: "error"; message: string };

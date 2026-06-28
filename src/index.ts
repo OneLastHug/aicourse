@@ -1,16 +1,9 @@
 #!/usr/bin/env node
 /**
  * Repo2Learn CLI — turn a repository into a layered bilingual tutorial site.
- *
- * Usage:
- *   repo2learn <repo-url-or-path>           # real run via codex (gpt-5.4 / xhigh)
- *   repo2learn --sample                     # offline demo with the mock driver
- *   repo2learn <repo> --no-cache            # force recompute
- *   repo2learn <repo> --concurrency 5 --model gpt-5.4 --effort xhigh
  */
 import { resolve } from "node:path";
 import { resolveConfig, type Repo2LearnFlags } from "./config";
-import type { Repo2LearnConfig } from "./types";
 import { CliCodexDriver } from "./codex/cli-driver";
 import { MockCodexDriver } from "./codex/mock-driver";
 import { sampleResponder } from "./sample/responder";
@@ -49,6 +42,13 @@ function parseArgs(argv: string[]): {
       case "--target": flags.targetLessonCount = Number(take()); break;
       case "--workdir": flags.workDir = take(); break;
       case "--out": flags.siteContentDir = take(); break;
+      case "--research": {
+        const mode = take();
+        if (mode !== "off" && mode !== "limited") throw new Error("--research must be 'off' or 'limited'");
+        flags.research = { ...(flags.research ?? {}), mode, enabled: mode === "limited" };
+        break;
+      }
+      case "--max-refs": flags.research = { ...(flags.research ?? {}), maxReferencesPerLesson: Number(take()) }; break;
       case "-h":
       case "--help":
         printHelp();
@@ -79,11 +79,13 @@ Options:
   --mock                   Use mock driver (alias for sample-style offline runs)
   --model <id>             codex model            (default: gpt-5.4)
   --effort <level>         reasoning effort       (default: xhigh)
-  --concurrency <n>        max concurrent agents   (default: 5)
-  --binary <path>          codex CLI path          (default: codex)
-  --target <n>             target lesson count     (default: 10)
+  --concurrency <n>        max concurrent agents  (default: 10)
+  --binary <path>          codex CLI path         (default: codex)
+  --target <n>             target lesson count    (default: 10)
   --workdir <path>         clone work directory
   --out <path>             generated site data dir (default: site/content/generated)
+  --research <mode>        off | limited          (default: off)
+  --max-refs <n>           max references per lesson when research is enabled
   R2L_VALIDATE=0|1         env: 0 skip validation, 1 run it (default: 1)
   R2L_SPINE=0|1            env: 0 skip spine materialization, 1 run it (default: 1)
 `);
@@ -104,12 +106,14 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const mode = sample ? "MOCK (offline)" : "codex " + cfg.codex.model + "/" + cfg.codex.reasoningEffort + " concurrency " + cfg.codex.concurrency;
+  const mode = sample
+    ? "MOCK (offline)"
+    : "codex " + cfg.codex.model + "/" + cfg.codex.reasoningEffort + " concurrency " + cfg.codex.concurrency + " research=" + cfg.research.mode;
   log.stage("Repo2Learn repo=" + cfg.repo + " " + mode);
 
   const driver = cfg.useMock
     ? new MockCodexDriver({ responder: sampleResponder, delayMs: 120 })
-    : new CliCodexDriver(cfg.codex);
+    : new CliCodexDriver(cfg.codex, cfg.research);
 
   const course = await runPipeline({ cfg, driver });
   const { runRenderStage } = await import("./pipeline/render");

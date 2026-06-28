@@ -18,6 +18,12 @@ export const config: Repo2LearnConfig = {
       // "--full-auto",
     ],
   },
+  research: {
+    enabled: false,
+    mode: "off",
+    allowedSources: ["official", "spec", "paper", "blog"],
+    maxReferencesPerLesson: 3,
+  },
   languages: ["zh", "en"],
   targetLessonCount: 10,
   siteContentDir: "site/content/generated",

@@ -4,6 +4,7 @@ export function isStr(v: unknown): v is string { return typeof v === "string"; }
 export function isBi(v: unknown): v is Bi {
   return typeof v === "object" && v !== null && isStr((v as Record<string, unknown>).zh) && isStr((v as Record<string, unknown>).en);
 }
+function isBiArray(v: unknown): v is Bi[] { return Array.isArray(v) && v.every(isBi); }
 export function isRepoContext(v: unknown): v is RepoContext {
   const r = v as RepoContext;
   return typeof v === "object" && v !== null && isStr(r.url) && isStr(r.localPath) && isStr(r.sha) && isStr(r.name) && Array.isArray(r.tree);
@@ -17,8 +18,6 @@ export function isZhLesson(v: unknown): v is ZhLesson {
   const l = v as ZhLesson;
   return typeof v === "object" && v !== null && isStr(l.id) && isStr(l.problem) && Array.isArray(l.howItWorks);
 }
-/** Spine artifact guard — lenient: only the fields the pipeline relies on. Does NOT
- *  verify the code actually compiles/runs (that is the prompt's goal, not enforced). */
 export function isSpineArtifact(v: unknown): v is SpineArtifact {
   const s = v as SpineArtifact;
   return typeof v === "object" && v !== null && isStr(s.path) && isStr(s.language) && isStr(s.code);
@@ -26,12 +25,8 @@ export function isSpineArtifact(v: unknown): v is SpineArtifact {
 export function isOutline(v: unknown): v is Outline {
   const o = v as Outline;
   if (typeof v !== "object" || v === null || !o.course || !Array.isArray(o.sections)) return false;
-  const flat = o.lessons;
-  return Array.isArray(flat);
+  return Array.isArray(o.lessons);
 }
-/** Guard for the translated bilingual outline (course meta + sections). `lessons`
- *  is a derived flat field populated by flattenOutline AFTER translation, so it is
- *  NOT required here — requiring it would reject valid translator output. */
 export function isBiOutline(v: unknown): v is Outline {
   const o = v as Outline;
   if (typeof v !== "object" || v === null || !o.course || !Array.isArray(o.sections)) return false;
@@ -40,12 +35,15 @@ export function isBiOutline(v: unknown): v is Outline {
 export function isLesson(v: unknown): v is Lesson {
   const l = v as Lesson;
   if (typeof v !== "object" || v === null || !isStr(l.id) || !isBi(l.problem)) return false;
-  return Array.isArray(l.howItWorks);
+  if (!Array.isArray(l.howItWorks)) return false;
+  if (l.tryIt) {
+    const t = l.tryIt as NonNullable<Lesson["tryIt"]>;
+    if (!isBiArray(t.commands) || !isBiArray(t.observe)) return false;
+    if (t.setup && !isBiArray(t.setup)) return false;
+  }
+  if (l.sourceCompare?.gaps && !Array.isArray(l.sourceCompare.gaps)) return false;
+  return true;
 }
-/** Guard for the translator's bilingual output. Mirrors isZhOutline's strictness
- *  (id + title on each section/lesson) but on the Bi types. `outline.lessons` is a
- *  derived field populated by flattenOutline AFTER translation, so it is NOT required
- *  here — requiring it would reject valid translator output. */
 export function isCourse(v: unknown): v is Course {
   const c = v as Course;
   if (typeof v !== "object" || v === null) return false;

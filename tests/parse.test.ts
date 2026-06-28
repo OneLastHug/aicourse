@@ -56,7 +56,6 @@ test("tolerates trailing commas", () => {
 });
 
 test("repair never alters code inside double-quoted strings", () => {
-  // unquoted key outside, but a snippet that itself contains `key:`, `//`, `,}`, braces
   const out = extractJson('{ snippet: "const o = { a: 1, }; // note\\nif(x){y}" }');
   assert.equal(
     (out as { snippet: string }).snippet,
@@ -90,11 +89,9 @@ test("isCourse accepts the sample translator output", () => {
 });
 
 test("isCourse rejects the shapes that crashed translate (missing outline/sections)", () => {
-  // Before the guard, flattenOutline read `course.outline.sections` directly and threw
-  // "Cannot read properties of undefined (reading 'sections')" when the model omitted outline.
-  assert.equal(isCourse({ lessons: {} }), false);                          // no outline
-  assert.equal(isCourse({ outline: null, lessons: {} }), false);           // null outline
-  assert.equal(isCourse({ outline: { course: {} }, lessons: {} }), false); // outline without sections
+  assert.equal(isCourse({ lessons: {} }), false);
+  assert.equal(isCourse({ outline: null, lessons: {} }), false);
+  assert.equal(isCourse({ outline: { course: {} }, lessons: {} }), false);
 });
 
 test("assertShape rejects bad translator output as a translate failure", () => {
@@ -109,10 +106,17 @@ test("isBiOutline accepts the sample translated outline", () => {
 });
 
 test("isBiOutline rejects outlines missing sections or with non-bilingual titles", () => {
-  assert.equal(isBiOutline({ course: {} }), false); // no sections
-  assert.equal(isBiOutline({ course: {}, sections: "no" }), false); // sections not array
+  assert.equal(isBiOutline({ course: {} }), false);
+  assert.equal(isBiOutline({ course: {}, sections: "no" }), false);
   assert.equal(
     isBiOutline({ course: {}, sections: [{ id: "l01", title: { zh: "", en: "" }, summary: { zh: "", en: "" }, lessons: [{ id: "s01", title: "not bi" }] }] }),
-    false, // lesson.title must be Bi
+    false,
   );
+});
+
+test("sample course carries structured tryIt and sourceCompare fields", () => {
+  const lesson = sampleCourse.lessons.s01!;
+  assert.ok(Array.isArray(lesson.tryIt?.commands));
+  assert.ok(Array.isArray(lesson.tryIt?.observe));
+  assert.ok(Array.isArray(lesson.sourceCompare?.gaps));
 });

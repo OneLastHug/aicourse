@@ -2,24 +2,24 @@ import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CodexConfig } from "../types";
+import type { CodexConfig, ResearchConfig } from "../types";
 import { log } from "../util/log";
 import type { CodexCall, CodexDriver, CodexResult } from "./driver";
 
 /**
  * Real codex driver. Invokes `codex exec` non-interactively. The prompt is piped
  * via STDIN (not as a CLI argument) to avoid OS ARG_MAX / E2BIG limits on large
- * prompts (e.g. validation with a full course JSON).
+ * prompts.
  */
 export class CliCodexDriver implements CodexDriver {
   readonly kind = "cli" as const;
-  constructor(private cfg: CodexConfig) {}
+  constructor(private cfg: CodexConfig, private research?: ResearchConfig) {}
 
   async run(call: CodexCall): Promise<CodexResult> {
     const started = Date.now();
     const outFile = call.outputFile ?? join(await mkdtemp(join(tmpdir(), "repo2learn-")), "last.txt");
     const args = this.buildArgs(call, outFile);
-    log.step("codex exec · " + call.label + " · model=" + this.cfg.model + " effort=" + this.cfg.reasoningEffort);
+    log.step("codex exec · " + call.label + " · model=" + this.cfg.model + " effort=" + this.cfg.reasoningEffort + (this.research?.enabled ? " research=" + this.research.mode : ""));
 
     const text = await new Promise<string>((resolve, reject) => {
       const proc = spawn(this.cfg.binary, args, {
@@ -33,7 +33,6 @@ export class CliCodexDriver implements CodexDriver {
       proc.stdout.on("data", (d) => stdout.push(d.toString()));
       proc.stderr.on("data", (d) => stderr.push(d.toString()));
 
-      // Pipe the prompt via stdin — avoids ARG_MAX / E2BIG.
       proc.stdin.on("error", (e) => {
         log.warn("stdin error during codex call " + call.label + ": " + e.message);
       });
@@ -55,7 +54,7 @@ export class CliCodexDriver implements CodexDriver {
           reject(new Error("codex exited " + code + ": " + stderr.join("").slice(-500)));
           return;
         }
-        resolve("");
+        resolve(stdout.join(""));
       });
     });
 
@@ -72,8 +71,9 @@ export class CliCodexDriver implements CodexDriver {
   }
 
   private buildArgs(call: CodexCall, outFile: string): string[] {
-    // Prompt is NOT passed as a positional arg — it goes via stdin.
-    return [
+    const args: string[] = [];
+    if (this.research?.enabled && this.research.mode === "limited") args.push("--search");
+    args.push(
       "exec",
       "--model", this.cfg.model,
       "-c", "model_reasoning_effort=" + this.cfg.reasoningEffort,
@@ -81,6 +81,7 @@ export class CliCodexDriver implements CodexDriver {
       "-C", call.cwd,
       "--output-last-message", outFile,
       ...this.cfg.extraArgs,
-    ];
+    );
+    return args;
   }
 }

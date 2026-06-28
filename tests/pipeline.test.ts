@@ -31,4 +31,28 @@ test("v2 pipeline runs end-to-end (mock): analyze→curriculum→lessons→valid
   assert.ok(l0.howItWorks.length >= 1, "lesson has steps");
   // Chinese-first: zh is the original generated text, en is translated from it
   assert.equal(course.lessons["s01"]!.problem.zh, sampleZhLessons.s01!.problem, "zh is the original Chinese");
+
+  assert.ok(course.outline.course.thesis?.zh, "course thesis exists");
+  assert.ok(course.outline.course.spine?.zh, "course spine exists");
+  assert.ok(course.outline.course.whyThisOrder?.zh, "course whyThisOrder exists");
+
+  const section = course.outline.sections[0]!;
+  assert.ok(section.role?.zh, "section role exists");
+  assert.ok(section.transitionIn?.zh, "section transitionIn exists");
+  assert.ok(section.transitionOut?.zh, "section transitionOut exists");
+
+  const meta = course.outline.lessons[0]!;
+  assert.ok(meta.mechanism?.zh, "lesson mechanism exists");
+  assert.ok(meta.whyNow?.zh, "lesson whyNow exists");
+  assert.ok(meta.nextPressure?.zh, "lesson nextPressure exists");
+
+  const lesson = course.lessons["s01"]!;
+  assert.ok(lesson.teachingScope?.zh, "teachingScope exists");
+  assert.ok(lesson.whatsNext?.zh, "whatsNext exists");
+  assert.ok(Array.isArray(lesson.tryIt?.commands), "tryIt.commands exists");
+  assert.ok(Array.isArray(lesson.tryIt?.observe), "tryIt.observe exists");
+  assert.ok(Array.isArray(lesson.sourceCompare?.gaps), "sourceCompare.gaps exists");
+  assert.ok((lesson.sourceCompare?.gaps?.length ?? 0) >= 1, "sourceCompare has gaps");
+  assert.ok(lesson.references[0]?.kind, "reference kind exists");
+  assert.ok(lesson.references[0]?.whyUsed, "reference whyUsed exists");
 });

@@ -1,15 +1,13 @@
-import { DEFAULT_CONFIG, type CodexConfig, type Repo2LearnConfig } from "./types";
+import { DEFAULT_CONFIG, type CodexConfig, type Repo2LearnConfig, type ResearchConfig } from "./types";
 
 /** CLI flags / file overrides, all optional, codex overridable field-by-field. */
-export type Repo2LearnFlags = Partial<Omit<Repo2LearnConfig, "codex">> & {
+export type Repo2LearnFlags = Partial<Omit<Repo2LearnConfig, "codex" | "research">> & {
   codex?: Partial<CodexConfig>;
+  research?: Partial<ResearchConfig>;
 };
 
 /**
  * Load and merge configuration: defaults <- config file <- env <- CLI flags.
- * The config file (config/repo2learn.config.ts) is optional; for simplicity
- * we read a JSON file if present, else rely on defaults + flags. Env knobs
- * (e.g. R2L_VALIDATE) sit between the file and explicit flags.
  */
 export function resolveConfig(flags: Repo2LearnFlags = {}, fileConfig?: Partial<Repo2LearnConfig>): Repo2LearnConfig {
   const merged: Repo2LearnConfig = {
@@ -23,21 +21,25 @@ export function resolveConfig(flags: Repo2LearnFlags = {}, fileConfig?: Partial<
       ...(fileConfig?.codex ?? {}),
       ...(flags.codex ?? {}),
     },
+    research: {
+      ...DEFAULT_CONFIG.research,
+      ...(fileConfig?.research ?? {}),
+      ...(flags.research ?? {}),
+    },
   };
+  if (!merged.research.enabled) merged.research.mode = "off";
+  if (merged.research.mode === "off") merged.research.enabled = false;
+  if (merged.research.mode === "limited") merged.research.enabled = true;
   return merged;
 }
 
-/** R2L_VALIDATE env knob: "0" disables the validate1/validate2 stages; unset or
- *  "1" keeps them on (the default). Read here so both the CLI and the site honor it. */
 function envValidateFlag(): Repo2LearnFlags {
   const v = process.env.R2L_VALIDATE;
   if (v === "0") return { validate: false };
   if (v === "1") return { validate: true };
-  return {}; // unset / unknown → leave default (on)
+  return {};
 }
 
-/** R2L_SPINE env knob: "0" disables the spine materialization stage (falls back to
- *  the legacy "explain real source" mode); unset or "1" keeps it on (the default). */
 function envSpineFlag(): Repo2LearnFlags {
   const v = process.env.R2L_SPINE;
   if (v === "0") return { spine: false };
@@ -48,7 +50,7 @@ function envSpineFlag(): Repo2LearnFlags {
 function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj)) {
-    if (k === "codex") continue;
+    if (k === "codex" || k === "research") continue;
     if (v !== undefined) out[k] = v;
   }
   return out as Partial<T>;
@@ -57,5 +59,12 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
 /** A stable string representation of the config bits that affect codex output,
  * used in cache keys. */
 export function configFingerprint(c: Repo2LearnConfig): string {
-  return [c.codex.model, c.codex.reasoningEffort, c.targetLessonCount, c.languages.join(",")].join("|");
+  return [
+    c.codex.model,
+    c.codex.reasoningEffort,
+    c.targetLessonCount,
+    c.languages.join(","),
+    c.research.mode,
+    c.research.maxReferencesPerLesson,
+  ].join("|");
 }

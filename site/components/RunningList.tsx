@@ -4,33 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { t } from "@/lib/i18n";
+import { getRunningPct, getStageLabel } from "@/lib/running-progress";
 import type { Locale } from "@/lib/types";
 
 interface RunningItem { id: string; repoId: string; repoUrl: string; stage: string; lessonsDone: number; lessonsTotal: number; startedAt: number; }
 interface FailedItem { id: string; repoId: string; repoUrl: string; errorMsg?: string; updatedAt: number; stage: string; lessonsDone: number; lessonsTotal: number; }
 interface CourseItem { repoId: string; url: string; name: string; title: string; createdAt: string; lessonCount: number; }
-
-function stageLabel(locale: Locale, stage: string): string {
-  const map: Record<string, string> = {
-    queued: locale === "zh" ? "排队中" : "queued",
-    ingest: t(locale, "stage.ingest"), analyze: t(locale, "stage.analyze"),
-    curriculum: t(locale, "stage.curriculum"), lessons: t(locale, "stage.lessons"),
-    validate1: t(locale, "stage.validate1"), validate2: t(locale, "stage.validate2"),
-    translate: t(locale, "stage.translate"), done: t(locale, "stage.done"),
-  };
-  return map[stage] ?? stage;
-}
-function runningPct(r: RunningItem): number {
-  if (r.stage === "done") return 100;
-  if (r.stage === "translate") return 92;
-  if (r.stage === "validate2") return 88;
-  if (r.stage === "validate1") return 82;
-  if (r.stage === "lessons") return r.lessonsTotal > 0 ? 20 + Math.round((r.lessonsDone / r.lessonsTotal) * 60) : 20;
-  if (r.stage === "curriculum") return 18;
-  if (r.stage === "analyze") return 12;
-  if (r.stage === "ingest") return 5;
-  return 2;
-}
 
 export function RunningList({ locale }: { locale: Locale }) {
   const router = useRouter();
@@ -66,14 +45,14 @@ export function RunningList({ locale }: { locale: Locale }) {
           <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-ink-faint dark:text-zinc-500">{t(locale, "home.running")}</h2>
           <div className="space-y-2">
             {running.map((r) => {
-              const pct = runningPct(r);
+              const pct = getRunningPct(r);
               return (
                 <Link key={r.id} href={"/" + locale + "/j/" + r.id} className="card relative flex items-center gap-3 overflow-hidden p-3 transition hover:-translate-y-0.5">
                   <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle dark:bg-zinc-800"><Dot /><span className="absolute h-9 w-9 animate-ping rounded-lg bg-brand/20" /></span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{r.repoUrl}</div>
                     <div className="mt-1 flex items-center gap-2 text-[11px] text-ink-faint dark:text-zinc-500">
-                      <span className="capitalize">{stageLabel(locale, r.stage)}</span><span>·</span>
+                      <span className="capitalize">{getStageLabel(locale, r.stage)}</span><span>·</span>
                       <span className="font-mono tabular-nums">{r.lessonsDone}/{r.lessonsTotal || "…"}</span><span>·</span>
                       <span className="font-mono tabular-nums">{pct}%</span>
                     </div>
@@ -102,7 +81,7 @@ export function RunningList({ locale }: { locale: Locale }) {
                   <div className="truncate text-sm font-medium">{f.repoUrl}</div>
                   <div className="mt-0.5 truncate text-[11px] text-ink-faint dark:text-zinc-500">{f.errorMsg || "error"}</div>
                   <div className="mt-0.5 text-[10px] text-ink-faint dark:text-zinc-600">
-                    {stageLabel(locale, f.stage)} · {f.lessonsDone}/{f.lessonsTotal || "…"} · auto-retry 10min
+                    {getStageLabel(locale, f.stage)} · {f.lessonsDone}/{f.lessonsTotal || "…"} · auto-retry 10min
                   </div>
                 </div>
                 <button type="button" onClick={() => retry(f.repoUrl)} disabled={retrying === f.repoUrl}

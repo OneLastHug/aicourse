@@ -10,7 +10,7 @@ export async function runCurriculumStage(args: {
   ctx: RepoContext; analysis: string; driver: CodexDriver; cfg: Repo2LearnConfig; cache: Cache; onProgress?: (e: ProgressEvent) => void;
 }): Promise<ZhOutline> {
   const { ctx, analysis, driver, cfg, cache, onProgress } = args;
-  const key = cache.key({ stage: "curriculum", sha: ctx.sha, cfg: configFingerprint(cfg), v: 4 });
+  const key = cache.key({ stage: "curriculum", sha: ctx.sha, cfg: configFingerprint(cfg), v: 5 });
   const cached = await cache.get<ZhOutline>(key);
   if (cached) { onProgress?.({ type: "log", level: "info", message: "curriculum cache hit" }); return cached; }
   const outline = await codexJson({

@@ -6,13 +6,13 @@ import { pick, neighbors } from "@/lib/content";
 import { t } from "@/lib/i18n";
 import { highlight } from "@/lib/highlight";
 import { difficultyTheme, difficultyLabel } from "@/lib/ui";
+import type { Course, Locale } from "@/lib/types";
 import { StepSimulator, type SimStep } from "@/components/StepSimulator";
 import { CompareTable } from "@/components/CompareTable";
 import { References } from "@/components/References";
 import { Mermaid } from "@/components/Mermaid";
 import { ProgressRail } from "@/components/ProgressRail";
 import { Prose } from "@/components/Prose";
-import type { Course, Locale } from "@/lib/types";
 
 const VALID: Locale[] = ["en", "zh"];
 
@@ -50,13 +50,12 @@ export default async function LessonPage({
       file: s.code?.file,
       isSpine: s.code?.isSpine,
       symbol: s.code?.symbol,
+      rawCode: s.code?.snippet,
       html: s.code ? await highlight(s.code.snippet, s.code.language, s.code.highlightLines) : null,
     })),
   );
   const { prev, next, index, total } = neighbors(course.outline.lessons, id);
 
-  // "Changes from previous lesson" — render the spine snapshot with the lines that
-  // grew this lesson highlighted. Only when there is a previous lesson + marked lines.
   const sp = lesson.spine;
   const changesHtml =
     sp?.prevLessonId && sp.addedLines && sp.addedLines.length
@@ -102,6 +101,13 @@ export default async function LessonPage({
               <span>{pick(meta.objective, loc)}</span>
             </p>
           )}
+          {(lesson.teachingScope || meta.whyNow || meta.nextPressure) && (
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {lesson.teachingScope && <MiniCard label="Scope" value={pick(lesson.teachingScope, loc)} />}
+              {meta.whyNow && <MiniCard label="Why now" value={pick(meta.whyNow, loc)} />}
+              {meta.nextPressure && <MiniCard label="Next pressure" value={pick(meta.nextPressure, loc)} />}
+            </div>
+          )}
 
           <Section label={t(loc, "lesson.problem")} accent>
             <p className="text-lg font-medium leading-relaxed text-ink dark:text-zinc-100">{pick(lesson.problem, loc)}</p>
@@ -140,7 +146,7 @@ export default async function LessonPage({
             {lesson.references.length > 0 && (
               <div className="mt-5">
                 <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-faint dark:text-zinc-500">{t(loc, "lesson.further")}</div>
-                <References items={lesson.references} />
+                <References items={lesson.references} locale={loc} />
               </div>
             )}
           </Section>
@@ -151,9 +157,40 @@ export default async function LessonPage({
             </Section>
           )}
 
+          {lesson.sourceCompare?.gaps?.length ? (
+            <Section label="Source Compare">
+              <div className="overflow-hidden rounded-2xl border border-line dark:border-zinc-800">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-bg-subtle text-xs uppercase tracking-wide text-ink-faint dark:bg-zinc-900 dark:text-zinc-500">
+                    <tr>
+                      <th className="px-4 py-3">Dimension</th>
+                      <th className="px-4 py-3">Teaching</th>
+                      <th className="px-4 py-3">Real</th>
+                      <th className="px-4 py-3">Why simplified</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lesson.sourceCompare.gaps.map((gap, idx) => (
+                      <tr key={idx} className="border-t border-line align-top dark:border-zinc-800">
+                        <td className="px-4 py-3 font-medium">{pick(gap.dimension, loc)}</td>
+                        <td className="px-4 py-3 text-ink-soft dark:text-zinc-300">{pick(gap.simplified, loc)}</td>
+                        <td className="px-4 py-3 text-ink-soft dark:text-zinc-300">{pick(gap.real, loc)}</td>
+                        <td className="px-4 py-3 text-ink-faint dark:text-zinc-400">{pick(gap.whySimplified, loc)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Section>
+          ) : null}
+
           {lesson.tryIt && (
             <Section label={t(loc, "lesson.tryIt")}>
-              <pre className="code-wrap overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-[13px] leading-relaxed text-zinc-300"><code>{pick(lesson.tryIt, loc)}</code></pre>
+              <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-zinc-300">
+                {lesson.tryIt.setup?.length ? <TryBlock title="Setup" items={lesson.tryIt.setup.map((x) => pick(x, loc))} /> : null}
+                <TryBlock title="Commands" items={lesson.tryIt.commands.map((x) => pick(x, loc))} code />
+                <TryBlock title="Observe" items={lesson.tryIt.observe.map((x) => pick(x, loc))} />
+              </div>
             </Section>
           )}
 
@@ -163,16 +200,21 @@ export default async function LessonPage({
             </Section>
           )}
 
-          {next && (
+          {(lesson.whatsNext || next) && (
             <Section label={t(loc, "lesson.whatsNext")}>
-              <Link href={`/${loc}/c/${repoId}/lessons/${next.id}`} className="card group flex items-start gap-3 p-4 transition hover:-translate-y-0.5">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle font-mono text-xs font-semibold text-ink-faint dark:bg-zinc-800 dark:text-zinc-400">{next.id}</span>
-                <span className="min-w-0">
-                  <span className="block text-[15px] font-semibold group-hover:text-brand">{pick(next.title, loc)}</span>
-                  <span className="mt-0.5 line-clamp-2 text-xs text-ink-faint dark:text-zinc-500">{pick(next.theProblem, loc)}</span>
-                </span>
-                <span className="ml-auto self-center text-ink-faint group-hover:text-brand dark:text-zinc-600">→</span>
-              </Link>
+              {lesson.whatsNext && (
+                <p className="mb-4 text-sm leading-relaxed text-ink-soft dark:text-zinc-300">{pick(lesson.whatsNext, loc)}</p>
+              )}
+              {next && (
+                <Link href={`/${loc}/c/${repoId}/lessons/${next.id}`} className="card group flex items-start gap-3 p-4 transition hover:-translate-y-0.5">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle font-mono text-xs font-semibold text-ink-faint dark:bg-zinc-800 dark:text-zinc-400">{next.id}</span>
+                  <span className="min-w-0">
+                    <span className="block text-[15px] font-semibold group-hover:text-brand">{pick(next.title, loc)}</span>
+                    <span className="mt-0.5 line-clamp-2 text-xs text-ink-faint dark:text-zinc-500">{pick(next.theProblem, loc)}</span>
+                  </span>
+                  <span className="ml-auto self-center text-ink-faint group-hover:text-brand dark:text-zinc-600">→</span>
+                </Link>
+              )}
             </Section>
           )}
 
@@ -208,3 +250,29 @@ function Section({ label, accent, children }: { label: string; accent?: boolean;
     </section>
   );
 }
+
+function MiniCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-line bg-white/80 p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint dark:text-zinc-500">{label}</div>
+      <div className="mt-1 text-sm leading-relaxed text-ink-soft dark:text-zinc-300">{value}</div>
+    </div>
+  );
+}
+
+function TryBlock({ title, items, code = false }: { title: string; items: string[]; code?: boolean }) {
+  if (!items.length) return null;
+  return (
+    <div>
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{title}</div>
+      <ul className="space-y-2">
+        {items.map((item, idx) => (
+          <li key={idx} className={code ? "font-mono text-[13px] leading-relaxed" : "text-[13px] leading-relaxed"}>
+            {code ? <code>{item}</code> : item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+

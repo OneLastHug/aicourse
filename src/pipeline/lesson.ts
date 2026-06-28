@@ -29,7 +29,7 @@ async function genLesson(args: {
   // v3: lessonWrite now consumes the spine snapshot + emits principle/diagram/badges
   // + a "compare with real source" step. The cache key includes the spine code so a
   // changed spine re-triggers the write.
-  const key = cache.key({ stage: "lesson", sha: ctx.sha, id: l.id, spine: spine ? spine.code : "none", cfg: configFingerprint(cfg), v: 6 });
+  const key = cache.key({ stage: "lesson", sha: ctx.sha, id: l.id, spine: spine ? spine.code : "none", cfg: configFingerprint(cfg), v: 7 });
   const cached = await cache.get<ZhLesson>(key);
   if (cached) { onProgress?.({ type: "lesson", id: l.id, status: "ok", label: "cache hit" }); return [l.id, cached]; }
   onProgress?.({ type: "lesson", id: l.id, status: "start" });
@@ -38,7 +38,7 @@ async function genLesson(args: {
   // 3b WRITE — strict ZhLesson JSON.
   const zh = await codexJson({
     driver, label: `lesson:write:${l.id}`, cwd: ctx.localPath, guard: isZhLesson, name: `lesson ${l.id}`,
-    prompt: lessonWritePrompt(l, readRes.text, spine),
+    prompt: lessonWritePrompt(l, readRes.text, cfg, spine),
   });
   await cache.set(key, zh);
   onProgress?.({ type: "lessonDraft", id: l.id, body: zh });

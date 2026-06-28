@@ -13,6 +13,10 @@ export interface OutlineLesson {
   difficulty: Difficulty;
   theProblem: Bi;
   objective: Bi;
+  mechanism?: Bi;
+  whyNow?: Bi;
+  missingBefore?: Bi;
+  nextPressure?: Bi;
   keyFiles: string[];
   prereq: string[];
   tags: string[];
@@ -22,6 +26,10 @@ export interface OutlineSection {
   id: string;
   title: Bi;
   summary: Bi;
+  spine?: Bi;
+  role?: Bi;
+  transitionIn?: Bi;
+  transitionOut?: Bi;
   lessons: OutlineLesson[];
 }
 
@@ -42,6 +50,31 @@ export interface SpineArtifact {
 /** Per-lesson badges (concepts are language-neutral tech tags). */
 export interface LessonBadges { loc: number; difficulty: Difficulty; concepts: string[]; }
 
+export interface TryIt {
+  setup?: Bi[];
+  commands: Bi[];
+  observe: Bi[];
+}
+
+export interface Reference {
+  title: string;
+  url: string;
+  kind?: "official" | "spec" | "paper" | "blog" | "other";
+  whyUsed?: Bi;
+}
+
+export interface SourceCompareGap {
+  dimension: Bi;
+  simplified: Bi;
+  real: Bi;
+  whySimplified: Bi;
+}
+export interface SourceCompare {
+  simplified?: Bi;
+  real?: Bi;
+  gaps: SourceCompareGap[];
+}
+
 export interface Outline {
   course: {
     title: Bi;
@@ -49,6 +82,8 @@ export interface Outline {
     repo: { url: string; name: string; sha: string };
     spine?: Bi;
     thesis?: Bi;
+    audience?: Bi;
+    whyThisOrder?: Bi;
   };
   archDiagram?: Diagram;
   sections?: OutlineSection[];
@@ -69,6 +104,8 @@ export interface HowItWorksStep {
   title: Bi;
   desc: Bi;
   code?: CodeBlock;
+  beforeCode?: CodeBlock;
+  anatomy?: Bi;
 }
 
 export interface CompareRow {
@@ -77,14 +114,10 @@ export interface CompareRow {
   b: string;
 }
 
-export interface Reference {
-  title: string;
-  url: string;
-}
-
 export interface Lesson {
   id: string;
   principle?: Bi;
+  teachingScope?: Bi;
   problem: Bi;
   solution?: Bi;
   diagram?: Diagram;
@@ -92,7 +125,9 @@ export interface Lesson {
   howItWorks: HowItWorksStep[];
   deepDive: Bi;
   deepSource?: Bi;
-  tryIt?: Bi;
+  sourceCompare?: SourceCompare;
+  tryIt?: TryIt;
+  whatsNext?: Bi;
   references: Reference[];
   compare: { rows: CompareRow[] };
   loc: number;

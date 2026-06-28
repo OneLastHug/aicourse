@@ -17,6 +17,11 @@ export interface JobState extends JobRecord {
 
 interface Job { state: JobState; emitter: EventEmitter; drafts: Record<string, unknown>; }
 
+export function progressScoreForStage(stage: string, lessonsDone: number): number {
+  const order = ["queued","ingest","analyze","curriculum","spine","lessons","validate1","validate2","translate","done"];
+  return (order.indexOf(stage) >= 0 ? order.indexOf(stage) : 0) * 1000 + lessonsDone;
+}
+
 class JobManager {
   private jobs = new Map<string, Job>();
   /** repoId -> running jobId, for dedupe. */
@@ -217,8 +222,7 @@ class JobManager {
 
   /** Higher = more progress. Stage ordinal dominates; lessonsDone breaks ties. */
   private progressScore(r: JobRecord): number {
-    const order = ["queued","ingest","analyze","curriculum","lessons","validate1","validate2","translate","done"];
-    return (order.indexOf(r.stage) >= 0 ? order.indexOf(r.stage) : 0) * 1000 + r.lessonsDone;
+    return progressScoreForStage(r.stage, r.lessonsDone);
   }
 
   /** Auto-cleanup: every 1h, remove jobs stale > 24h (no progress). */
