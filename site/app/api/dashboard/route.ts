@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { jobManager } from "@/lib/server/jobs";
 import { listCourses } from "@/lib/server/store";
+import { proxyToPython, usePythonBackend } from "@/lib/server/python-backend";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  if (usePythonBackend()) return proxyToPython(new Request("http://local/api/dashboard"), "/api/dashboard");
+
   const runningRecs = await jobManager.listRunningMerged();
   const running = runningRecs.map((s) => ({
     id: s.id, repoId: s.repoId, repoUrl: s.repoUrl, stage: s.stage,

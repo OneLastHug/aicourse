@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+from typing import Any, Protocol, TypeVar
+
+from pydantic import BaseModel, TypeAdapter
+
+from app.services.codex_driver import CodexCall
+from app.services.json_parse import extract_json
+
+T = TypeVar("T")
+
+
+class CodexDriverLike(Protocol):
+    async def run(self, call: CodexCall): ...
+
+
+async def codex_json(
+    *,
+    driver: CodexDriverLike,
+    label: str,
+    prompt: str,
+    cwd,
+    model: type[T],
+    attempts: int = 2,
+) -> T:
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            result = await driver.run(CodexCall(label=label, prompt=prompt, cwd=cwd))
+            parsed = extract_json(result.text)
+            if isinstance(model, type) and issubclass(model, BaseModel):
+                return model.model_validate(parsed)  # type: ignore[return-value]
+            return TypeAdapter(model).validate_python(parsed)
+        except Exception as exc:
+            last_error = exc
+            if attempt == attempts:
+                break
+            prompt += (
+                "\n\nYour previous response did not parse as the required JSON shape. "
+                "Return STRICT JSON ONLY. Do not include markdown fences or prose."
+            )
+    raise RuntimeError(f"{label} failed: {last_error}") from last_error
+
+
+def ensure_jsonable(value: Any) -> Any:
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json", exclude_none=True)
+    return value
+

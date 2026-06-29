@@ -1,0 +1,662 @@
+{
+  "outline": {
+    "course": {
+      "title": {
+        "zh": "构建迷你 Agent",
+        "en": "Build a Mini Agent"
+      },
+      "tagline": {
+        "zh": "一次只讲一个机制。",
+        "en": "One mechanism at a time."
+      },
+      "repo": {
+        "url": "local://nano-agent",
+        "name": "nano-agent",
+        "sha": "sample"
+      },
+      "spine": {
+        "zh": "一个随每节课长大的迷你 agent。",
+        "en": "A tiny agent that grows each lesson."
+      },
+      "thesis": {
+        "zh": "所有 agent 都是同一个循环，逐个机制叠上去。",
+        "en": "Every agent is the same loop, with one mechanism stacked on at a time."
+      },
+      "audience": {
+        "zh": "想从代码里真正看懂 agent 骨架的开发者。",
+        "en": "Developers who want to really understand an agent skeleton from code."
+      },
+      "whyThisOrder": {
+        "zh": "先让循环跑起来，再解释谁在驱动它、谁在约束它。",
+        "en": "First make the loop run, then explain what drives it and what constrains it."
+      }
+    },
+    "archDiagram": {
+      "kind": "mermaid",
+      "caption": {
+        "zh": "nano-agent 总体架构",
+        "en": "nano-agent architecture"
+      },
+      "diagram": "flowchart TD\n  index[\"index.ts CLI\"] --> loop[\"loop.ts 循环\"]\n  prompt[\"prompt.ts 系统提示词\"] --> loop\n  loop --> model[\"model.ts 调模型\"]\n  loop --> tools[\"tools.ts 读写工具\"]"
+    },
+    "sections": [
+      {
+        "id": "l01",
+        "title": {
+          "zh": "基础",
+          "en": "Foundations"
+        },
+        "summary": {
+          "zh": "赋予 agent 生命的循环与提示词。",
+          "en": "The loop and the prompt that give the agent life."
+        },
+        "spine": {
+          "zh": "让基础循环跑起来。",
+          "en": "Make the foundational loop run."
+        },
+        "role": {
+          "zh": "先搭出最小可运行骨架，再引入行为约束。",
+          "en": "First build the minimal runnable skeleton, then add behavioral constraints."
+        },
+        "transitionIn": {
+          "zh": "从仓库整体视图收缩到最小 agent 主循环。",
+          "en": "Narrow from the full repo view down to the minimal agent main loop."
+        },
+        "transitionOut": {
+          "zh": "当循环能跑后，自然会追问它为什么会这样行动。",
+          "en": "Once the loop runs, the next natural question is why it behaves this way."
+        },
+        "lessons": [
+          {
+            "id": "s01",
+            "title": {
+              "zh": "Agent 循环",
+              "en": "Agent Loop"
+            },
+            "difficulty": "beginner",
+            "theProblem": {
+              "zh": "模型只会输出文本，不会自己执行、看不到结果就停了。",
+              "en": "The model only emits text; it won't run anything or react to results."
+            },
+            "objective": {
+              "zh": "理解模型与工具之间的循环。",
+              "en": "Understand the loop between model and tools."
+            },
+            "mechanism": {
+              "zh": "agent 循环",
+              "en": "agent loop"
+            },
+            "whyNow": {
+              "zh": "一切后续能力都挂在这个循环上。",
+              "en": "Every later capability hangs off this loop."
+            },
+            "missingBefore": {
+              "zh": "还没有一个能持续读结果再决策的执行骨架。",
+              "en": "We still lacked an execution skeleton that can keep reading results and deciding again."
+            },
+            "nextPressure": {
+              "zh": "循环跑起来后，你会立刻追问：谁在第一轮前规定它该怎么做？",
+              "en": "Once the loop runs, you immediately ask: what decides how it should behave before turn one?"
+            },
+            "keyFiles": [
+              "src/loop.ts"
+            ],
+            "prereq": [],
+            "tags": [
+              "loop"
+            ]
+          },
+          {
+            "id": "s02",
+            "title": {
+              "zh": "系统提示词",
+              "en": "System Prompt"
+            },
+            "difficulty": "beginner",
+            "theProblem": {
+              "zh": "同一个模型，换句话开场表现就不同。",
+              "en": "Same model, different opening — different behavior."
+            },
+            "objective": {
+              "zh": "看清系统提示词如何设定行为。",
+              "en": "See how the system prompt sets behavior."
+            },
+            "mechanism": {
+              "zh": "系统提示词",
+              "en": "system prompt"
+            },
+            "whyNow": {
+              "zh": "循环已经能跑了，接下来要解释行为为什么稳定。",
+              "en": "Now that the loop runs, we need to explain why its behavior stays stable."
+            },
+            "missingBefore": {
+              "zh": "前一节只有执行骨架，还没有行为约束来源。",
+              "en": "The previous lesson gave us only an execution skeleton, not the source of behavioral constraints."
+            },
+            "nextPressure": {
+              "zh": "规则写死后，又会暴露提示词如何组织、拼接与演化的问题。",
+              "en": "Once the rules are fixed, the next pressure is how prompts are organized, composed, and evolved."
+            },
+            "keyFiles": [
+              "src/prompt.ts"
+            ],
+            "prereq": [
+              "s01"
+            ],
+            "tags": [
+              "prompt"
+            ]
+          }
+        ]
+      }
+    ],
+    "lessons": [
+      {
+        "id": "s01",
+        "title": {
+          "zh": "Agent 循环",
+          "en": "Agent Loop"
+        },
+        "difficulty": "beginner",
+        "theProblem": {
+          "zh": "模型只会输出文本，不会自己执行、看不到结果就停了。",
+          "en": "The model only emits text; it won't run anything or react to results."
+        },
+        "objective": {
+          "zh": "理解模型与工具之间的循环。",
+          "en": "Understand the loop between model and tools."
+        },
+        "mechanism": {
+          "zh": "agent 循环",
+          "en": "agent loop"
+        },
+        "whyNow": {
+          "zh": "一切后续能力都挂在这个循环上。",
+          "en": "Every later capability hangs off this loop."
+        },
+        "missingBefore": {
+          "zh": "还没有一个能持续读结果再决策的执行骨架。",
+          "en": "We still lacked an execution skeleton that can keep reading results and deciding again."
+        },
+        "nextPressure": {
+          "zh": "循环跑起来后，你会立刻追问：谁在第一轮前规定它该怎么做？",
+          "en": "Once the loop runs, you immediately ask: what decides how it should behave before turn one?"
+        },
+        "keyFiles": [
+          "src/loop.ts"
+        ],
+        "prereq": [],
+        "tags": [
+          "loop"
+        ]
+      },
+      {
+        "id": "s02",
+        "title": {
+          "zh": "系统提示词",
+          "en": "System Prompt"
+        },
+        "difficulty": "beginner",
+        "theProblem": {
+          "zh": "同一个模型，换句话开场表现就不同。",
+          "en": "Same model, different opening — different behavior."
+        },
+        "objective": {
+          "zh": "看清系统提示词如何设定行为。",
+          "en": "See how the system prompt sets behavior."
+        },
+        "mechanism": {
+          "zh": "系统提示词",
+          "en": "system prompt"
+        },
+        "whyNow": {
+          "zh": "循环已经能跑了，接下来要解释行为为什么稳定。",
+          "en": "Now that the loop runs, we need to explain why its behavior stays stable."
+        },
+        "missingBefore": {
+          "zh": "前一节只有执行骨架，还没有行为约束来源。",
+          "en": "The previous lesson gave us only an execution skeleton, not the source of behavioral constraints."
+        },
+        "nextPressure": {
+          "zh": "规则写死后，又会暴露提示词如何组织、拼接与演化的问题。",
+          "en": "Once the rules are fixed, the next pressure is how prompts are organized, composed, and evolved."
+        },
+        "keyFiles": [
+          "src/prompt.ts"
+        ],
+        "prereq": [
+          "s01"
+        ],
+        "tags": [
+          "prompt"
+        ]
+      }
+    ]
+  },
+  "lessons": {
+    "s01": {
+      "id": "s01",
+      "principle": {
+        "zh": "循环让模型从「说」变成「做」。",
+        "en": "The loop turns the model from talking into doing."
+      },
+      "teachingScope": {
+        "zh": "只讲最小 agent 循环，不展开并行调度、长上下文压缩与恢复策略。",
+        "en": "Focus only on the minimal agent loop; do not expand into parallel scheduling, long-context compaction, or recovery strategy."
+      },
+      "problem": {
+        "zh": "大模型只会输出文本。你想让它读写文件，它却停在这——差距就在「循环」。",
+        "en": "An LLM only emits text. You want it to read/write files, but it stops there — the gap is the loop."
+      },
+      "solution": {
+        "zh": "一个 while(true)：模型调工具就继续，不调就停。",
+        "en": "A while(true): keep going while the model calls tools, stop when it doesn't."
+      },
+      "diagram": {
+        "kind": "mermaid",
+        "caption": {
+          "zh": "Agent 循环",
+          "en": "The agent loop"
+        },
+        "diagram": "flowchart LR\n  user[\"用户消息\"] --> model[\"调用模型\"]\n  model --> check{\"有 tool_use?\"}\n  check -->|\"有\"| exec[\"执行工具\"] --> model\n  check -->|\"无\"| done[\"返回结果\"]"
+      },
+      "spine": {
+        "lessonId": "s01",
+        "path": "s01_agent_loop/code.ts",
+        "language": "ts",
+        "code": "// s01_agent_loop/code.ts — a minimal agent loop\nimport { callModel } from \"./model\"; // stub LLM, no API key needed\n\nexport async function run(userMsg: string) {\n  const messages = [{ role: \"user\", content: userMsg }];\n  while (true) {\n    const reply = await callModel({ messages });\n    const toolUses = reply.filter((b) => b.type === \"tool_use\");\n    if (toolUses.length === 0) return reply;\n    messages.push({ role: \"assistant\", content: reply });\n  }\n}\n\nif (import.meta.main) run(\"list the files here\").then(console.log);\n",
+        "runCmd": "npx tsx s01_agent_loop/code.ts",
+        "addedLines": []
+      },
+      "howItWorks": [
+        {
+          "title": {
+            "zh": "调用模型",
+            "en": "Call the model"
+          },
+          "desc": {
+            "zh": "把用户问题作为第一条消息，连同工具定义发给模型。",
+            "en": "Send the user's question plus tool definitions to the model."
+          },
+          "code": {
+            "file": "s01_agent_loop/code.ts",
+            "language": "ts",
+            "snippet": "const reply = await callModel({ messages });",
+            "highlightLines": [
+              1
+            ],
+            "isSpine": true
+          }
+        },
+        {
+          "title": {
+            "zh": "判断结束",
+            "en": "Check for stop"
+          },
+          "desc": {
+            "zh": "没有 tool_use 就返回，否则把模型回答追加进消息。",
+            "en": "Return if there's no tool_use; otherwise append the model's reply."
+          },
+          "code": {
+            "file": "s01_agent_loop/code.ts",
+            "language": "ts",
+            "snippet": "if (toolUses.length === 0) return reply;",
+            "highlightLines": [
+              1
+            ],
+            "isSpine": true
+          }
+        },
+        {
+          "title": {
+            "zh": "对照真实源码",
+            "en": "Compare with the real source"
+          },
+          "desc": {
+            "zh": "真实仓库里循环在 loop.ts 的 loop() 中，还多了工具结果回传与错误处理。",
+            "en": "In the real repo the loop lives in loop.ts's loop(), with tool-result feedback and error handling added."
+          },
+          "code": {
+            "file": "src/loop.ts",
+            "language": "ts",
+            "snippet": "while (true) {\n  const response = await callModel({ systemPrompt, messages });",
+            "highlightLines": [
+              1,
+              2
+            ],
+            "isSpine": false,
+            "symbol": "loop"
+          }
+        }
+      ],
+      "deepDive": {
+        "zh": "## 为什么是循环\n模型只会输出文本；没有循环，它只能「说」不能「做」。把模型调用放进 while，让它读到工具结果后继续决策，才把\"对话\"变成\"执行\"。\n\n## 取舍\n- 用\"是否还有 tool_use\"判断停止，而不是让模型显式说\"我做完了\"——更稳，不依赖措辞。\n- 教学版一次只跑一个工具、不做并行，换来代码清晰。\n\n## 边界与坑\n模型可能反复调用同一个工具陷入死循环——真实实现会加步数上限或重复检测。",
+        "en": "## Why a loop\nAn LLM only emits text; without a loop it can only \"talk\", not \"act\". Wrapping the model call in a while loop — so it reads tool results and keeps deciding — is what turns a conversation into execution.\n\n## Trade-offs\n- Stop on \"no more tool_use\" rather than asking the model to say \"I'm done\" — sturdier, not wording-dependent.\n- The teaching version runs one tool at a time, no parallelism, trading throughput for clarity.\n\n## Edges & gotchas\nThe model can loop forever calling the same tool — the real implementation adds a step cap or repeat detection."
+      },
+      "deepSource": {
+        "zh": "真实仓库的循环在 `src/loop.ts` 的 `loop()` 里，骨架与教学版一致，但外面包了不少工程细节。\n\n| 维度 | 教学版 | 真实实现 |\n| --- | --- | --- |\n| 工具结果 | 直接拼进 messages | 以 `role:\"tool\"` 回传，按 id 关联 |\n| 出错 | 不处理 | 重试 + 降级 |\n| 上下文超长 | 不处理 | compaction 压缩 |\n| 停止条件 | 无 tool_use 即停 | 再叠加步数上限/中断信号 |\n\n这些都挂在循环外围、主体不变——所以教学版省掉它们不影响你理解\"循环\"本身。",
+        "en": "The real loop lives in `loop()` in `src/loop.ts` — same skeleton as the teaching version, but wrapped in engineering detail.\n\n| Aspect | Teaching | Real |\n| --- | --- | --- |\n| Tool result | spliced into messages | sent back as `role:\"tool\"`, keyed by id |\n| Errors | ignored | retry + fallback |\n| Long context | ignored | compaction |\n| Stop | no tool_use | plus step cap / interrupt signal |\n\nAll of it hangs around the loop — the body is unchanged, so dropping it in the teaching version doesn't hurt your understanding of \"the loop\"."
+      },
+      "sourceCompare": {
+        "simplified": {
+          "zh": "教学版循环",
+          "en": "teaching loop"
+        },
+        "real": {
+          "zh": "真实仓库循环",
+          "en": "real repository loop"
+        },
+        "gaps": [
+          {
+            "dimension": {
+              "zh": "工具结果回传",
+              "en": "tool result feedback"
+            },
+            "simplified": {
+              "zh": "直接把 reply 留在本地变量里",
+              "en": "keep reply in a local variable"
+            },
+            "real": {
+              "zh": "显式回填 tool role 与 call id",
+              "en": "explicitly feed back tool role and call id"
+            },
+            "whySimplified": {
+              "zh": "先看主控制流",
+              "en": "focus on the main control flow first"
+            }
+          },
+          {
+            "dimension": {
+              "zh": "停止保护",
+              "en": "stop guards"
+            },
+            "simplified": {
+              "zh": "只看有没有 tool_use",
+              "en": "only check for tool_use"
+            },
+            "real": {
+              "zh": "还叠加步数上限与中断处理",
+              "en": "also add a step cap and interrupt handling"
+            },
+            "whySimplified": {
+              "zh": "先讲最核心停止条件",
+              "en": "teach the core stop condition first"
+            }
+          },
+          {
+            "dimension": {
+              "zh": "错误恢复",
+              "en": "error recovery"
+            },
+            "simplified": {
+              "zh": "暂不处理",
+              "en": "leave it unhandled"
+            },
+            "real": {
+              "zh": "有重试、降级与异常包装",
+              "en": "includes retry, fallback, and exception wrapping"
+            },
+            "whySimplified": {
+              "zh": "先别让工程噪音盖过主机制",
+              "en": "avoid letting engineering noise bury the core mechanism"
+            }
+          }
+        ]
+      },
+      "tryIt": {
+        "commands": [
+          {
+            "zh": "npx tsx s01_agent_loop/code.ts",
+            "en": "npx tsx s01_agent_loop/code.ts"
+          },
+          {
+            "zh": "让模型列出当前目录的 Python 文件",
+            "en": "Ask the model to list Python files in the current directory"
+          }
+        ],
+        "observe": [
+          {
+            "zh": "模型何时发出 tool_use",
+            "en": "When the model emits tool_use"
+          },
+          {
+            "zh": "什么时候循环继续，什么时候直接结束",
+            "en": "When the loop continues versus ends immediately"
+          }
+        ]
+      },
+      "whatsNext": {
+        "zh": "当循环能持续运行后，下一个问题就是：到底是什么规则在第一轮之前就把模型行为定住了？这正是系统提示词要回答的。",
+        "en": "Once the loop can keep running, the next question is: what locks the model's behavior in before turn one? That's exactly what the system prompt answers."
+      },
+      "references": [
+        {
+          "title": "Building effective agents",
+          "url": "https://www.anthropic.com/research/building-effective-agents",
+          "kind": "official",
+          "whyUsed": {
+            "zh": "补充 agent 循环设计背景",
+            "en": "Adds background on agent-loop design"
+          }
+        }
+      ],
+      "compare": {
+        "rows": [
+          {
+            "label": {
+              "zh": "停止条件",
+              "en": "Stop condition"
+            },
+            "a": "运行到超时",
+            "b": "模型自行停止"
+          }
+        ]
+      },
+      "loc": 14,
+      "badges": {
+        "loc": 14,
+        "difficulty": "beginner",
+        "concepts": [
+          "agent-loop",
+          "tool_use",
+          "while-true"
+        ]
+      },
+      "status": "ok"
+    },
+    "s02": {
+      "id": "s02",
+      "principle": {
+        "zh": "提示词是 agent 的宪法。",
+        "en": "The prompt is the agent's constitution."
+      },
+      "teachingScope": {
+        "zh": "只讲 system prompt 如何约束行为，不展开 prompt 模板系统与权限策略生成器。",
+        "en": "Focus only on how the system prompt constrains behavior, not on template systems or permission-policy generators."
+      },
+      "problem": {
+        "zh": "同一个模型，表现不同——系统提示词在第一轮之前就定下基调。",
+        "en": "Same model, different behavior — the system prompt sets the tone before turn one."
+      },
+      "solution": {
+        "zh": "把行为规则写成常量，注入 system 字段。",
+        "en": "Encode the behavioral rules as a constant, injected into the system field."
+      },
+      "diagram": {
+        "kind": "mermaid",
+        "caption": {
+          "zh": "系统提示词定基调",
+          "en": "The system prompt sets the tone"
+        },
+        "diagram": "flowchart TD\n  sys[\"系统提示词\"] --> behavior[\"模型行为基调\"]\n  user[\"用户消息\"] --> behavior"
+      },
+      "spine": {
+        "lessonId": "s02",
+        "path": "s02_system_prompt/code.ts",
+        "language": "ts",
+        "code": "// s02_system_prompt/code.ts — agent loop + system prompt\nimport { callModel } from \"./model\"; // stub LLM, no API key needed\n\nconst systemPrompt = \"You are nano-agent. Use tools to read and write files.\";\n\nexport async function run(userMsg: string) {\n  const messages = [{ role: \"user\", content: userMsg }];\n  while (true) {\n    const reply = await callModel({ systemPrompt, messages });\n    const toolUses = reply.filter((b) => b.type === \"tool_use\");\n    if (toolUses.length === 0) return reply;\n    messages.push({ role: \"assistant\", content: reply });\n  }\n}\n\nif (import.meta.main) run(\"list the files here\").then(console.log);\n",
+        "runCmd": "npx tsx s02_system_prompt/code.ts",
+        "addedLines": [
+          4,
+          8
+        ],
+        "prevLessonId": "s01"
+      },
+      "howItWorks": [
+        {
+          "title": {
+            "zh": "常量字符串",
+            "en": "A constant string"
+          },
+          "desc": {
+            "zh": "规则写成常量，循环里把它作为 systemPrompt 传给模型。",
+            "en": "Rules as a constant, passed into the loop as systemPrompt."
+          },
+          "code": {
+            "file": "s02_system_prompt/code.ts",
+            "language": "ts",
+            "snippet": "const systemPrompt = \"You are nano-agent. Use tools to read and write files.\";",
+            "highlightLines": [
+              1
+            ],
+            "isSpine": true
+          }
+        },
+        {
+          "title": {
+            "zh": "对照真实源码",
+            "en": "Compare with the real source"
+          },
+          "desc": {
+            "zh": "真实仓库把系统提示词单独放在 prompt.ts，便于迭代与拼接。",
+            "en": "The real repo keeps the system prompt in its own prompt.ts for easy iteration and composition."
+          },
+          "code": {
+            "file": "src/prompt.ts",
+            "language": "ts",
+            "snippet": "export const systemPrompt = \"You are nano-agent.\"; ",
+            "highlightLines": [
+              1
+            ],
+            "isSpine": false,
+            "symbol": "systemPrompt"
+          }
+        }
+      ],
+      "deepDive": {
+        "zh": "## 为什么放在 system\nsystem 字段在第一轮之前就定下基调，权重高于普通用户消息。把行为规则放这里，比每轮重复叮嘱更省 token、更稳定。\n\n## 取舍\n- 写成常量 vs 模板拼接：常量简单、可读；真实项目常按工具集/权限动态拼接。\n- 关键规则放开头和结尾——模型对首尾更敏感。\n\n## 边界与坑\n改一句话就可能显著改变行为，却几乎不增加代码——杠杆极高，也意味着容易踩坑，需要回归测试。",
+        "en": "## Why put it in system\nThe system field sets the tone before turn one and outweighs ordinary user messages. Putting behavioral rules here is cheaper (tokens) and steadier than re-stating them every turn.\n\n## Trade-offs\n- Constant vs templated: a constant is simple and readable; real projects assemble it dynamically by toolset/permissions.\n- Put key rules at the start AND end — models weight the edges more.\n\n## Edges & gotchas\nOne sentence can shift behavior dramatically at near-zero code cost — huge leverage, but also easy to break, so it needs regression tests."
+      },
+      "deepSource": {
+        "zh": "真实仓库的 system prompt 在 `src/prompt.ts`，通常上千行，按场景动态拼接。\n\n| 维度 | 教学版 | 真实实现 |\n| --- | --- | --- |\n| 形态 | 一句常量 | 多段按需拼接 |\n| 工具说明 | 无 | 随启用工具注入 |\n| 安全边界 | 无 | 显式权限/禁止项 |\n| 环境信息 | 无 | 注入 cwd、时间、平台等 |\n\n教学版只留一句，够说明\"它如何在第一轮前设定行为\"；生产里的拼接逻辑是工程细节，不影响理解这个机制。",
+        "en": "A real repo's system prompt lives in `src/prompt.ts` — often thousands of lines, assembled dynamically per scenario.\n\n| Aspect | Teaching | Real |\n| --- | --- | --- |\n| Form | one constant | many composed sections |\n| Tool docs | none | injected per enabled tool |\n| Safety | none | explicit permissions / denials |\n| Environment | none | cwd, time, platform, … |\n\nThe teaching version keeps one line — enough to show \"how it sets behavior before turn one\"; the composition logic is engineering detail that doesn't change the mechanism."
+      },
+      "sourceCompare": {
+        "simplified": {
+          "zh": "教学版单行 prompt",
+          "en": "teaching single-line prompt"
+        },
+        "real": {
+          "zh": "真实项目多段 prompt",
+          "en": "real multi-part prompt"
+        },
+        "gaps": [
+          {
+            "dimension": {
+              "zh": "组织方式",
+              "en": "organization"
+            },
+            "simplified": {
+              "zh": "一条常量字符串",
+              "en": "one constant string"
+            },
+            "real": {
+              "zh": "按工具、权限、环境动态拼接",
+              "en": "dynamically composed by tools, permissions, and environment"
+            },
+            "whySimplified": {
+              "zh": "先聚焦 system 字段本身",
+              "en": "focus on the system field itself first"
+            }
+          },
+          {
+            "dimension": {
+              "zh": "安全边界",
+              "en": "safety boundaries"
+            },
+            "simplified": {
+              "zh": "不写限制",
+              "en": "no explicit restrictions"
+            },
+            "real": {
+              "zh": "明确禁止项与权限边界",
+              "en": "explicit denials and permission boundaries"
+            },
+            "whySimplified": {
+              "zh": "先讲行为入口，再讲治理",
+              "en": "teach the behavior entry point before governance"
+            }
+          },
+          {
+            "dimension": {
+              "zh": "环境注入",
+              "en": "environment injection"
+            },
+            "simplified": {
+              "zh": "不带运行时信息",
+              "en": "no runtime information"
+            },
+            "real": {
+              "zh": "注入 cwd、平台、时间等上下文",
+              "en": "inject cwd, platform, time, and other context"
+            },
+            "whySimplified": {
+              "zh": "先降低首节理解负担",
+              "en": "lower the cognitive load of the first lesson"
+            }
+          }
+        ]
+      },
+      "tryIt": {
+        "commands": [
+          {
+            "zh": "修改 systemPrompt 的内容",
+            "en": "Edit the systemPrompt content"
+          },
+          {
+            "zh": "把关键规则同时放在开头和结尾，对比效果",
+            "en": "Put a key rule at both the start and end, then compare"
+          }
+        ],
+        "observe": [
+          {
+            "zh": "模型行为是否变化",
+            "en": "Whether the model behavior changes"
+          },
+          {
+            "zh": "首尾强调是否提高规则遵守度",
+            "en": "Whether edge emphasis improves rule-following"
+          }
+        ]
+      },
+      "whatsNext": {
+        "zh": "当你知道规则写在 system prompt 里，下一步自然会追问：这些规则如何按工具、权限和场景被拼装出来。",
+        "en": "Once you know the rules live in the system prompt, the next natural question is how those rules are composed by toolset, permissions, and scenario."
+      },
+      "references": [],
+      "compare": {
+        "rows": []
+      },
+      "loc": 14,
+      "badges": {
+        "loc": 14,
+        "difficulty": "beginner",
+        "concepts": [
+          "system-prompt",
+          "behavior"
+        ]
+      },
+      "status": "ok"
+    }
+  }
+}

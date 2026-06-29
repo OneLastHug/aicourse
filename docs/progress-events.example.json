@@ -1,0 +1,110 @@
+[
+  {
+    "type": "stage",
+    "stage": "ingest",
+    "label": "Cloning & mapping the repo"
+  },
+  {
+    "type": "log",
+    "level": "info",
+    "message": "repo ingested: demo@abc123 · 10 files · 100 LOC"
+  },
+  {
+    "type": "stage",
+    "stage": "analyze",
+    "label": "Deep-reading the actual codebase"
+  },
+  {
+    "type": "stage",
+    "stage": "curriculum",
+    "label": "Designing the layered curriculum"
+  },
+  {
+    "type": "stage",
+    "stage": "lessons",
+    "label": "Writing the Chinese course"
+  },
+  {
+    "type": "plan",
+    "total": 2,
+    "lessons": [
+      {
+        "id": "s01",
+        "title": {
+          "zh": "入口",
+          "en": ""
+        },
+        "difficulty": "beginner"
+      }
+    ]
+  },
+  {
+    "type": "lesson",
+    "id": "s01",
+    "status": "start"
+  },
+  {
+    "type": "lessonDraft",
+    "id": "s01",
+    "body": {
+      "id": "s01",
+      "status": "ok"
+    }
+  },
+  {
+    "type": "lesson",
+    "id": "s01",
+    "status": "ok"
+  },
+  {
+    "type": "stage",
+    "stage": "spine",
+    "label": "Materializing the runnable spine"
+  },
+  {
+    "type": "spine",
+    "id": "s01",
+    "status": "start"
+  },
+  {
+    "type": "spine",
+    "id": "s01",
+    "status": "ok"
+  },
+  {
+    "type": "stage",
+    "stage": "validate1",
+    "label": "Chinese course schema validation"
+  },
+  {
+    "type": "validation",
+    "round": 1,
+    "passed": true,
+    "issueCount": 0
+  },
+  {
+    "type": "stage",
+    "stage": "validate2",
+    "label": "Repository alignment validation"
+  },
+  {
+    "type": "validation",
+    "round": 2,
+    "passed": true,
+    "issueCount": 0
+  },
+  {
+    "type": "stage",
+    "stage": "translate",
+    "label": "Translating the Chinese course to English"
+  },
+  {
+    "type": "stage",
+    "stage": "done",
+    "label": "Done"
+  },
+  {
+    "type": "error",
+    "message": "example failure"
+  }
+]

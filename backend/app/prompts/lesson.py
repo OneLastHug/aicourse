@@ -1,0 +1,115 @@
+from __future__ import annotations
+
+import json
+
+from app.core.schemas import ZhOutline, ZhOutlineLesson
+from app.prompts.common import repo_context_block
+from app.services.repo import RepoContext
+
+
+def lesson_prompt(ctx: RepoContext, outline: ZhOutline, lesson: ZhOutlineLesson) -> str:
+    outline_brief = {
+        "course": outline.course.model_dump(mode="json", exclude_none=True),
+        "lessons": [
+            {
+                "id": item.id,
+                "title": item.title,
+                "difficulty": item.difficulty,
+                "prereq": item.prereq,
+            }
+            for item in outline.lessons
+        ],
+    }
+    lesson_json = json.dumps(lesson.model_dump(mode="json", exclude_none=True), ensure_ascii=False, indent=2)
+    outline_json = json.dumps(outline_brief, ensure_ascii=False, indent=2)
+    return f"""你正在为中文优先的代码阅读课程写一节课的正文。
+
+写作前必须读取本节列出的真实仓库文件。尽量使用真实文件里的短代码片段；
+如果为了教学需要写简化代码，把片段标记为 `isSpine: true`。
+
+{repo_context_block(ctx)}
+
+COURSE BRIEF
+{outline_json}
+
+LESSON META
+{lesson_json}
+
+返回 STRICT JSON ONLY，匹配这个 ZhLesson 形状。面向用户的文本全部使用简体中文；
+code、文件路径、id、language、highlightLines、diagram.diagram、spine、URL、badges.concepts 保持原样：
+{{
+  "id": "{lesson.id}",
+  "principle": "...",
+  "teachingScope": "...",
+  "problem": "...",
+  "solution": "...",
+  "diagram": {{
+    "kind": "mermaid",
+    "caption": "...",
+    "diagram": "flowchart TD..."
+  }},
+  "spine": {{
+    "lessonId": "{lesson.id}",
+    "path": "{lesson.id}/code.py",
+    "language": "py",
+    "code": "short runnable teaching code or source excerpt",
+    "runCmd": "optional command",
+    "addedLines": []
+  }},
+  "howItWorks": [
+    {{
+      "title": "...",
+      "desc": "...",
+      "code": {{
+        "file": "real/path/or/spine/path",
+        "language": "ts",
+        "snippet": "short code snippet",
+        "highlightLines": [1],
+        "isSpine": false,
+        "symbol": "optional"
+      }},
+      "anatomy": "..."
+    }}
+  ],
+  "deepDive": "markdown",
+  "deepSource": "markdown",
+  "sourceCompare": {{
+    "simplified": "...",
+    "real": "...",
+    "gaps": [
+      {{
+        "dimension": "...",
+        "simplified": "...",
+        "real": "...",
+        "whySimplified": "..."
+      }}
+    ]
+  }},
+  "tryIt": {{
+    "setup": ["..."],
+    "commands": ["..."],
+    "observe": ["..."]
+  }},
+  "whatsNext": "...",
+  "references": [{{"title":"...","url":"https://...","kind":"official","whyUsed":"..."}}],
+  "compare": {{
+    "rows": [
+      {{"label": "...", "a": "...", "b": "..."}}
+    ]
+  }},
+  "loc": 10,
+  "badges": {{"loc": 10, "difficulty": "{lesson.difficulty}", "concepts": ["concept"]}},
+  "filesUsed": ["real/path"],
+  "status": "ok"
+}}
+
+写作规则：
+- 顶层 id 必须是 "{lesson.id}"。
+- 每节只讲一个机制，不重复其它节。
+- howItWorks 需要 4-8 步，每一步标题短，desc 解释为什么这一步存在。
+- deepDive 讲设计取舍、边界和坑；deepSource 带读者回到真实源码。
+- tryIt.commands 是可执行命令或可复现实验，observe 是读者应该观察的现象。
+- filesUsed 必须列出本节实际使用的真实仓库路径。
+- 代码片段必须足够短，适合 UI 展示。
+- 只返回 JSON，不要 markdown fence 或解释文字。
+"""

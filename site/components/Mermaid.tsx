@@ -25,7 +25,17 @@ export function Mermaid({ chart, caption }: { chart: string; caption?: string })
           theme: resolvedTheme === "dark" ? "dark" : "neutral",
         });
         const { svg } = await mermaid.render(`${id}-svg`, chart.trim());
+        const renderedError =
+          svg.includes("Syntax error in text") ||
+          svg.includes("mermaid version") ||
+          svg.includes("error-icon") ||
+          svg.includes("error-text");
         if (!cancelled && ref.current) {
+          if (renderedError) {
+            ref.current.innerHTML = "";
+            setFailed(true);
+            return;
+          }
           ref.current.innerHTML = svg;
           setFailed(false);
         }

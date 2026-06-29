@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jobManager } from "@/lib/server/jobs";
 import { getCourse, repoIdFor } from "@/lib/server/store";
+import { proxyToPython, usePythonBackend } from "@/lib/server/python-backend";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,8 @@ function isRepoUrl(u: string): boolean {
 }
 
 export async function POST(req: Request) {
+  if (usePythonBackend()) return proxyToPython(req, "/api/generate");
+
   let body: { repoUrl?: string };
   try { body = await req.json(); } catch {
     return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });

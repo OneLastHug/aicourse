@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { join, isAbsolute } from "node:path";
 import type { Course } from "repo2learn/src/types";
 import { dirNameForUrl } from "repo2learn/src/util/repo";
+import { fetchPythonJson } from "./python-backend";
 
 /** All on-disk state lives under one directory (override with R2L_DATA_DIR). */
 export const DATA_DIR = process.env.R2L_DATA_DIR || join(process.cwd(), "data");
@@ -34,6 +35,9 @@ export async function saveCourse(repoId: string, course: Course, meta: CourseMet
 }
 
 export async function getCourse(repoId: string): Promise<Course | null> {
+  const remote = await fetchPythonJson<Course>("/api/courses/" + encodeURIComponent(repoId));
+  if (remote) return remote;
+
   try {
     return JSON.parse(await readFile(join(COURSES_DIR, repoId, "course.json"), "utf8")) as Course;
   } catch {
@@ -42,6 +46,18 @@ export async function getCourse(repoId: string): Promise<Course | null> {
 }
 
 export async function getMeta(repoId: string): Promise<CourseMeta | null> {
+  const course = await fetchPythonJson<Course>("/api/courses/" + encodeURIComponent(repoId));
+  if (course) {
+    return {
+      repoId,
+      url: course.outline.course.repo.url,
+      name: course.outline.course.repo.name,
+      title: course.outline.course.title.en,
+      createdAt: new Date().toISOString(),
+      lessonCount: course.outline.lessons.length,
+    };
+  }
+
   try {
     return JSON.parse(await readFile(join(COURSES_DIR, repoId, "meta.json"), "utf8")) as CourseMeta;
   } catch {
@@ -50,6 +66,9 @@ export async function getMeta(repoId: string): Promise<CourseMeta | null> {
 }
 
 export async function listCourses(): Promise<CourseMeta[]> {
+  const remote = await fetchPythonJson<{ courses: CourseMeta[] }>("/api/courses");
+  if (remote?.courses) return remote.courses;
+
   try {
     const dirs = await readdir(COURSES_DIR, { withFileTypes: true });
     const metas: CourseMeta[] = [];

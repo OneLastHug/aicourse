@@ -1,5 +1,6 @@
 import { jobManager } from "@/lib/server/jobs";
 import type { ProgressEvent } from "repo2learn/src/types";
+import { proxyToPython, usePythonBackend } from "@/lib/server/python-backend";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,8 @@ function isTerminal(e: ProgressEvent): boolean {
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (usePythonBackend()) return proxyToPython(_req, "/api/jobs/" + encodeURIComponent(id) + "/stream");
+
   const state = jobManager.get(id);
   if (!state) return new Response("job not found", { status: 404 });
 

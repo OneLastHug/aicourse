@@ -1,0 +1,284 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from app.core.config import Settings
+from app.sample.fixtures import build_mock_course
+from app.services.cache import Cache
+from app.services.codex_driver import CodexResult
+from app.services.generator import generate_course
+from app.services.json_parse import extract_json
+from app.services.pipeline.validate import (
+    CourseValidationError,
+    validate_course_alignment,
+    validate_course_schema,
+    validate_zh_course_alignment,
+    validate_zh_course_schema,
+)
+from app.services.repo import ingest_repo
+
+
+def _zh_from_bi(value):
+    if isinstance(value, dict):
+        if set(value) == {"zh", "en"}:
+            return value["zh"]
+        return {key: _zh_from_bi(item) for key, item in value.items() if key not in {"keyFiles"}}
+    if isinstance(value, list):
+        return [_zh_from_bi(item) for item in value]
+    return value
+
+
+def _zh_outline_from_fixture(fixture: dict[str, object]) -> dict[str, object]:
+    outline = _zh_from_bi(fixture["outline"])
+    for section in outline["sections"]:
+        for lesson in section["lessons"]:
+            lesson["filesToRead"] = fixture_lesson_files(fixture, lesson["id"])
+    outline["lessons"] = [lesson for section in outline["sections"] for lesson in section["lessons"]]
+    return outline
+
+
+def fixture_lesson_files(fixture: dict[str, object], lesson_id: str) -> list[str]:
+    for lesson in fixture["outline"]["lessons"]:
+        if lesson["id"] == lesson_id:
+            return list(lesson["keyFiles"])
+    return []
+
+
+def _zh_lesson_from_fixture(fixture: dict[str, object], lesson_id: str) -> dict[str, object]:
+    lesson = _zh_from_bi(fixture["lessons"][lesson_id])
+    lesson["filesUsed"] = fixture_lesson_files(fixture, lesson_id)
+    return lesson
+
+
+def test_extract_json_handles_fences_and_relaxed_literals() -> None:
+    text = """
+    prose
+    ```json
+    {
+      unquoted: 'value',
+      list: [1, 2,],
+    }
+    ```
+    """
+    assert extract_json(text) == {"unquoted": "value", "list": [1, 2]}
+
+
+def test_cache_roundtrip(tmp_path: Path) -> None:
+    cache = Cache(tmp_path)
+    key = cache.key({"stage": "analyze", "repo": "abc"})
+    cache.set(key, {"ok": True})
+    assert cache.get(key) == {"ok": True}
+
+
+@pytest.mark.asyncio
+async def test_ingest_local_repo(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "README.md").write_text("# Demo\n\nHello", encoding="utf-8")
+    (repo / "main.py").write_text("print('hi')\n", encoding="utf-8")
+
+    ctx = await ingest_repo(str(repo), Settings(R2L_DATA_DIR=tmp_path / "data", R2L_MOCK=False))
+
+    assert ctx.name == "repo"
+    assert ctx.sha == "unknown"
+    assert ctx.loc == 1
+    assert "main.py" in ctx.tree
+    assert ctx.languages["Python"] > 0
+
+
+@pytest.mark.asyncio
+async def test_non_mock_pipeline_can_generate_with_codex_driver(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "README.md").write_text("# Demo", encoding="utf-8")
+    events: list[dict[str, object]] = []
+
+    async def on_progress(event: dict[str, object]) -> None:
+        events.append(event)
+
+    class FakeDriver:
+        def __init__(self, _settings) -> None:
+            self.calls = 0
+
+        async def run(self, call):
+            self.calls += 1
+            fixture = build_mock_course(str(repo))
+            if call.label == "analyze":
+                return CodexResult(
+                    text='{"summary":"demo","entrypoints":["README.md"],"coreFlows":[],"teachingSpine":"demo","risks":[]}',
+                    duration_ms=1,
+                )
+            if call.label == "curriculum":
+                return CodexResult(text=json.dumps(_zh_outline_from_fixture(fixture)), duration_ms=1)
+            if call.label == "translate:outline":
+                return CodexResult(text=json.dumps(fixture["outline"]), duration_ms=1)
+            if call.label.startswith("translate:lesson:"):
+                lesson_id = call.label.rsplit(":", 1)[1]
+                return CodexResult(text=json.dumps(fixture["lessons"][lesson_id]), duration_ms=1)
+            lesson_id = call.label.split(":", 1)[1]
+            return CodexResult(text=json.dumps(_zh_lesson_from_fixture(fixture, lesson_id)), duration_ms=1)
+
+    import app.services.pipeline.run as run_module
+
+    monkeypatch.setattr(run_module, "CliCodexDriver", FakeDriver)
+
+    course = await generate_course(
+        str(repo),
+        on_progress,
+        Settings(R2L_DATA_DIR=tmp_path / "data", R2L_MOCK=False),
+    )
+
+    assert course["outline"]["course"]["repo"]["name"] == "repo"
+    assert any(event.get("type") == "plan" for event in events)
+    stages = [event.get("stage") for event in events if event.get("type") == "stage"]
+    assert stages == [
+        "ingest",
+        "analyze",
+        "curriculum",
+        "lessons",
+        "spine",
+        "validate1",
+        "validate2",
+        "translate",
+        "done",
+    ]
+    assert any(event.get("type") == "spine" and event.get("status") == "ok" for event in events)
+    assert any(
+        event.get("type") == "validation" and event.get("round") == 2 for event in events
+    )
+    assert events[-1] == {"type": "stage", "stage": "done", "label": "Done"}
+
+
+@pytest.mark.asyncio
+async def test_non_mock_pipeline_emits_validation_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "README.md").write_text("# Demo", encoding="utf-8")
+    events: list[dict[str, object]] = []
+
+    async def on_progress(event: dict[str, object]) -> None:
+        events.append(event)
+
+    class FakeDriver:
+        def __init__(self, _settings) -> None:
+            pass
+
+        async def run(self, call):
+            fixture = build_mock_course(str(repo))
+            if call.label == "analyze":
+                return CodexResult(text='{"summary":"demo"}', duration_ms=1)
+            if call.label == "curriculum":
+                return CodexResult(text=json.dumps(_zh_outline_from_fixture(fixture)), duration_ms=1)
+            if call.label == "translate:outline":
+                return CodexResult(text=json.dumps(fixture["outline"]), duration_ms=1)
+            if call.label.startswith("translate:lesson:"):
+                lesson_id = call.label.rsplit(":", 1)[1]
+                return CodexResult(text=json.dumps(fixture["lessons"][lesson_id]), duration_ms=1)
+            lesson_id = call.label.split(":", 1)[1]
+            lesson = _zh_lesson_from_fixture(fixture, lesson_id)
+            if lesson_id == "s02":
+                lesson = {**lesson, "status": "failed"}
+                lesson.pop("error", None)
+            return CodexResult(text=json.dumps(lesson), duration_ms=1)
+
+    import app.services.pipeline.run as run_module
+
+    monkeypatch.setattr(run_module, "CliCodexDriver", FakeDriver)
+
+    with pytest.raises(CourseValidationError, match="failed lesson s02 is missing error"):
+        await generate_course(
+            str(repo),
+            on_progress,
+            Settings(R2L_DATA_DIR=tmp_path / "data", R2L_MOCK=False),
+        )
+
+    assert {
+        "type": "validation",
+        "round": 1,
+        "passed": False,
+        "issueCount": 1,
+    } in events
+    assert any(
+        event.get("type") == "log" and "failed lesson s02 is missing error" in str(event.get("message"))
+        for event in events
+    )
+
+
+def test_course_validation_catches_missing_lesson_body() -> None:
+    from app.core.schemas import Course
+
+    data = build_mock_course("https://github.com/chalk/chalk")
+    del data["lessons"]["s02"]
+    issues = validate_course_schema(Course.model_validate(data))
+    assert issues == ["missing lesson bodies: s02"]
+
+
+def test_course_alignment_warns_for_missing_repo_paths(tmp_path: Path) -> None:
+    from app.core.schemas import Course
+    from app.services.repo import RepoContext
+
+    course = Course.model_validate(build_mock_course("https://github.com/chalk/chalk"))
+    ctx = RepoContext(
+        url="https://github.com/chalk/chalk",
+        localPath=str(tmp_path),
+        sha="abc123",
+        name="chalk",
+        defaultBranch="main",
+        summary="",
+        loc=0,
+        languages={},
+        tree=["README.md"],
+    )
+    issues = validate_course_alignment(course, ctx)
+    assert any("keyFiles references missing path" in issue for issue in issues)
+
+
+def test_zh_course_validation_catches_missing_body_and_bad_status() -> None:
+    from app.core.schemas import ZhLesson, ZhOutline
+
+    fixture = build_mock_course("https://github.com/chalk/chalk")
+    outline = ZhOutline.model_validate(_zh_outline_from_fixture(fixture))
+    lessons = {
+        "s01": ZhLesson.model_validate(_zh_lesson_from_fixture(fixture, "s01")),
+        "s02": ZhLesson.model_validate({**_zh_lesson_from_fixture(fixture, "s02"), "status": "failed"}),
+    }
+
+    issues = validate_zh_course_schema(outline, lessons)
+
+    assert "failed lesson s02 is missing error" in issues
+
+
+def test_zh_course_alignment_warns_for_missing_repo_paths(tmp_path: Path) -> None:
+    from app.core.schemas import ZhLesson, ZhOutline
+    from app.services.repo import RepoContext
+
+    fixture = build_mock_course("https://github.com/chalk/chalk")
+    outline = ZhOutline.model_validate(_zh_outline_from_fixture(fixture))
+    lessons = {
+        lesson_id: ZhLesson.model_validate(_zh_lesson_from_fixture(fixture, lesson_id))
+        for lesson_id in ["s01", "s02"]
+    }
+    ctx = RepoContext(
+        url="https://github.com/chalk/chalk",
+        localPath=str(tmp_path),
+        sha="abc123",
+        name="chalk",
+        defaultBranch="main",
+        summary="",
+        loc=0,
+        languages={},
+        tree=["README.md"],
+    )
+
+    issues = validate_zh_course_alignment(outline, lessons, ctx)
+
+    assert any("filesToRead references missing path" in issue for issue in issues)

@@ -33,6 +33,26 @@ npm -w site run dev      # http://localhost:3000
 R2L_MOCK=1 npm -w site run dev     # 首页随便填一个 github 地址即可
 ```
 
+### Python 后端分支
+
+`python` 分支提供 FastAPI 后端，前端 UI 保持不变，通过 `PY_BACKEND_URL`
+把 `/api/*` 转发到 Python 服务：
+
+```bash
+cd backend
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -e ".[dev]"
+R2L_MOCK=1 uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+
+cd ../site
+PY_BACKEND_URL=http://127.0.0.1:8000 npm run dev
+```
+
+`R2L_MOCK=0` 会走 Python repo-ingest/Codex pipeline。API 合同见
+[`docs/python-backend-contract.md`](./docs/python-backend-contract.md)，部署说明见
+[`docs/python-backend-deploy.md`](./docs/python-backend-deploy.md)。
+
 ## 部署到 VPS（Debian + codex）
 
 详见 [`DEPLOY.md`](./DEPLOY.md)。要点：
