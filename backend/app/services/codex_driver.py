@@ -51,11 +51,12 @@ class CliCodexDriver:
             "--output-last-message",
             str(output_file),
         ]
+        env = generation_codex_env(self.settings)
 
         proc = await asyncio.create_subprocess_exec(
             *args,
             cwd=str(call.cwd),
-            env=os.environ.copy(),
+            env=env,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -91,3 +92,34 @@ class CliCodexDriver:
             duration_ms=int((time.monotonic() - started) * 1000),
         )
 
+
+def generation_codex_env(settings: Settings) -> dict[str, str]:
+    """Build the tutorial-generation Codex environment without host Codex state."""
+
+    codex_home = settings.codex_home
+    codex_home.mkdir(parents=True, exist_ok=True)
+
+    env: dict[str, str] = {}
+    for key in (
+        "PATH",
+        "LANG",
+        "LC_ALL",
+        "LC_CTYPE",
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "ALL_PROXY",
+        "NO_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "all_proxy",
+        "no_proxy",
+    ):
+        value = os.environ.get(key)
+        if value:
+            env[key] = value
+
+    env["HOME"] = str(codex_home)
+    env["CODEX_HOME"] = str(codex_home)
+    return env

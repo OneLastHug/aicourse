@@ -41,6 +41,7 @@ async def run_curriculum_stage(
         prompt=curriculum_prompt(ctx, analysis),
         cwd=Path(ctx.localPath),
         model=ZhOutline,
+        settings=settings,
     )
     normalized = normalize_outline(outline)
     cache.set(key, normalized.model_dump(mode="json", exclude_none=True))

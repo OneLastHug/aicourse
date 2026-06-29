@@ -36,7 +36,7 @@ async def run_analyze_stage(
         prompt=analyze_prompt(ctx),
         cwd=Path(ctx.localPath),
         model=dict[str, Any],
+        settings=settings,
     )
     cache.set(key, analysis)
     return analysis
-

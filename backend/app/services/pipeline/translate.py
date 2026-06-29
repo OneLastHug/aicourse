@@ -51,21 +51,18 @@ async def run_translate_stage(
         settings=settings,
     )
 
-    semaphore = asyncio.Semaphore(max(1, settings.r2l_codex_concurrency))
-
     async def translate_one(outline_lesson) -> tuple[str, Lesson]:
         zh_lesson = zh_lessons.get(outline_lesson.id)
         if zh_lesson is None:
             return outline_lesson.id, missing_lesson(outline_lesson.id, "missing Chinese lesson body")
-        async with semaphore:
-            lesson = await translate_lesson(
-                ctx=ctx,
-                zh_lesson=zh_lesson,
-                driver=driver,
-                cache=cache,
-                settings=settings,
-            )
-            return outline_lesson.id, lesson
+        lesson = await translate_lesson(
+            ctx=ctx,
+            zh_lesson=zh_lesson,
+            driver=driver,
+            cache=cache,
+            settings=settings,
+        )
+        return outline_lesson.id, lesson
 
     lessons = dict(await asyncio.gather(*(translate_one(item) for item in zh_outline.lessons)))
 
@@ -105,6 +102,7 @@ async def translate_outline(
         prompt=translate_outline_prompt(json_for_prompt(zh_outline)),
         cwd=Path(ctx.localPath),
         model=Outline,
+        settings=settings,
     )
     outline.lessons = [lesson for section in outline.sections for lesson in section.lessons]
     cache.set(key, outline.model_dump(mode="json", exclude_none=True))
@@ -139,6 +137,7 @@ async def translate_lesson(
         prompt=translate_lesson_prompt(zh_lesson.id, json_for_prompt(zh_lesson)),
         cwd=Path(ctx.localPath),
         model=Lesson,
+        settings=settings,
     )
     if lesson.id != zh_lesson.id:
         lesson.id = zh_lesson.id

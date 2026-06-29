@@ -32,7 +32,7 @@ npm -w site run build      # 生产构建
 export R2L_DATA_DIR=/var/lib/aicourse
 mkdir -p "$R2L_DATA_DIR"
 
-# 真实 codex 模式（不要设 R2L_MOCK；codex 走默认 gpt-5.5 / xhigh / 并发 5）
+# 真实 codex 模式（不要设 R2L_MOCK；codex 走默认 gpt-5.4 / xhigh / 教程生成共享并发 10）
 npm -w site run start      # 监听 http://0.0.0.0:3000
 ```
 

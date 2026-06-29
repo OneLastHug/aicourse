@@ -20,18 +20,16 @@ class Settings(BaseSettings):
     r2l_data_dir: Path = Field(default_factory=lambda: Path.cwd() / "data", alias="R2L_DATA_DIR")
     r2l_mock: bool = Field(default=False, alias="R2L_MOCK")
     r2l_codex_binary: str = Field(default="codex", alias="R2L_CODEX_BINARY")
-    r2l_codex_model: str = Field(default="gpt-5.5", alias="R2L_CODEX_MODEL")
+    r2l_codex_model: str = Field(default="gpt-5.4", alias="R2L_CODEX_MODEL")
     r2l_codex_reasoning_effort: str = Field(
         default="xhigh",
         alias="R2L_CODEX_REASONING_EFFORT",
     )
-    r2l_codex_concurrency: int = Field(default=5, alias="R2L_CODEX_CONCURRENCY")
+    r2l_codex_concurrency: int = Field(default=10, alias="R2L_CODEX_CONCURRENCY")
     r2l_codex_timeout_ms: int = Field(default=300 * 60 * 1000, alias="R2L_CODEX_TIMEOUT_MS")
+    r2l_codex_home: Path | None = Field(default=None, alias="R2L_CODEX_HOME")
     r2l_assistant_mock: bool = Field(default=False, alias="R2L_ASSISTANT_MOCK")
-    r2l_assistant_endpoint: str = Field(
-        default="https://codex.ciii.club/v1/chat/completions",
-        alias="R2L_ASSISTANT_ENDPOINT",
-    )
+    r2l_assistant_endpoint: str | None = Field(default=None, alias="R2L_ASSISTANT_ENDPOINT")
     r2l_assistant_api_key: str | None = Field(default=None, alias="R2L_ASSISTANT_API_KEY")
     r2l_assistant_model: str = Field(default="gpt-5.4-mini", alias="R2L_ASSISTANT_MODEL")
     r2l_assistant_timeout_ms: int = Field(default=90 * 1000, alias="R2L_ASSISTANT_TIMEOUT_MS")
@@ -55,6 +53,10 @@ class Settings(BaseSettings):
     @property
     def cache_dir(self) -> Path:
         return self.data_dir / "cache"
+
+    @property
+    def codex_home(self) -> Path:
+        return self.r2l_codex_home or self.data_dir / "codex" / "generation"
 
 
 @lru_cache

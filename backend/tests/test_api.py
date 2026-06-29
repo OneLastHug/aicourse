@@ -172,6 +172,7 @@ async def test_codex_sidebar_api_uses_isolated_endpoint_model_and_pool(
     monkeypatch.setenv("R2L_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("R2L_MOCK", "1")
     monkeypatch.setenv("R2L_CODEX_MODEL", "host-codex-model")
+    monkeypatch.setenv("R2L_ASSISTANT_ENDPOINT", "https://assistant.example.invalid/v1/chat/completions")
     monkeypatch.delenv("R2L_ASSISTANT_MOCK", raising=False)
     get_settings.cache_clear()
     settings = Settings(
@@ -207,7 +208,7 @@ async def test_codex_sidebar_api_uses_isolated_endpoint_model_and_pool(
     assert res.json()["provider"] == "codex-sidebar"
     assert calls == [
         {
-            "url": "https://codex.ciii.club/v1/chat/completions",
+            "url": "https://assistant.example.invalid/v1/chat/completions",
             "payload": {
                 "model": "gpt-5.4-mini",
                 "messages": calls[0]["payload"]["messages"],
@@ -218,3 +219,27 @@ async def test_codex_sidebar_api_uses_isolated_endpoint_model_and_pool(
     ]
     assert calls[0]["payload"]["model"] != settings.r2l_codex_model
     assert assistant_module._sidebar_executor._max_workers == 3
+
+
+@pytest.mark.asyncio
+async def test_codex_sidebar_does_not_call_provider_without_endpoint(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import app.services.assistant as assistant_module
+
+    def fail_urlopen(*_args, **_kwargs):
+        raise AssertionError("provider should not be called without R2L_ASSISTANT_ENDPOINT")
+
+    monkeypatch.setattr(assistant_module.urllib.request, "urlopen", fail_urlopen)
+    settings = Settings(R2L_DATA_DIR=tmp_path)
+
+    result = await assistant_module.answer_question(
+        assistant_module.AssistantRequest(
+            question="解释",
+            context=assistant_module.AssistantContext(selectionText="while true"),
+        ),
+        settings,
+    )
+
+    assert result.provider == "local"

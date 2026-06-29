@@ -66,11 +66,14 @@ course generation. The sidebar uses its own OpenAI-compatible chat endpoint and
 a process-wide 3-thread pool shared by all sidebar requests.
 
 ```bash
-R2L_ASSISTANT_ENDPOINT=https://codex.ciii.club/v1/chat/completions
-R2L_ASSISTANT_API_KEY=sk-...
+R2L_ASSISTANT_ENDPOINT=<openai-compatible-chat-completions-url>
+R2L_ASSISTANT_API_KEY=<provider-api-key>
 R2L_ASSISTANT_MODEL=gpt-5.4-mini
 R2L_ASSISTANT_TIMEOUT_MS=90000
 ```
+
+Do not commit real assistant endpoint or API key values. Keep them in the
+deployment environment or a local untracked env file.
 
 `R2L_ASSISTANT_MOCK=1` keeps the route usable with a local teacher-style
 fallback, so the frontend can be tested without a live model provider. This is

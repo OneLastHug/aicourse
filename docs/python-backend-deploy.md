@@ -48,9 +48,11 @@ WorkingDirectory=/opt/aicourse/backend
 Environment=R2L_DATA_DIR=/var/lib/aicourse
 Environment=R2L_MOCK=0
 Environment=R2L_CODEX_BINARY=codex
-Environment=R2L_CODEX_MODEL=gpt-5.5
+Environment=R2L_CODEX_MODEL=gpt-5.4
 Environment=R2L_CODEX_REASONING_EFFORT=xhigh
-Environment=R2L_ASSISTANT_ENDPOINT=https://codex.ciii.club/v1/chat/completions
+Environment=R2L_CODEX_CONCURRENCY=10
+Environment=R2L_CODEX_HOME=/var/lib/aicourse/codex/generation
+Environment=R2L_ASSISTANT_ENDPOINT=<set-in-private-environment>
 Environment=R2L_ASSISTANT_MODEL=gpt-5.4-mini
 ExecStart=/opt/aicourse/backend/run.sh
 Restart=always

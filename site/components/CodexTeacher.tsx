@@ -100,9 +100,7 @@ export function CodexTeacher({
       }
 
       const range = sel.getRangeAt(0);
-      const container = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
-        ? (range.commonAncestorContainer as Element)
-        : range.commonAncestorContainer.parentElement;
+      const container = selectionContainer(range.commonAncestorContainer);
       const root = container?.closest("[data-codex-scope]");
       if (!root) {
         setSelection(null);
@@ -132,14 +130,17 @@ export function CodexTeacher({
     }
 
     const onPointerUp = () => window.setTimeout(readSelection, 0);
+    const onSelectionChange = () => window.setTimeout(readSelection, 0);
     const onKeyUp = () => readSelection();
     document.addEventListener("mouseup", onPointerUp);
     document.addEventListener("touchend", onPointerUp);
     document.addEventListener("keyup", onKeyUp);
+    document.addEventListener("selectionchange", onSelectionChange);
     return () => {
       document.removeEventListener("mouseup", onPointerUp);
       document.removeEventListener("touchend", onPointerUp);
       document.removeEventListener("keyup", onKeyUp);
+      document.removeEventListener("selectionchange", onSelectionChange);
     };
   }, [locale]);
 
@@ -392,6 +393,12 @@ function inferKind(container: Element | null): string {
   if (container.closest("pre, code, .code-wrap")) return "code";
   if (container.closest("figure")) return "diagram";
   return "text";
+}
+
+function selectionContainer(node: Node): Element | null {
+  if (node.nodeType === Node.ELEMENT_NODE) return node as Element;
+  const parent = node.parentNode;
+  return parent instanceof Element ? parent : null;
 }
 
 function quickQuestion(mode: CodexAssistantMode, locale: Locale, selectedText: string): string {

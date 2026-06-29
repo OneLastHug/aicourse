@@ -68,7 +68,7 @@ async def answer_question(
     settings: Settings | None = None,
 ) -> AssistantResponse:
     cfg = settings or get_settings()
-    if cfg.r2l_assistant_mock:
+    if cfg.r2l_assistant_mock or not cfg.r2l_assistant_endpoint:
         return _local_teacher_answer(request, "local")
     try:
         return await _answer_with_sidebar_provider(request, cfg)
@@ -98,6 +98,8 @@ async def _answer_with_sidebar_provider(
 
 
 def _post_sidebar_provider(prompt: str, cfg: Settings) -> str:
+    if not cfg.r2l_assistant_endpoint:
+        raise RuntimeError("R2L_ASSISTANT_ENDPOINT is not configured")
     url = _chat_completions_url(cfg.r2l_assistant_endpoint)
     payload = {
         "model": cfg.r2l_assistant_model,

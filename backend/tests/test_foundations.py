@@ -8,9 +8,10 @@ import pytest
 from app.core.config import Settings
 from app.sample.fixtures import build_mock_course
 from app.services.cache import Cache
-from app.services.codex_driver import CodexResult
+from app.services.codex_driver import CodexResult, generation_codex_env
 from app.services.generator import generate_course
 from app.services.json_parse import extract_json
+from app.services.pipeline.call import get_generation_limiter
 from app.services.pipeline.validate import (
     CourseValidationError,
     validate_course_alignment,
@@ -71,6 +72,34 @@ def test_cache_roundtrip(tmp_path: Path) -> None:
     key = cache.key({"stage": "analyze", "repo": "abc"})
     cache.set(key, {"ok": True})
     assert cache.get(key) == {"ok": True}
+
+
+def test_generation_defaults_and_pool_are_ten_slots(tmp_path: Path) -> None:
+    settings = Settings(R2L_DATA_DIR=tmp_path / "data")
+    limiter = get_generation_limiter(settings)
+
+    assert settings.r2l_codex_model == "gpt-5.4"
+    assert settings.r2l_codex_reasoning_effort == "xhigh"
+    assert settings.r2l_codex_concurrency == 10
+    assert limiter._value == 10
+
+
+def test_generation_codex_env_isolated_from_host_codex(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CODEX_HOME", "/host/codex")
+    monkeypatch.setenv("OPENAI_API_KEY", "host-secret")
+    monkeypatch.setenv("R2L_ASSISTANT_API_KEY", "assistant-secret")
+    settings = Settings(R2L_DATA_DIR=tmp_path / "data")
+
+    env = generation_codex_env(settings)
+
+    assert env["CODEX_HOME"] == str(settings.codex_home)
+    assert env["HOME"] == str(settings.codex_home)
+    assert env["CODEX_HOME"] != "/host/codex"
+    assert "OPENAI_API_KEY" not in env
+    assert "R2L_ASSISTANT_API_KEY" not in env
 
 
 @pytest.mark.asyncio

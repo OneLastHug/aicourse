@@ -16,11 +16,12 @@ Concrete examples are stored next to this document:
 R2L_DATA_DIR=/var/lib/aicourse
 R2L_MOCK=1
 R2L_CODEX_BINARY=codex
-R2L_CODEX_MODEL=gpt-5.5
+R2L_CODEX_MODEL=gpt-5.4
 R2L_CODEX_REASONING_EFFORT=xhigh
-R2L_CODEX_CONCURRENCY=5
+R2L_CODEX_CONCURRENCY=10
+R2L_CODEX_HOME=/var/lib/aicourse/codex/generation
 R2L_ASSISTANT_MOCK=0
-R2L_ASSISTANT_ENDPOINT=https://codex.ciii.club/v1/chat/completions
+R2L_ASSISTANT_ENDPOINT=<openai-compatible-chat-completions-url>
 R2L_ASSISTANT_API_KEY=
 R2L_ASSISTANT_MODEL=gpt-5.4-mini
 R2L_ASSISTANT_TIMEOUT_MS=90000
@@ -34,6 +35,11 @@ The Codex teacher sidebar is deliberately isolated from the course-generation
 Codex configuration. `R2L_CODEX_*` controls tutorial generation only.
 `R2L_ASSISTANT_*` controls the sidebar only. Sidebar requests share one
 process-wide 3-thread pool, separate from tutorial generation concurrency.
+Tutorial generation Codex calls share one process-wide 10-slot pool and run
+with a dedicated `CODEX_HOME`, so host-machine Codex configuration is not
+inherited by generated-course jobs.
+
+Do not commit real `R2L_ASSISTANT_ENDPOINT` or `R2L_ASSISTANT_API_KEY` values.
 
 The non-mock pipeline is Chinese-first, matching the v2 TypeScript generation
 contract:
@@ -251,11 +257,12 @@ Response:
 }
 ```
 
-The sidebar calls a dedicated OpenAI-compatible chat completion endpoint:
+The sidebar calls a dedicated OpenAI-compatible chat completion endpoint
+configured outside git:
 
 ```bash
-R2L_ASSISTANT_ENDPOINT=https://codex.ciii.club/v1/chat/completions
-R2L_ASSISTANT_API_KEY=sk-...
+R2L_ASSISTANT_ENDPOINT=<openai-compatible-chat-completions-url>
+R2L_ASSISTANT_API_KEY=<provider-api-key>
 R2L_ASSISTANT_MODEL=gpt-5.4-mini
 ```
 
