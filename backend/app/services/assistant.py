@@ -4,17 +4,22 @@ import asyncio
 import json
 import urllib.error
 import urllib.request
-from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 from typing import Literal
 
 from pydantic import Field
 
 from app.core.config import Settings, get_settings
 from app.core.schemas import ApiModel
-from app.services.codex_driver import CliCodexDriver, CodexCall
 from app.services.json_parse import JsonExtractionError, parse_model
 
 AssistantMode = Literal["explain", "translate", "example", "followup", "summarize", "quiz"]
+
+SIDEBAR_THREAD_LIMIT = 3
+_sidebar_executor = ThreadPoolExecutor(
+    max_workers=SIDEBAR_THREAD_LIMIT,
+    thread_name_prefix="codex-sidebar",
+)
 
 
 class AssistantTurn(ApiModel):
@@ -63,49 +68,21 @@ async def answer_question(
     settings: Settings | None = None,
 ) -> AssistantResponse:
     cfg = settings or get_settings()
-    provider = _assistant_provider(cfg)
-    if provider == "mock":
+    if cfg.r2l_assistant_mock:
         return _local_teacher_answer(request, "local")
-    if provider == "openai":
-        try:
-            return await _answer_with_openai_compatible(request, cfg)
-        except Exception:
-            return _local_teacher_answer(request, "local")
     try:
-        return await _answer_with_codex(request, cfg)
+        return await _answer_with_sidebar_provider(request, cfg)
     except Exception:
         return _local_teacher_answer(request, "local")
 
 
-def _assistant_provider(cfg: Settings) -> Literal["mock", "openai", "codex"]:
-    configured = cfg.r2l_assistant_provider
-    if cfg.r2l_mock or configured == "mock":
-        return "mock"
-    if configured == "openai" or cfg.r2l_assistant_base_url:
-        return "openai"
-    return "codex"
-
-
-async def _answer_with_codex(request: AssistantRequest, cfg: Settings) -> AssistantResponse:
-    prompt = _teacher_prompt(request)
-    result = await CliCodexDriver(cfg).run(
-        CodexCall(
-            label="codex-sidebar-teacher",
-            prompt=prompt,
-            cwd=Path.cwd(),
-        )
-    )
-    parsed = parse_model(AssistantResponse, result.text)
-    parsed.provider = "codex"
-    return parsed
-
-
-async def _answer_with_openai_compatible(
+async def _answer_with_sidebar_provider(
     request: AssistantRequest,
     cfg: Settings,
 ) -> AssistantResponse:
     prompt = _teacher_prompt(request)
-    content = await asyncio.to_thread(_post_openai_compatible, prompt, cfg)
+    loop = asyncio.get_running_loop()
+    content = await loop.run_in_executor(_sidebar_executor, _post_sidebar_provider, prompt, cfg)
     try:
         parsed = parse_model(AssistantResponse, content)
     except JsonExtractionError:
@@ -114,18 +91,16 @@ async def _answer_with_openai_compatible(
             summary=_clip(content.strip(), 80),
             highlights=[],
             followUps=_default_followups(request),
-            provider="openai-compatible",
+            provider="codex-sidebar",
         )
-    parsed.provider = "openai-compatible"
+    parsed.provider = "codex-sidebar"
     return parsed
 
 
-def _post_openai_compatible(prompt: str, cfg: Settings) -> str:
-    if not cfg.r2l_assistant_base_url:
-        raise RuntimeError("R2L_ASSISTANT_BASE_URL is not configured")
-    url = _chat_completions_url(cfg.r2l_assistant_base_url)
+def _post_sidebar_provider(prompt: str, cfg: Settings) -> str:
+    url = _chat_completions_url(cfg.r2l_assistant_endpoint)
     payload = {
-        "model": cfg.r2l_assistant_model or cfg.r2l_codex_model,
+        "model": cfg.r2l_assistant_model,
         "messages": [
             {
                 "role": "system",
@@ -153,8 +128,8 @@ def _post_openai_compatible(prompt: str, cfg: Settings) -> str:
     return str(data["choices"][0]["message"]["content"])
 
 
-def _chat_completions_url(base_url: str) -> str:
-    base = base_url.rstrip("/")
+def _chat_completions_url(endpoint: str) -> str:
+    base = endpoint.rstrip("/")
     if base.endswith("/chat/completions"):
         return base
     if base.endswith("/v1"):
@@ -290,4 +265,3 @@ def _clip(value: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[: limit - 1] + "…"
-

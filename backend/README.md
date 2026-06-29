@@ -60,19 +60,21 @@ PY_BACKEND_URL=http://127.0.0.1:8000 npm run dev
 ## Codex Teacher Sidebar
 
 The course UI can call `POST /api/codex/query` for selected-text explanation.
-By default it uses the local `codex exec` configuration. For domestic or
-proxy-based deployments, point it at any OpenAI-compatible chat endpoint:
+It is isolated from the course-generation Codex CLI configuration: changes to
+`R2L_CODEX_*` do not affect the sidebar, and sidebar settings do not affect
+course generation. The sidebar uses its own OpenAI-compatible chat endpoint and
+a process-wide 3-thread pool shared by all sidebar requests.
 
 ```bash
-R2L_ASSISTANT_PROVIDER=openai
-R2L_ASSISTANT_BASE_URL=https://your-compatible-endpoint.example.com/v1
+R2L_ASSISTANT_ENDPOINT=https://codex.ciii.club/v1/chat/completions
 R2L_ASSISTANT_API_KEY=sk-...
-R2L_ASSISTANT_MODEL=your-model-name
+R2L_ASSISTANT_MODEL=gpt-5.4-mini
 R2L_ASSISTANT_TIMEOUT_MS=90000
 ```
 
-`R2L_MOCK=1` keeps the route usable with a local teacher-style fallback, so the
-frontend can be tested without a live model provider.
+`R2L_ASSISTANT_MOCK=1` keeps the route usable with a local teacher-style
+fallback, so the frontend can be tested without a live model provider. This is
+separate from `R2L_MOCK`, which only controls course generation.
 
 ## Production Shape
 

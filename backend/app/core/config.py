@@ -27,10 +27,13 @@ class Settings(BaseSettings):
     )
     r2l_codex_concurrency: int = Field(default=5, alias="R2L_CODEX_CONCURRENCY")
     r2l_codex_timeout_ms: int = Field(default=300 * 60 * 1000, alias="R2L_CODEX_TIMEOUT_MS")
-    r2l_assistant_provider: str = Field(default="codex", alias="R2L_ASSISTANT_PROVIDER")
-    r2l_assistant_base_url: str | None = Field(default=None, alias="R2L_ASSISTANT_BASE_URL")
+    r2l_assistant_mock: bool = Field(default=False, alias="R2L_ASSISTANT_MOCK")
+    r2l_assistant_endpoint: str = Field(
+        default="https://codex.ciii.club/v1/chat/completions",
+        alias="R2L_ASSISTANT_ENDPOINT",
+    )
     r2l_assistant_api_key: str | None = Field(default=None, alias="R2L_ASSISTANT_API_KEY")
-    r2l_assistant_model: str | None = Field(default=None, alias="R2L_ASSISTANT_MODEL")
+    r2l_assistant_model: str = Field(default="gpt-5.4-mini", alias="R2L_ASSISTANT_MODEL")
     r2l_assistant_timeout_ms: int = Field(default=90 * 1000, alias="R2L_ASSISTANT_TIMEOUT_MS")
 
     @property

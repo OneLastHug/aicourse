@@ -50,6 +50,8 @@ Environment=R2L_MOCK=0
 Environment=R2L_CODEX_BINARY=codex
 Environment=R2L_CODEX_MODEL=gpt-5.5
 Environment=R2L_CODEX_REASONING_EFFORT=xhigh
+Environment=R2L_ASSISTANT_ENDPOINT=https://codex.ciii.club/v1/chat/completions
+Environment=R2L_ASSISTANT_MODEL=gpt-5.4-mini
 ExecStart=/opt/aicourse/backend/run.sh
 Restart=always
 RestartSec=5
@@ -102,4 +104,3 @@ location / {
   proxy_pass http://127.0.0.1:3000;
 }
 ```
-
