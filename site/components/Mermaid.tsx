@@ -24,18 +24,18 @@ export function Mermaid({ chart, caption }: { chart: string; caption?: string })
           securityLevel: "strict",
           theme: resolvedTheme === "dark" ? "dark" : "neutral",
         });
+        // Validate via mermaid's own parser so a malformed diagram falls back
+        // cleanly. Do NOT sniff the rendered SVG for "error-icon"/"error-text":
+        // mermaid embeds those class names in the <style> of EVERY valid diagram,
+        // so that check false-positives on everything and hides all diagrams. A
+        // genuine syntax error makes parse() return false (and render() throw).
+        const valid = await mermaid.parse(chart.trim(), { suppressErrors: true });
+        if (valid === false) {
+          if (!cancelled) setFailed(true);
+          return;
+        }
         const { svg } = await mermaid.render(`${id}-svg`, chart.trim());
-        const renderedError =
-          svg.includes("Syntax error in text") ||
-          svg.includes("mermaid version") ||
-          svg.includes("error-icon") ||
-          svg.includes("error-text");
         if (!cancelled && ref.current) {
-          if (renderedError) {
-            ref.current.innerHTML = "";
-            setFailed(true);
-            return;
-          }
           ref.current.innerHTML = svg;
           setFailed(false);
         }
