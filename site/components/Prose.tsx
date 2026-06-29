@@ -128,5 +128,5 @@ export function Prose({ text, className }: { text: string; className?: string })
     blocks.push(<p key={key} className="my-2 leading-relaxed">{renderInline(para.join(" "), `p${key}`)}</p>);
     key++;
   }
-  return <div className={className}>{blocks}</div>;
+  return <div className={className} data-codex-kind="text">{blocks}</div>;
 }

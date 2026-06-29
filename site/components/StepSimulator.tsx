@@ -69,7 +69,7 @@ export function StepSimulator({ steps, locale }: { steps: SimStep[]; locale: Loc
       </div>
 
       {/* active panel */}
-      <div key={active} className="step-panel p-5">
+      <div key={active} className="step-panel p-5" data-codex-kind={step?.html ? "code" : "text"} data-codex-file={step?.file} data-codex-step={step?.title}>
         {step?.html ? (
           <div className="code-wrap overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
             {step.file && (

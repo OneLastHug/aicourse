@@ -81,3 +81,37 @@ async def test_generate_invalid_json_contract(isolated_app) -> None:
         )
         assert res.status_code == 400
         assert res.json() == {"error": "invalid JSON body"}
+
+
+@pytest.mark.asyncio
+async def test_codex_query_returns_teacher_answer_in_mock_mode(isolated_app) -> None:
+    app, _manager = isolated_app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.post(
+            "/api/codex/query",
+            json={
+                "question": "解释这段",
+                "mode": "explain",
+                "context": {
+                    "repoId": "demo",
+                    "locale": "zh",
+                    "courseTitle": "Demo Course",
+                    "lessonId": "s01",
+                    "lessonTitle": "Agent 循环",
+                    "selectionText": "while true",
+                    "selectionKind": "code",
+                    "surroundingText": "while true keeps the model/tool loop running",
+                    "codeFile": "src/loop.ts",
+                    "codeLanguage": "ts",
+                },
+                "history": [],
+            },
+        )
+
+        assert res.status_code == 200
+        body = res.json()
+        assert "先说结论" in body["answer"]
+        assert body["provider"] == "local"
+        assert body["highlights"]
+        assert body["followUps"]

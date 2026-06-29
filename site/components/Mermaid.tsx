@@ -60,7 +60,7 @@ export function Mermaid({ chart, caption }: { chart: string; caption?: string })
   }
 
   return (
-    <figure className="card overflow-x-auto p-4">
+    <figure className="card overflow-x-auto p-4" data-codex-kind="diagram">
       <div ref={ref} className="flex justify-center [&_svg]:h-auto [&_svg]:max-w-full" />
       {caption && (
         <figcaption className="mt-2 text-center text-xs text-ink-faint dark:text-zinc-500">{caption}</figcaption>

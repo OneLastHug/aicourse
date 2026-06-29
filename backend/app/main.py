@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse
 
-from app.api import courses, dashboard, generate, jobs
+from app.api import codex, courses, dashboard, generate, jobs
 from app.core.config import get_settings
 from app.services.jobs import job_manager
 
@@ -36,6 +36,7 @@ def create_app() -> FastAPI:
     app.include_router(dashboard.router, prefix=api_prefix)
     app.include_router(courses.router, prefix=api_prefix)
     app.include_router(jobs.router, prefix=api_prefix)
+    app.include_router(codex.router, prefix=api_prefix)
     return app
 
 

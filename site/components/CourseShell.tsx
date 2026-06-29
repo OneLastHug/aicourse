@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { TopBar } from "./TopBar";
 import { Sidebar } from "./Sidebar";
 import { LangSetter } from "./LangSetter";
+import { CodexTeacher } from "./CodexTeacher";
 import { pick } from "@/lib/content";
 import type { Course, Locale } from "@/lib/types";
 
@@ -26,8 +27,15 @@ export function CourseShell({
         <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-72 shrink-0 overflow-y-auto border-r border-line p-4 dark:border-zinc-800 lg:block">
           <Sidebar locale={locale} repoId={repoId} lessons={course.outline.lessons} sections={course.outline.sections} activeId={activeId} />
         </aside>
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="min-w-0 flex-1" data-codex-scope>{children}</main>
       </div>
+      <CodexTeacher
+        repoId={repoId}
+        locale={locale}
+        courseTitle={pick(course.outline.course.title, locale)}
+        lessonId={activeId}
+        lessonTitle={activeId ? pick(course.outline.lessons.find((lesson) => lesson.id === activeId)?.title ?? course.outline.course.title, locale) : undefined}
+      />
     </div>
   );
 }

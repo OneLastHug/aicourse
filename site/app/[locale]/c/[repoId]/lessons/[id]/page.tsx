@@ -157,7 +157,7 @@ export default async function LessonPage({
                 <span>·</span>
                 <span>{t(loc, "lesson.changesHint")}</span>
               </div>
-              <div className="code-wrap overflow-x-auto rounded-xl" dangerouslySetInnerHTML={{ __html: changesHtml }} />
+              <div className="code-wrap overflow-x-auto rounded-xl" data-codex-kind="code" data-codex-file={sp.path} data-codex-language={sp.language} dangerouslySetInnerHTML={{ __html: changesHtml }} />
               {sp.runCmd && (
                 <div className="mt-2 font-mono text-[11px] text-ink-faint dark:text-zinc-500">$ {sp.runCmd}</div>
               )}
@@ -265,7 +265,7 @@ export default async function LessonPage({
 
 function Section({ label, accent, children }: { label: string; accent?: boolean; children: React.ReactNode }) {
   return (
-    <section className="mt-8">
+    <section className="mt-8" data-codex-kind="text">
       <h2 className={`mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] ${accent ? "text-brand" : "text-ink-faint dark:text-zinc-500"}`}>
         <span className="h-px w-5 bg-current opacity-50" />{label}
       </h2>

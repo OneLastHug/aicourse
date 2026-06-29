@@ -15,7 +15,7 @@ export function HighlightedCode({
 }) {
   const lines = tokenizeCode(code, language);
   return (
-    <pre className={`shiki syntax-fallback ${className}`.trim()}>
+    <pre className={`shiki syntax-fallback ${className}`.trim()} data-codex-kind="code" data-codex-language={language}>
       <code>
         {lines.map((tokens, lineIdx) => {
           const lineNo = lineIdx + 1;

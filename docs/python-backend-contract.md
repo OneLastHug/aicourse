@@ -19,6 +19,10 @@ R2L_CODEX_BINARY=codex
 R2L_CODEX_MODEL=gpt-5.5
 R2L_CODEX_REASONING_EFFORT=xhigh
 R2L_CODEX_CONCURRENCY=5
+R2L_ASSISTANT_PROVIDER=codex
+R2L_ASSISTANT_BASE_URL=
+R2L_ASSISTANT_API_KEY=
+R2L_ASSISTANT_MODEL=
 PY_BACKEND_URL=http://127.0.0.1:8000
 ```
 
@@ -194,6 +198,60 @@ Not ready:
 {
   "error": "draft not ready"
 }
+```
+
+### `POST /api/codex/query`
+
+Used by the Codex AI teacher sidebar for selected-text explanation.
+
+Request:
+
+```json
+{
+  "question": "解释这段代码",
+  "mode": "explain",
+  "context": {
+    "repoId": "repo-xxxxxx",
+    "locale": "zh",
+    "courseTitle": "Course title",
+    "lessonId": "s01",
+    "lessonTitle": "Agent 循环",
+    "selectionText": "while true",
+    "selectionKind": "code",
+    "surroundingText": "nearby paragraph or code",
+    "codeFile": "src/loop.ts",
+    "codeLanguage": "ts",
+    "activeStep": "判断结束"
+  },
+  "history": [
+    { "role": "user", "content": "上一轮问题" },
+    { "role": "assistant", "content": "上一轮回答" }
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "answer": "中文教师式解释",
+  "summary": "一句话总结",
+  "highlights": ["关键点1", "关键点2"],
+  "followUps": ["可以继续问的问题"],
+  "references": [
+    { "label": "s01 Agent 循环", "href": null }
+  ],
+  "provider": "codex"
+}
+```
+
+Domestic/provider-friendly deployment can use any OpenAI-compatible endpoint:
+
+```bash
+R2L_ASSISTANT_PROVIDER=openai
+R2L_ASSISTANT_BASE_URL=https://your-compatible-endpoint.example.com/v1
+R2L_ASSISTANT_API_KEY=sk-...
+R2L_ASSISTANT_MODEL=your-model-name
 ```
 
 ## Progress Events
