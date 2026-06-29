@@ -1,7 +1,8 @@
 /**
- * Repo2Learn brand mark — an amber tile with three ascending bars (a layered,
- * 0→1 learning path). Kept byte-identical to site/app/icon.svg so the in-app
- * logo and the browser-tab favicon are the same mark.
+ * Repo2Learn brand mark — an amber tile with a white open book (an open
+ * tutorial/lesson). The center spine line plus the small upward stroke on the
+ * right page hint at a 0→1 learning path. Kept byte-identical to
+ * site/app/icon.svg so the in-app logo and the browser-tab favicon match.
  */
 export function Logo({ size = 28, className }: { size?: number; className?: string }) {
   return (
@@ -15,17 +16,24 @@ export function Logo({ size = 28, className }: { size?: number; className?: stri
       aria-hidden="true"
     >
       <defs>
-        <linearGradient id="r2lGrad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fbbf24" />
+        <linearGradient id="r2lGrad" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#fbbf24" />
           <stop offset="1" stopColor="#d97706" />
         </linearGradient>
       </defs>
       <rect x="2" y="2" width="28" height="28" rx="8" fill="url(#r2lGrad)" />
-      <g fill="#ffffff">
-        <rect x="8" y="18" width="4.5" height="7" rx="2.25" />
-        <rect x="13.75" y="13" width="4.5" height="12" rx="2.25" />
-        <rect x="19.5" y="8" width="4.5" height="17" rx="2.25" />
-      </g>
+      <path
+        d="M9 11.2C9 10.54 9.54 10 10.2 10h4.95c.77 0 1.5.3 2.05.85.55-.55 1.28-.85 2.05-.85h4.95c.66 0 1.2.54 1.2 1.2v8.7c0 .66-.54 1.2-1.2 1.2h-4.95c-.77 0-1.5.3-2.05.85-.55-.55-1.28-.85-2.05-.85H10.2c-.66 0-1.2-.54-1.2-1.2v-8.7Zm7.2 1.05c-.39-.27-.85-.41-1.32-.41H10.7v7.42h4.18c.47 0 .93.14 1.32.41v-7.42Zm1.6 0v7.42c.39-.27.85-.41 1.32-.41h4.18v-7.42h-4.18c-.47 0-.93.14-1.32.41Z"
+        fill="#ffffff"
+      />
+      <path d="M16 12.9v5.1" stroke="#ffffff" strokeWidth="1.2" strokeLinecap="round" />
+      <path
+        d="M16 14.4c.95 1.1 1.45 2.35 1.45 3.55"
+        stroke="#ffffff"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        opacity=".9"
+      />
     </svg>
   );
 }
