@@ -1,8 +1,7 @@
 /**
- * Repo2Learn brand mark — an amber tile with a white open book (an open
- * tutorial/lesson). The center spine line plus the small upward stroke on the
- * right page hint at a 0→1 learning path. Kept byte-identical to
- * site/app/icon.svg so the in-app logo and the browser-tab favicon match.
+ * Repo2Learn brand mark — an open book on a near-black rounded tile (monochrome).
+ * Kept byte-identical in shape to site/app/icon.svg so the in-app logo and the
+ * browser-tab favicon are the same mark.
  */
 export function Logo({ size = 28, className }: { size?: number; className?: string }) {
   return (
@@ -15,25 +14,13 @@ export function Logo({ size = 28, className }: { size?: number; className?: stri
       className={className}
       aria-hidden="true"
     >
-      <defs>
-        <linearGradient id="r2lGrad" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#fbbf24" />
-          <stop offset="1" stopColor="#d97706" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="28" height="28" rx="8" fill="url(#r2lGrad)" />
-      <path
-        d="M9 11.2C9 10.54 9.54 10 10.2 10h4.95c.77 0 1.5.3 2.05.85.55-.55 1.28-.85 2.05-.85h4.95c.66 0 1.2.54 1.2 1.2v8.7c0 .66-.54 1.2-1.2 1.2h-4.95c-.77 0-1.5.3-2.05.85-.55-.55-1.28-.85-2.05-.85H10.2c-.66 0-1.2-.54-1.2-1.2v-8.7Zm7.2 1.05c-.39-.27-.85-.41-1.32-.41H10.7v7.42h4.18c.47 0 .93.14 1.32.41v-7.42Zm1.6 0v7.42c.39-.27.85-.41 1.32-.41h4.18v-7.42h-4.18c-.47 0-.93.14-1.32.41Z"
-        fill="#ffffff"
-      />
-      <path d="M16 12.9v5.1" stroke="#ffffff" strokeWidth="1.2" strokeLinecap="round" />
-      <path
-        d="M16 14.4c.95 1.1 1.45 2.35 1.45 3.55"
-        stroke="#ffffff"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        opacity=".9"
-      />
+      <rect x="2" y="2" width="28" height="28" rx="8" fill="#18181b" stroke="#ffffff" strokeOpacity="0.14" />
+      <g transform="translate(5.2 5.2) scale(0.9)">
+        <path
+          fill="#ffffff"
+          d="M11.25 4.533A9.707 9.707 0 0 0 6 3a9.735 9.735 0 0 0-3.25.555.75.75 0 0 0-.5.707v14.25a.75.75 0 0 0 1 .707A8.237 8.237 0 0 1 6 18.75c1.995 0 3.823.707 5.25 1.886V4.533ZM12.75 20.636A8.214 8.214 0 0 1 18 18.75c.966 0 1.89.166 2.75.47a.75.75 0 0 0 1-.708V4.262a.75.75 0 0 0-.5-.707A9.735 9.735 0 0 0 18 3a9.707 9.707 0 0 0-5.25 1.533v16.103Z"
+        />
+      </g>
     </svg>
   );
 }
