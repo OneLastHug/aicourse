@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useTheme } from "next-themes";
+import { HighlightedCode } from "@/components/HighlightedCode";
 
 /**
  * Renders a Mermaid diagram on the client. If the diagram text fails to parse it
@@ -50,9 +51,11 @@ export function Mermaid({ chart, caption }: { chart: string; caption?: string })
 
   if (failed) {
     return (
-      <pre className="code-wrap overflow-x-auto rounded-xl border border-line bg-bg-subtle p-4 text-[12px] leading-relaxed text-ink-soft dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
-        <code>{chart}</code>
-      </pre>
+      <HighlightedCode
+        code={chart}
+        language="mermaid"
+        className="overflow-x-auto rounded-xl border border-line bg-bg-subtle p-4 text-[12px] leading-relaxed text-ink-soft dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
+      />
     );
   }
 

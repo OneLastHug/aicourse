@@ -52,6 +52,29 @@ html.dark .btn-primary { @apply bg-white text-zinc-900 hover:bg-zinc-200; }
   padding-left: 1rem;
 }
 
+.syntax-fallback code,
+.syntax-fallback .line {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+.syntax-fallback .line {
+  display: block;
+  min-height: 1.5em;
+}
+.syntax-fallback .hl-line {
+  display: block;
+  background-color: rgba(245, 158, 11, 0.12);
+  border-left: 2px solid rgba(245, 158, 11, 0.8);
+  margin-left: -1rem;
+  padding-left: 1rem;
+}
+.syntax-fallback .syntax-comment { color: #6b7280; }
+.syntax-fallback .syntax-string { color: #22c55e; }
+.syntax-fallback .syntax-keyword { color: #f472b6; }
+.syntax-fallback .syntax-number { color: #60a5fa; }
+.syntax-fallback .syntax-punctuation { color: #d4d4d8; }
+.syntax-fallback .syntax-function { color: #fbbf24; }
+.syntax-fallback .syntax-boolean { color: #a78bfa; }
+
 .step-panel { animation: fadeUp 0.3s ease both; }
 
 /* Animated sheen for in-progress bars (advances while running) */

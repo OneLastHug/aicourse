@@ -5,6 +5,7 @@ import { CourseShell } from "@/components/CourseShell";
 import { pick, neighbors } from "@/lib/content";
 import { t } from "@/lib/i18n";
 import { highlight } from "@/lib/highlight";
+import { renderStepCodeBlock } from "@/lib/step-codeblock";
 import { difficultyTheme, difficultyLabel } from "@/lib/ui";
 import type { Course, Locale } from "@/lib/types";
 import { StepSimulator, type SimStep } from "@/components/StepSimulator";
@@ -13,6 +14,7 @@ import { References } from "@/components/References";
 import { Mermaid } from "@/components/Mermaid";
 import { ProgressRail } from "@/components/ProgressRail";
 import { Prose } from "@/components/Prose";
+import { HighlightedCode } from "@/components/HighlightedCode";
 
 const VALID: Locale[] = ["en", "zh"];
 
@@ -44,15 +46,36 @@ export default async function LessonPage({
   if (!meta || !lesson) notFound();
 
   const steps: SimStep[] = await Promise.all(
-    lesson.howItWorks.map(async (s) => ({
-      title: pick(s.title, loc),
-      desc: pick(s.desc, loc),
-      file: s.code?.file,
-      isSpine: s.code?.isSpine,
-      symbol: s.code?.symbol,
-      rawCode: s.code?.snippet,
-      html: s.code ? await highlight(s.code.snippet, s.code.language, s.code.highlightLines) : null,
-    })),
+    lesson.howItWorks.map(async (s) => {
+      const title = pick(s.title, loc);
+      const desc = pick(s.desc, loc);
+      const commentStyle = commentPrefixFor(s.code?.language ?? "");
+      const decorated = s.code
+        ? renderStepCodeBlock({
+            title,
+            description: desc,
+            code: s.code.snippet,
+            commentPrefix: commentStyle.prefix,
+            commentSuffix: commentStyle.suffix,
+            maxCommentWidth: 72,
+          })
+        : null;
+      const commentLineOffset = s.code ? 1 + wrapDescriptionLines(desc, 72).length : 0;
+      return {
+        title,
+        desc,
+        file: s.code?.file,
+        isSpine: s.code?.isSpine,
+        symbol: s.code?.symbol,
+        html: s.code && decorated
+          ? await highlight(
+              decorated,
+              s.code.language,
+              s.code.highlightLines.map((line) => line + commentLineOffset),
+            )
+          : null,
+      };
+    }),
   );
   const { prev, next, index, total } = neighbors(course.outline.lessons, id);
 
@@ -265,14 +288,56 @@ function TryBlock({ title, items, code = false }: { title: string; items: string
   return (
     <div>
       <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{title}</div>
-      <ul className="space-y-2">
-        {items.map((item, idx) => (
-          <li key={idx} className={code ? "font-mono text-[13px] leading-relaxed" : "text-[13px] leading-relaxed"}>
-            {code ? <code>{item}</code> : item}
-          </li>
-        ))}
-      </ul>
+      <div className="space-y-2">
+        {items.map((item, idx) =>
+          code ? (
+            <HighlightedCode
+              key={idx}
+              code={item}
+              language="bash"
+              className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-[13px] leading-relaxed text-zinc-300"
+            />
+          ) : (
+            <p key={idx} className="text-[13px] leading-relaxed text-zinc-300">{item}</p>
+          ),
+        )}
+      </div>
     </div>
   );
 }
 
+function commentPrefixFor(language: string): { prefix: string; suffix: string } {
+  const lang = language.toLowerCase();
+  if (["html", "xml", "svg"].includes(lang)) return { prefix: "<!-- ", suffix: " -->" };
+  if (["css"].includes(lang)) return { prefix: "/* ", suffix: " */" };
+  if (["bash", "shell", "sh", "python", "py", "yaml", "yml"].includes(lang)) return { prefix: "# ", suffix: "" };
+  return { prefix: "// ", suffix: "" };
+}
+
+function wrapDescriptionLines(text: string, width: number): string[] {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return [];
+  const words = clean.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= width) {
+      current = next;
+      continue;
+    }
+    if (current) lines.push(current);
+    if (word.length <= width) {
+      current = word;
+      continue;
+    }
+    let rest = word;
+    while (rest.length > width) {
+      lines.push(rest.slice(0, width));
+      rest = rest.slice(width);
+    }
+    current = rest;
+  }
+  if (current) lines.push(current);
+  return lines;
+}

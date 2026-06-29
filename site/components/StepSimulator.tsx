@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/cn";
-import { renderStepCodeBlock } from "@/lib/step-codeblock";
 import { t } from "@/lib/i18n";
 import type { Locale } from "@/lib/types";
 
@@ -10,7 +9,6 @@ export type SimStep = {
   title: string;
   desc: string;
   html: string | null;
-  rawCode?: string;
   file?: string;
   isSpine?: boolean;
   symbol?: string;
@@ -72,7 +70,7 @@ export function StepSimulator({ steps, locale }: { steps: SimStep[]; locale: Loc
 
       {/* active panel */}
       <div key={active} className="step-panel p-5">
-        {step?.rawCode ? (
+        {step?.html ? (
           <div className="code-wrap overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
             {step.file && (
               <div className="mb-2 flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-ink-faint dark:text-zinc-500">
@@ -88,9 +86,7 @@ export function StepSimulator({ steps, locale }: { steps: SimStep[]; locale: Loc
                 )}
               </div>
             )}
-            <pre className="whitespace-pre-wrap break-words font-mono text-[13px] leading-relaxed text-zinc-300">
-              {renderStepCodeBlock({ title: step.title, description: step.desc, code: step.rawCode, maxCommentWidth: 72 })}
-            </pre>
+            <div dangerouslySetInnerHTML={{ __html: step.html }} />
           </div>
         ) : (
           <div>

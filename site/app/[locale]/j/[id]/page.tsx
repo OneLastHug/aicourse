@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { TopBar } from "@/components/TopBar";
 import { pick } from "@/lib/content";
 import { t } from "@/lib/i18n";
+import { HighlightedCode } from "@/components/HighlightedCode";
 import { difficultyColor } from "@/lib/ui";
 import { etaSeconds, fmtClock } from "@/lib/duration";
 import type { Difficulty, Locale, ProgressEvent } from "@/lib/types";
@@ -265,11 +266,7 @@ export default function ProgressPage() {
                 <div key={i} className="mb-4">
                   <div className="mb-1 text-sm font-semibold">{String(step.title || "")}</div>
                   <p className="mb-2 text-xs leading-relaxed text-ink-faint dark:text-zinc-400">{String(step.desc || "")}</p>
-                  {code?.snippet ? (
-                    <pre className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-[12px] leading-relaxed text-zinc-300">
-                      <code>{String(code.snippet)}</code>
-                    </pre>
-                  ) : null}
+                  {code?.snippet ? <HighlightedCode code={String(code.snippet)} language={String(code.language || "text")} className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-[12px] leading-relaxed text-zinc-300" /> : null}
                 </div>
               );
             })}

@@ -1,4 +1,5 @@
 import { createHighlighter, type Highlighter, type ShikiTransformer } from "shiki";
+import { highlightToHtml, normalizeLanguage } from "./syntax";
 
 let hlPromise: Promise<Highlighter> | null = null;
 
@@ -6,7 +7,7 @@ function getHighlighter(): Promise<Highlighter> {
   if (!hlPromise) {
     hlPromise = createHighlighter({
       themes: ["github-dark"],
-      langs: ["typescript","javascript","tsx","jsx","python","bash","shell","json","go","rust","css","html"],
+      langs: ["typescript", "javascript", "tsx", "jsx", "python", "bash", "shell", "json", "go", "rust", "css", "html", "yaml", "markdown"],
     });
   }
   return hlPromise;
@@ -27,13 +28,15 @@ const lineHighlighter = (lines: number[]): ShikiTransformer => ({
 });
 
 export async function highlight(code: string, lang: string, lines: number[]): Promise<string> {
+  const safeLang = normalizeLanguage(lang);
   try {
     const h = await getHighlighter();
     const loaded = h.getLoadedLanguages();
-    const safe = loaded.includes(lang) ? lang : "typescript";
-    return h.codeToHtml(code, { lang: safe, theme: "github-dark", transformers: [lineHighlighter(lines)] });
+    if (!loaded.includes(safeLang)) {
+      return highlightToHtml(code, safeLang, lines);
+    }
+    return h.codeToHtml(code, { lang: safeLang, theme: "github-dark", transformers: [lineHighlighter(lines)] });
   } catch {
-    const esc = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    return `<pre class="shiki"><code>${esc}</code></pre>`;
+    return highlightToHtml(code, safeLang, lines);
   }
 }
