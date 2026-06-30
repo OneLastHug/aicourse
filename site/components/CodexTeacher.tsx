@@ -413,7 +413,8 @@ function RenderedMessage({
   copyLabel: string;
   copiedLabel: string;
 }) {
-  const segments = useMemo(() => parseMessageSegments(content), [content]);
+  const displayContent = useMemo(() => unwrapAssistantAnswer(content), [content]);
+  const segments = useMemo(() => parseMessageSegments(displayContent), [displayContent]);
 
   return (
     <div className="space-y-2">
@@ -544,6 +545,32 @@ function parseMessageSegments(content: string): MessageSegment[] {
     }
   }
   return segments.length ? segments : [{ kind: "text", text: content }];
+}
+
+function unwrapAssistantAnswer(content: string): string {
+  let current = stripJsonFence(content.trim());
+  for (let i = 0; i < 3; i += 1) {
+    const parsed = parseJsonObject(current);
+    if (!parsed || typeof parsed.answer !== "string") break;
+    current = stripJsonFence(parsed.answer.trim());
+  }
+  return current || content;
+}
+
+function stripJsonFence(value: string): string {
+  const match = /^\s*```(?:json)?\s*([\s\S]*?)```\s*$/i.exec(value);
+  return match ? match[1].trim() : value;
+}
+
+function parseJsonObject(value: string): { answer?: unknown } | null {
+  try {
+    const parsed = JSON.parse(value);
+    if (typeof parsed === "string") return parseJsonObject(parsed);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as { answer?: unknown };
+  } catch {
+    return null;
+  }
 }
 
 function quickQuestion(mode: CodexAssistantMode, locale: Locale, selectedText: string): string {

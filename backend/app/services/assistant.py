@@ -5,7 +5,7 @@ import json
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field
 
@@ -83,35 +83,67 @@ async def _answer_with_sidebar_provider(
     prompt = _teacher_prompt(request)
     loop = asyncio.get_running_loop()
     content = await loop.run_in_executor(_sidebar_executor, _post_sidebar_provider, prompt, cfg)
-    try:
-        parsed = parse_model(AssistantResponse, content)
-    except JsonExtractionError:
-        parsed = AssistantResponse(
-            answer=content.strip(),
-            summary=_clip(content.strip(), 80),
-            highlights=[],
-            followUps=_default_followups(request),
-            provider="codex-sidebar",
-        )
+    parsed = _parse_assistant_response(content, request)
     parsed.provider = "codex-sidebar"
     return parsed
+
+
+def _parse_assistant_response(content: str, request: AssistantRequest) -> AssistantResponse:
+    text = content.strip()
+    candidates = [text]
+    unwrapped = _unwrap_json_string(text)
+    if unwrapped and unwrapped not in candidates:
+        candidates.append(unwrapped)
+
+    for candidate in candidates:
+        try:
+            return _unwrap_nested_answer(parse_model(AssistantResponse, candidate))
+        except (JsonExtractionError, ValueError):
+            continue
+
+    return AssistantResponse(
+        answer=text,
+        summary=_clip(text, 80),
+        highlights=[],
+        followUps=_default_followups(request),
+        provider="codex-sidebar",
+    )
+
+
+def _unwrap_nested_answer(response: AssistantResponse) -> AssistantResponse:
+    current = response
+    for _ in range(3):
+        answer = _unwrap_json_string(current.answer.strip())
+        if not answer:
+            return current
+        try:
+            nested = parse_model(AssistantResponse, answer)
+        except (JsonExtractionError, ValueError):
+            return current
+        current = nested
+    return current
+
+
+def _unwrap_json_string(text: str) -> str:
+    current = text.strip()
+    for _ in range(3):
+        try:
+            value = json.loads(current)
+        except json.JSONDecodeError:
+            return current
+        if isinstance(value, str):
+            current = value.strip()
+            continue
+        if isinstance(value, dict | list):
+            return json.dumps(value, ensure_ascii=False)
+        return current
+    return current
 
 
 def _post_sidebar_provider(prompt: str, cfg: Settings) -> str:
     if not cfg.r2l_assistant_endpoint:
         raise RuntimeError("R2L_ASSISTANT_ENDPOINT is not configured")
-    url = _chat_completions_url(cfg.r2l_assistant_endpoint)
-    payload = {
-        "model": cfg.r2l_assistant_model,
-        "messages": [
-            {
-                "role": "system",
-                "content": "你是 AICourse 的中文 AI 教师。回答必须稳定、准确、面向学习者。",
-            },
-            {"role": "user", "content": prompt},
-        ],
-        "temperature": 0.2,
-    }
+    url, payload = _sidebar_provider_request(cfg, prompt)
     headers = {"content-type": "application/json"}
     if cfg.r2l_assistant_api_key:
         headers["authorization"] = f"Bearer {cfg.r2l_assistant_api_key}"
@@ -127,7 +159,117 @@ def _post_sidebar_provider(prompt: str, cfg: Settings) -> str:
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")[-500:]
         raise RuntimeError(f"assistant provider returned {exc.code}: {body}") from exc
-    return str(data["choices"][0]["message"]["content"])
+    return _sidebar_provider_content(cfg.r2l_assistant_endpoint, data)
+
+
+def _sidebar_provider_request(cfg: Settings, prompt: str) -> tuple[str, dict[str, object]]:
+    system_prompt = "你是 AICourse 的中文 AI 教师。回答必须稳定、准确、面向学习者。"
+    if _is_responses_endpoint(cfg.r2l_assistant_endpoint or ""):
+        return (cfg.r2l_assistant_endpoint or "").rstrip("/"), {
+            "model": cfg.r2l_assistant_model,
+            "input": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.2,
+            "text": {"format": _assistant_response_text_format()},
+        }
+    return _chat_completions_url(cfg.r2l_assistant_endpoint or ""), {
+        "model": cfg.r2l_assistant_model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+        "temperature": 0.2,
+    }
+
+
+def _sidebar_provider_content(endpoint: str | None, data: dict[str, object]) -> str:
+    if _is_responses_endpoint(endpoint or ""):
+        output_text = data.get("output_text")
+        if isinstance(output_text, str) and output_text:
+            return output_text
+        output = data.get("output")
+        if isinstance(output, list):
+            chunks = _response_output_chunks(output)
+            if chunks:
+                return "".join(chunks)
+        raise RuntimeError("assistant responses payload did not include output_text")
+    choices = data["choices"]
+    if not isinstance(choices, list) or not choices:
+        raise RuntimeError("assistant chat payload did not include choices")
+    first = choices[0]
+    if not isinstance(first, dict):
+        raise RuntimeError("assistant chat choice is malformed")
+    message = first.get("message")
+    if not isinstance(message, dict):
+        raise RuntimeError("assistant chat choice did not include message")
+    content = message.get("content")
+    if not isinstance(content, str):
+        raise RuntimeError("assistant chat message did not include text content")
+    return content
+
+
+def _is_responses_endpoint(endpoint: str) -> bool:
+    return endpoint.rstrip("/").endswith("/responses")
+
+
+def _response_output_chunks(output: list[object]) -> list[str]:
+    chunks: list[str] = []
+    for item in output:
+        if not isinstance(item, dict):
+            continue
+        content = item.get("content")
+        if isinstance(content, str):
+            chunks.append(content)
+            continue
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if isinstance(block, str):
+                chunks.append(block)
+                continue
+            if not isinstance(block, dict):
+                continue
+            text = block.get("text")
+            if isinstance(text, str):
+                chunks.append(text)
+                continue
+            block_content = block.get("content")
+            if isinstance(block_content, str):
+                chunks.append(block_content)
+    return chunks
+
+
+def _assistant_response_text_format() -> dict[str, Any]:
+    return {
+        "type": "json_schema",
+        "name": "codex_sidebar_response",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "answer": {"type": "string"},
+                "summary": {"type": "string"},
+                "highlights": {"type": "array", "items": {"type": "string"}},
+                "followUps": {"type": "array", "items": {"type": "string"}},
+                "references": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "label": {"type": "string"},
+                            "href": {"type": ["string", "null"]},
+                        },
+                        "required": ["label", "href"],
+                    },
+                },
+            },
+            "required": ["answer", "summary", "highlights", "followUps", "references"],
+        },
+    }
 
 
 def _chat_completions_url(endpoint: str) -> str:
@@ -162,7 +304,8 @@ def _teacher_prompt(request: AssistantRequest) -> str:
 - 不要编造当前仓库、文件或代码里没有的事实。
 - 如果上下文不足，明确说明需要更多上下文，并给出你能确定的部分。
 - 回答不要太长，适合放在右侧学习侧边栏里。
-- 必须返回严格 JSON，不要 markdown 代码围栏，不要 JSON 之外的文字。
+- 必须返回严格 JSON 对象，不要在 JSON 对象之外输出任何文字。
+- 如果需要给代码示例，把 markdown 代码围栏放进 answer 字符串内部，例如 ```ts\\nconst x = 1;\\n```；不要用代码围栏包住整个 JSON。
 
 本次任务：{mode_instruction}
 
@@ -191,7 +334,7 @@ def _teacher_prompt(request: AssistantRequest) -> str:
 
 返回 JSON 结构必须完全兼容：
 {{
-  "answer": "用中文分段解释，建议包含：先说结论、为什么、例子、下一步。",
+  "answer": "用中文分段解释，建议包含：先说结论、为什么、例子、下一步。如包含代码，使用 markdown fenced code block 写在这个字符串里。",
   "summary": "一句话总结",
   "highlights": ["关键点1", "关键点2", "关键点3"],
   "followUps": ["可以继续问的问题1", "可以继续问的问题2"],

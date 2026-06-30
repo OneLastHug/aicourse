@@ -16,22 +16,15 @@ class JsonExtractionError(ValueError):
 
 
 def extract_json(text: str) -> Any:
-    cleaned = _strip_code_fences(text)
-    start = _find_first_json_start(cleaned)
-    if start < 0:
-        raise JsonExtractionError("no JSON value found", text)
-    end = _find_matching_end(cleaned, start)
-    if end < 0:
-        raise JsonExtractionError("unterminated JSON value", text)
-
-    value = cleaned[start : end + 1]
-    try:
-        return json.loads(value)
-    except json.JSONDecodeError as strict_error:
+    first_error: JsonExtractionError | None = None
+    for cleaned in _json_candidates(text):
         try:
-            return json.loads(_relaxed_json(value))
-        except json.JSONDecodeError:
-            raise JsonExtractionError(f"JSON.parse failed: {strict_error}", value) from strict_error
+            return _parse_json_candidate(cleaned, text)
+        except JsonExtractionError as exc:
+            first_error = first_error or exc
+    if first_error:
+        raise first_error
+    raise JsonExtractionError("no JSON value found", text)
 
 
 def parse_model(model: type[T], text: str) -> T:
@@ -52,6 +45,43 @@ def _strip_code_fences(text: str) -> str:
         if "{" in body or "[" in body:
             return body
     return fences[0][1]
+
+
+def _json_candidates(text: str) -> list[str]:
+    candidates = [text]
+    fenced = _strip_whole_code_fence(text)
+    if fenced is not None:
+        candidates.append(fenced)
+    elif _find_first_json_start(text) < 0:
+        stripped = _strip_code_fences(text)
+        if stripped != text:
+            candidates.append(stripped)
+    return candidates
+
+
+def _strip_whole_code_fence(text: str) -> str | None:
+    match = re.fullmatch(r"\s*```(\w+)?\s*([\s\S]*?)```\s*", text, re.IGNORECASE)
+    if not match:
+        return None
+    return match.group(2)
+
+
+def _parse_json_candidate(cleaned: str, raw: str) -> Any:
+    start = _find_first_json_start(cleaned)
+    if start < 0:
+        raise JsonExtractionError("no JSON value found", raw)
+    end = _find_matching_end(cleaned, start)
+    if end < 0:
+        raise JsonExtractionError("unterminated JSON value", raw)
+
+    value = cleaned[start : end + 1]
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError as strict_error:
+        try:
+            return json.loads(_relaxed_json(value))
+        except json.JSONDecodeError:
+            raise JsonExtractionError(f"JSON.parse failed: {strict_error}", value) from strict_error
 
 
 def _find_first_json_start(text: str) -> int:
@@ -180,4 +210,3 @@ def _relaxed_json(text: str) -> str:
         i += 1
 
     return "".join(out)
-

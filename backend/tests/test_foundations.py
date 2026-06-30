@@ -67,6 +67,17 @@ def test_extract_json_handles_fences_and_relaxed_literals() -> None:
     assert extract_json(text) == {"unquoted": "value", "list": [1, 2]}
 
 
+def test_extract_json_preserves_code_fences_inside_json_strings() -> None:
+    text = json.dumps(
+        {
+            "answer": "示例：\n\n```ts\nconst x = 1;\n```",
+            "summary": "代码",
+        },
+        ensure_ascii=False,
+    )
+    assert extract_json(text)["answer"] == "示例：\n\n```ts\nconst x = 1;\n```"
+
+
 def test_cache_roundtrip(tmp_path: Path) -> None:
     cache = Cache(tmp_path)
     key = cache.key({"stage": "analyze", "repo": "abc"})
