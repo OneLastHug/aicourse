@@ -8,6 +8,7 @@ import type {
   CodexAssistantResponse,
   CodexAssistantTurn,
 } from "@/lib/codex-assistant";
+import { syntaxClass, tokenizeCode } from "@/lib/syntax";
 import type { Locale } from "@/lib/types";
 
 interface CodexTeacherProps {
@@ -34,6 +35,10 @@ interface ChatMessage {
   content: string;
   response?: CodexAssistantResponse;
 }
+
+type MessageSegment =
+  | { kind: "text"; text: string }
+  | { kind: "code"; code: string; language: string };
 
 const ACTIONS: { mode: CodexAssistantMode; zh: string; en: string }[] = [
   { mode: "explain", zh: "解释", en: "Explain" },
@@ -321,9 +326,7 @@ export function CodexTeacher({
                       ? "rounded-xl bg-ink px-3 py-2 text-sm leading-relaxed text-white dark:bg-white dark:text-zinc-900"
                       : "rounded-xl border border-line bg-white px-3 py-2 text-sm leading-relaxed text-ink-soft shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"}
                     >
-                      {message.content.split("\n").map((line, lineIndex) => (
-                        <p key={lineIndex} className={lineIndex ? "mt-2" : ""}>{line}</p>
-                      ))}
+                      <RenderedMessage content={message.content} copyLabel={ui.copyCode} copiedLabel={ui.copiedCode} />
                       {message.response?.highlights?.length ? (
                         <div className="mt-3 flex flex-wrap gap-1">
                           {message.response.highlights.map((item) => (
@@ -401,6 +404,148 @@ function selectionContainer(node: Node): Element | null {
   return parent instanceof Element ? parent : null;
 }
 
+function RenderedMessage({
+  content,
+  copyLabel,
+  copiedLabel,
+}: {
+  content: string;
+  copyLabel: string;
+  copiedLabel: string;
+}) {
+  const segments = useMemo(() => parseMessageSegments(content), [content]);
+
+  return (
+    <div className="space-y-2">
+      {segments.map((segment, index) =>
+        segment.kind === "code" ? (
+          <SidebarCodeBlock
+            key={index}
+            code={segment.code}
+            language={segment.language}
+            copyLabel={copyLabel}
+            copiedLabel={copiedLabel}
+          />
+        ) : (
+          <TextBlock key={index} text={segment.text} />
+        ),
+      )}
+    </div>
+  );
+}
+
+function TextBlock({ text }: { text: string }) {
+  const paragraphs = text.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
+  if (!paragraphs.length) return null;
+  return (
+    <>
+      {paragraphs.map((paragraph, index) => (
+        <p key={index} className="whitespace-pre-wrap break-words">
+          {paragraph}
+        </p>
+      ))}
+    </>
+  );
+}
+
+function SidebarCodeBlock({
+  code,
+  language,
+  copyLabel,
+  copiedLabel,
+}: {
+  code: string;
+  language: string;
+  copyLabel: string;
+  copiedLabel: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const tokenLines = useMemo(() => tokenizeCode(code, language), [code, language]);
+  const displayLanguage = language || "text";
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="my-2 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 text-zinc-100">
+      <div className="flex min-h-9 items-center justify-between gap-2 border-b border-zinc-800 bg-zinc-900/90 px-3 py-1.5">
+        <span className="truncate font-mono text-[11px] uppercase tracking-wide text-zinc-400">
+          {displayLanguage}
+        </span>
+        <button
+          type="button"
+          onClick={() => void copyCode()}
+          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-zinc-700 px-2 text-[11px] font-medium text-zinc-300 transition hover:border-zinc-500 hover:bg-zinc-800 hover:text-white"
+        >
+          <CopyIcon />
+          {copied ? copiedLabel : copyLabel}
+        </button>
+      </div>
+      <pre className="syntax-fallback overflow-x-auto p-3 text-[12px] leading-relaxed">
+        <code>
+          {tokenLines.map((tokens, lineIndex) => (
+            <span key={lineIndex} className="line">
+              {tokens.length
+                ? tokens.map((token, tokenIndex) => {
+                    const tokenClass = syntaxClass(token.type);
+                    return tokenClass ? (
+                      <span key={tokenIndex} className={tokenClass}>
+                        {token.text}
+                      </span>
+                    ) : (
+                      token.text
+                    );
+                  })
+                : " "}
+            </span>
+          ))}
+        </code>
+      </pre>
+    </div>
+  );
+}
+
+function parseMessageSegments(content: string): MessageSegment[] {
+  const segments: MessageSegment[] = [];
+  const fence = /```([A-Za-z0-9_+.-]*)[^\n]*\n([\s\S]*?)```/g;
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = fence.exec(content)) !== null) {
+    if (match.index > cursor) {
+      segments.push({ kind: "text", text: content.slice(cursor, match.index) });
+    }
+    segments.push({
+      kind: "code",
+      language: match[1]?.trim() || "text",
+      code: match[2]?.replace(/\n$/, "") ?? "",
+    });
+    cursor = match.index + match[0].length;
+  }
+
+  if (cursor < content.length) {
+    const tail = content.slice(cursor);
+    const openFence = /^```([A-Za-z0-9_+.-]*)[^\n]*\n([\s\S]*)$/.exec(tail);
+    if (openFence) {
+      segments.push({
+        kind: "code",
+        language: openFence[1]?.trim() || "text",
+        code: openFence[2] ?? "",
+      });
+    } else {
+      segments.push({ kind: "text", text: tail });
+    }
+  }
+  return segments.length ? segments : [{ kind: "text", text: content }];
+}
+
 function quickQuestion(mode: CodexAssistantMode, locale: Locale, selectedText: string): string {
   const prefix = locale === "zh" ? "请" : "Please ";
   if (mode === "translate") return `${prefix}${locale === "zh" ? "把这段讲成更容易懂的中文白话" : "explain this in plain language"}`;
@@ -431,6 +576,8 @@ function copy(locale: Locale) {
       thinking: "正在组织解释…",
       error: "请求失败",
       placeholder: "继续追问，例如：为什么这里要这样写？",
+      copyCode: "复制",
+      copiedCode: "已复制",
       send: "发送",
     };
   }
@@ -447,6 +594,8 @@ function copy(locale: Locale) {
     thinking: "Thinking…",
     error: "Request failed",
     placeholder: "Ask a follow-up, e.g. why is this written this way?",
+    copyCode: "Copy",
+    copiedCode: "Copied",
     send: "Send",
   };
 }
@@ -474,6 +623,15 @@ function Dot() {
     <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="3" opacity="0.25" />
       <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CopyIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
     </svg>
   );
 }
