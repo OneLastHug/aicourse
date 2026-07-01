@@ -102,15 +102,41 @@ def test_generation_codex_env_isolated_from_host_codex(
     monkeypatch.setenv("CODEX_HOME", "/host/codex")
     monkeypatch.setenv("OPENAI_API_KEY", "host-secret")
     monkeypatch.setenv("R2L_ASSISTANT_API_KEY", "assistant-secret")
-    settings = Settings(R2L_DATA_DIR=tmp_path / "data")
+    settings = Settings(
+        R2L_DATA_DIR=tmp_path / "data",
+        R2L_ASSISTANT_ENDPOINT="https://codex.ciii.club/v1/responses",
+        R2L_ASSISTANT_API_KEY="assistant-secret",
+    )
 
     env = generation_codex_env(settings)
+
+    config = (settings.codex_home / "config.toml").read_text(encoding="utf-8")
+    auth = json.loads((settings.codex_home / "auth.json").read_text(encoding="utf-8"))
 
     assert env["CODEX_HOME"] == str(settings.codex_home)
     assert env["HOME"] == str(settings.codex_home)
     assert env["CODEX_HOME"] != "/host/codex"
     assert "OPENAI_API_KEY" not in env
     assert "R2L_ASSISTANT_API_KEY" not in env
+    assert 'openai_base_url = "https://codex.ciii.club/v1"' in config
+    assert auth == {"auth_mode": "apikey", "OPENAI_API_KEY": "assistant-secret"}
+
+
+def test_generation_codex_api_key_can_be_separate_from_sidebar(tmp_path: Path) -> None:
+    settings = Settings(
+        R2L_DATA_DIR=tmp_path / "data",
+        R2L_CODEX_BASE_URL="https://codex.ciii.club/v1/",
+        R2L_CODEX_API_KEY="generation-secret",
+        R2L_ASSISTANT_API_KEY="assistant-secret",
+    )
+
+    generation_codex_env(settings)
+
+    auth = json.loads((settings.codex_home / "auth.json").read_text(encoding="utf-8"))
+    config = (settings.codex_home / "config.toml").read_text(encoding="utf-8")
+    assert auth["OPENAI_API_KEY"] == "generation-secret"
+    assert "assistant-secret" not in json.dumps(auth)
+    assert 'openai_base_url = "https://codex.ciii.club/v1"' in config
 
 
 @pytest.mark.asyncio

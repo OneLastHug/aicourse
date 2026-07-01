@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import tempfile
 import time
@@ -98,6 +99,7 @@ def generation_codex_env(settings: Settings) -> dict[str, str]:
 
     codex_home = settings.codex_home
     codex_home.mkdir(parents=True, exist_ok=True)
+    _ensure_generation_codex_config(settings, codex_home)
 
     env: dict[str, str] = {}
     for key in (
@@ -123,3 +125,41 @@ def generation_codex_env(settings: Settings) -> dict[str, str]:
     env["HOME"] = str(codex_home)
     env["CODEX_HOME"] = str(codex_home)
     return env
+
+
+def _ensure_generation_codex_config(settings: Settings, codex_home: Path) -> None:
+    base_url = _generation_codex_base_url(settings)
+    api_key = settings.r2l_codex_api_key or settings.r2l_assistant_api_key
+
+    config_lines = [
+        f'model = "{_toml_string(settings.r2l_codex_model)}"',
+        'model_provider = "openai"',
+        f'openai_base_url = "{_toml_string(base_url)}"',
+        f'model_reasoning_effort = "{_toml_string(settings.r2l_codex_reasoning_effort)}"',
+        'approval_policy = "never"',
+        'sandbox_mode = "danger-full-access"',
+        "",
+    ]
+    (codex_home / "config.toml").write_text("\n".join(config_lines), encoding="utf-8")
+
+    if api_key:
+        auth = {
+            "auth_mode": "apikey",
+            "OPENAI_API_KEY": api_key,
+        }
+        auth_path = codex_home / "auth.json"
+        auth_path.write_text(json.dumps(auth, ensure_ascii=False, indent=2), encoding="utf-8")
+        auth_path.chmod(0o600)
+
+
+def _generation_codex_base_url(settings: Settings) -> str:
+    if settings.r2l_codex_base_url:
+        return settings.r2l_codex_base_url.rstrip("/")
+    endpoint = settings.r2l_assistant_endpoint
+    if endpoint and endpoint.rstrip("/").endswith("/responses"):
+        return endpoint.rstrip("/")[: -len("/responses")]
+    return "https://codex.ciii.club/v1"
+
+
+def _toml_string(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
