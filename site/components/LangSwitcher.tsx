@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE, normalizeLocale } from "@/lib/locale";
 import type { Locale } from "@/lib/types";
 
 export function LangSwitcher() {
@@ -8,14 +9,14 @@ export function LangSwitcher() {
   const pathname = usePathname();
   const segs = (pathname ?? "").split("/");
   const currentIdx = segs.findIndex((s) => s === "en" || s === "zh");
-  const current = (currentIdx >= 0 ? segs[currentIdx] : "en") as Locale;
+  const current = normalizeLocale(currentIdx >= 0 ? segs[currentIdx] : DEFAULT_LOCALE);
 
   function set(locale: Locale) {
-    if (locale === current || currentIdx < 0) return;
-    const next = segs.slice();
-    next[currentIdx] = locale;
+    document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE}; samesite=lax`;
+    if (locale === current && currentIdx >= 0) return;
+    const next = currentIdx >= 0 ? segs.slice() : ["", locale];
+    if (currentIdx >= 0) next[currentIdx] = locale;
     router.push(next.join("/") || "/");
-    router.refresh();
   }
 
   return (
