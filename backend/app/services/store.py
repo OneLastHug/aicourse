@@ -6,26 +6,53 @@ import re
 import shutil
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from app.core.config import Settings, get_settings
 from app.core.schemas import Course, CourseMeta, JobRecord
 
 
+def canonical_repo_url(url: str) -> str:
+    text = url.strip()
+    ssh = re.match(r"^(?P<user>[^@\s]+)@(?P<host>[^:\s]+):(?P<path>[^\s]+)$", text)
+    if ssh:
+        host = ssh.group("host").lower()
+        path = ssh.group("path").strip("/")
+        path = re.sub(r"\.git$", "", path, flags=re.IGNORECASE)
+        if host == "github.com":
+            path = path.lower()
+        return f"{ssh.group('user')}@{host}:{path}"
+
+    try:
+        parsed = urlsplit(text)
+    except ValueError:
+        return re.sub(r"\.git$", "", text.rstrip("/"), flags=re.IGNORECASE)
+
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        scheme = parsed.scheme.lower()
+        netloc = parsed.netloc.lower()
+        path = parsed.path.rstrip("/")
+        path = re.sub(r"\.git$", "", path, flags=re.IGNORECASE)
+        if netloc.split("@")[-1].split(":")[0] == "github.com":
+            path = path.lower()
+        return urlunsplit((scheme, netloc, path, "", ""))
+
+    return re.sub(r"\.git$", "", text.rstrip("/"), flags=re.IGNORECASE)
+
+
 def repo_id_for(url: str) -> str:
-    base = re.split(r"[/\:]", url)
+    canonical = canonical_repo_url(url)
+    base = re.split(r"[/\:]", canonical)
     name = next((part for part in reversed(base) if part), "repo")
     name = re.sub(r"\.git$", "", name)
     slug = re.sub(r"[^a-z0-9_-]+", "-", name, flags=re.IGNORECASE)[:40].lower()
     slug = re.sub(r"^-+|-+$", "", slug)
-    digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:6]
+    digest = hashlib.sha1(canonical.encode("utf-8")).hexdigest()[:6]
     return f"{slug or 'repo'}-{digest}"
 
 
 def dir_name_for_url(url: str) -> str:
-    base = re.split(r"[/\:]", url)
-    name = next((part for part in reversed(base) if part), "repo")
-    name = re.sub(r"\.git$", "", name)
-    return re.sub(r"[^a-z0-9_-]+", "-", name, flags=re.IGNORECASE)
+    return repo_id_for(url)
 
 
 def _settings(settings: Settings | None = None) -> Settings:
@@ -147,4 +174,3 @@ def list_job_records(settings: Settings | None = None) -> list[JobRecord]:
         except ValueError:
             continue
     return sorted(records, key=lambda item: item.startedAt, reverse=True)
-

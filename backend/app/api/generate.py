@@ -5,7 +5,7 @@ import re
 from fastapi import APIRouter, HTTPException, Request
 
 from app.services.jobs import job_manager
-from app.services.store import get_course, repo_id_for
+from app.services.store import canonical_repo_url, get_course, repo_id_for
 
 router = APIRouter()
 
@@ -31,6 +31,7 @@ async def generate(request: Request) -> dict[str, object]:
             detail={"error": "please provide a full git URL, e.g. https://github.com/owner/repo"},
         )
 
+    repo_url = canonical_repo_url(repo_url)
     repo_id = repo_id_for(repo_url)
     if get_course(repo_id) is not None:
         return {"ready": True, "repoId": repo_id}

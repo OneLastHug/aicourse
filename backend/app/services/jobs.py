@@ -12,11 +12,13 @@ from app.core.events import validate_progress_event
 from app.core.schemas import CourseMeta, JobRecord, JobState
 from app.services.generator import generate_course
 from app.services.store import (
+    canonical_repo_url,
     get_meta,
     list_job_records,
     remove_course,
     remove_job_record,
     remove_repo_clone,
+    repo_id_for,
     save_course,
     save_job_record,
 )
@@ -76,6 +78,13 @@ class JobManager:
                 save_job_record(record, self.settings)
 
     def create(self, repo_url: str, repo_id: str) -> str:
+        repo_url = canonical_repo_url(repo_url)
+        repo_id = repo_id_for(repo_url)
+        running = self.running_id(repo_id)
+        if running:
+            return running
+        self._cleanup_failed_for_repo_sync(repo_id)
+
         job_id = str(uuid.uuid4())
         ts = now_ms()
         state = JobState(
@@ -107,7 +116,7 @@ class JobManager:
         if in_memory:
             return in_memory
         for record in list_job_records(self.settings):
-            if record.repoId == repo_id and record.status == "running":
+            if self._record_matches_repo(record, repo_id) and record.status == "running":
                 job = self.jobs.get(record.id)
                 if job is None or job.state.status == "running":
                     return record.id
@@ -239,9 +248,16 @@ class JobManager:
                 queue.put_nowait(None)
 
     async def cleanup_failed_for_repo(self, repo_id: str) -> None:
+        self._cleanup_failed_for_repo_sync(repo_id)
+
+    def _cleanup_failed_for_repo_sync(self, repo_id: str) -> None:
         for record in list_job_records(self.settings):
-            if record.repoId == repo_id and record.status == "error":
+            if self._record_matches_repo(record, repo_id) and record.status == "error":
                 remove_job_record(record.id, self.settings)
+
+    @staticmethod
+    def _record_matches_repo(record: JobRecord, repo_id: str) -> bool:
+        return record.repoId == repo_id or repo_id_for(record.repoUrl) == repo_id
 
     async def auto_retry(self) -> None:
         failed = self.list_failed()
@@ -250,7 +266,7 @@ class JobManager:
 
         by_repo: dict[str, list[JobRecord]] = {}
         for record in failed:
-            by_repo.setdefault(record.repoId, []).append(record)
+            by_repo.setdefault(repo_id_for(record.repoUrl), []).append(record)
 
         for repo_id, records in by_repo.items():
             if get_meta(repo_id, self.settings):

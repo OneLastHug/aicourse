@@ -7,6 +7,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Literal
 
+import httpx
 from pydantic import Field
 
 from app.core.config import Settings, get_settings
@@ -154,11 +155,20 @@ def _post_sidebar_provider(prompt: str, cfg: Settings) -> str:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=cfg.r2l_assistant_timeout_ms / 1000) as res:
-            data = json.loads(res.read().decode("utf-8"))
+        if _is_responses_endpoint(cfg.r2l_assistant_endpoint):
+            with httpx.Client(timeout=cfg.r2l_assistant_timeout_ms / 1000) as client:
+                res = client.post(url, json=payload, headers=headers)
+                res.raise_for_status()
+                data = res.json()
+        else:
+            with urllib.request.urlopen(req, timeout=cfg.r2l_assistant_timeout_ms / 1000) as res:
+                data = json.loads(res.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")[-500:]
         raise RuntimeError(f"assistant provider returned {exc.code}: {body}") from exc
+    except httpx.HTTPStatusError as exc:
+        body = exc.response.text[-500:]
+        raise RuntimeError(f"assistant provider returned {exc.response.status_code}: {body}") from exc
     return _sidebar_provider_content(cfg.r2l_assistant_endpoint, data)
 
 

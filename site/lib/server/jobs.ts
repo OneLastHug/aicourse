@@ -7,6 +7,7 @@ import {
   saveJobRecord, removeJobRecord, listJobRecords,
   type CourseMeta, type JobRecord,
 } from "./store";
+import { usePythonBackend } from "./python-backend";
 
 export type JobStatus = "running" | "done" | "error";
 
@@ -28,6 +29,7 @@ class JobManager {
   private runningByRepo = new Map<string, string>();
 
   constructor() {
+    if (usePythonBackend()) return;
     // Reconcile on startup: any "running" records belong to a dead process now.
     void this.reconcile();
   }
@@ -244,7 +246,7 @@ export const jobManager = new JobManager();
 
 // Background timers (single-process next start). Guard against HMR duplicates.
 declare const globalThis: { __r2lTimers?: boolean };
-if (!globalThis.__r2lTimers && process.env.NEXT_RUNTIME === "nodejs") {
+if (!globalThis.__r2lTimers && process.env.NEXT_RUNTIME === "nodejs" && !usePythonBackend()) {
   globalThis.__r2lTimers = true;
   setInterval(() => { void jobManager.autoRetry(); }, 10 * 60 * 1000);
   setInterval(() => { void jobManager.autoCleanup(); }, 60 * 60 * 1000);

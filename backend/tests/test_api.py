@@ -9,8 +9,10 @@ from httpx import ASGITransport, AsyncClient
 
 from app.core.config import Settings, get_settings
 from app.main import create_app
+from app.sample.fixtures import build_mock_course
 from app.services import jobs as jobs_module
 from app.services.jobs import JobManager
+from app.services.store import list_job_records, save_job_record
 
 
 @pytest.fixture()
@@ -69,6 +71,116 @@ async def test_generate_dashboard_and_course_flow(isolated_app) -> None:
             assert ready == {"ready": True, "repoId": "chalk-65b538"}
         finally:
             pass
+
+
+@pytest.mark.asyncio
+async def test_generate_dedupes_canonical_repo_urls(isolated_app, monkeypatch: pytest.MonkeyPatch) -> None:
+    app, manager = isolated_app
+    release = asyncio.Event()
+
+    async def fake_generate_course(repo_url, _on_progress, _settings):
+        await release.wait()
+        return build_mock_course(repo_url)
+
+    monkeypatch.setattr(jobs_module, "generate_course", fake_generate_course)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        first = (
+            await client.post(
+                "/api/generate",
+                json={"repoUrl": "https://github.com/EvoMap/evolver.git"},
+            )
+        ).json()
+        second = (
+            await client.post(
+                "/api/generate",
+                json={"repoUrl": "https://github.com/EvoMap/evolver"},
+            )
+        ).json()
+
+        assert first["ready"] is False
+        assert second["ready"] is False
+        assert first["id"] == second["id"]
+        assert first["repoId"] == "evolver-655c54"
+        assert second["repoId"] == "evolver-655c54"
+        assert manager.get(first["id"]).repoUrl == "https://github.com/evomap/evolver"
+
+        dashboard = (await client.get("/api/dashboard")).json()
+        assert [item["repoId"] for item in dashboard["running"]] == ["evolver-655c54"]
+
+        release.set()
+        for _ in range(40):
+            state = manager.get(first["id"])
+            if state and state.status == "done":
+                break
+            await asyncio.sleep(0.02)
+        assert manager.get(first["id"]).status == "done"
+
+
+@pytest.mark.asyncio
+async def test_auto_retry_collapses_legacy_canonical_duplicates(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = Settings(R2L_DATA_DIR=tmp_path, R2L_MOCK=True)
+    manager = JobManager(settings)
+    release = asyncio.Event()
+
+    async def fake_generate_course(repo_url, _on_progress, _settings):
+        await release.wait()
+        return build_mock_course(repo_url)
+
+    monkeypatch.setattr(jobs_module, "generate_course", fake_generate_course)
+    ts = jobs_module.now_ms()
+    save_job_record(
+        {
+            "id": "old-git",
+            "repoUrl": "https://github.com/EvoMap/evolver.git",
+            "repoId": "evolver-6472be",
+            "status": "error",
+            "stage": "ingest",
+            "lessonsDone": 0,
+            "lessonsTotal": 0,
+            "error": "fatal: Cannot fast-forward to multiple branches.",
+            "startedAt": ts - 2,
+            "updatedAt": ts - 2,
+        },
+        settings,
+    )
+    save_job_record(
+        {
+            "id": "old-no-git",
+            "repoUrl": "https://github.com/EvoMap/evolver",
+            "repoId": "evolver-939642",
+            "status": "error",
+            "stage": "analyze",
+            "lessonsDone": 0,
+            "lessonsTotal": 0,
+            "error": "provider blocked",
+            "startedAt": ts - 1,
+            "updatedAt": ts - 1,
+        },
+        settings,
+    )
+
+    await manager.auto_retry()
+
+    records = list_job_records(settings)
+    running = [record for record in records if record.status == "running"]
+    failed = [record for record in records if record.status == "error"]
+    assert len(running) == 1
+    assert failed == []
+    assert running[0].repoId == "evolver-655c54"
+    assert running[0].repoUrl == "https://github.com/evomap/evolver"
+
+    release.set()
+    for _ in range(40):
+        state = manager.get(running[0].id)
+        if state and state.status == "done":
+            break
+        await asyncio.sleep(0.02)
+    assert manager.get(running[0].id).status == "done"
 
 
 @pytest.mark.asyncio
@@ -230,42 +342,46 @@ async def test_codex_sidebar_api_supports_responses_endpoint(
 
     calls: list[dict[str, object]] = []
 
-    class FakeResponse:
+    class FakeHttpxResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, str]:
+            return {
+                "output_text": json.dumps(
+                    {
+                        "answer": "responses 回答",
+                        "summary": "responses 总结",
+                        "highlights": ["responses"],
+                        "followUps": ["继续"],
+                        "references": [{"label": "当前 lesson", "href": None}],
+                    },
+                    ensure_ascii=False,
+                )
+            }
+
+    class FakeHttpxClient:
+        def __init__(self, timeout: float):
+            self.timeout = timeout
+
         def __enter__(self):
             return self
 
         def __exit__(self, *_args: object) -> None:
             return None
 
-        def read(self) -> bytes:
-            return json.dumps(
+        def post(self, url: str, json: dict[str, object], headers: dict[str, str]):
+            calls.append(
                 {
-                    "output_text": json.dumps(
-                        {
-                            "answer": "responses 回答",
-                            "summary": "responses 总结",
-                            "highlights": ["responses"],
-                            "followUps": ["继续"],
-                            "references": [{"label": "当前 lesson", "href": None}],
-                        },
-                        ensure_ascii=False,
-                    )
-                },
-                ensure_ascii=False,
-            ).encode("utf-8")
+                    "url": url,
+                    "payload": json,
+                    "headers": headers,
+                    "timeout": self.timeout,
+                }
+            )
+            return FakeHttpxResponse()
 
-    def fake_urlopen(req, timeout: float):
-        calls.append(
-            {
-                "url": req.full_url,
-                "payload": json.loads(req.data.decode("utf-8")),
-                "headers": dict(req.headers),
-                "timeout": timeout,
-            }
-        )
-        return FakeResponse()
-
-    monkeypatch.setattr(assistant_module.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(assistant_module.httpx, "Client", FakeHttpxClient)
     settings = Settings(
         R2L_DATA_DIR=tmp_path,
         R2L_ASSISTANT_ENDPOINT="https://assistant.example.invalid/v1/responses",
@@ -313,36 +429,39 @@ async def test_codex_sidebar_responses_unwraps_nested_json_and_preserves_code_bl
         "references": [],
     }
 
-    class FakeResponse:
+    class FakeHttpxResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {
+                "output": [
+                    {
+                        "type": "message",
+                        "content": [
+                            {
+                                "type": "output_text",
+                                "text": json.dumps(outer, ensure_ascii=False),
+                            }
+                        ],
+                    }
+                ]
+            }
+
+    class FakeHttpxClient:
+        def __init__(self, timeout: float):
+            assert timeout == 90.0
+
         def __enter__(self):
             return self
 
         def __exit__(self, *_args: object) -> None:
             return None
 
-        def read(self) -> bytes:
-            return json.dumps(
-                {
-                    "output": [
-                        {
-                            "type": "message",
-                            "content": [
-                                {
-                                    "type": "output_text",
-                                    "text": json.dumps(outer, ensure_ascii=False),
-                                }
-                            ],
-                        }
-                    ]
-                },
-                ensure_ascii=False,
-            ).encode("utf-8")
+        def post(self, *_args, **_kwargs):
+            return FakeHttpxResponse()
 
-    def fake_urlopen(_req, timeout: float):
-        assert timeout == 90.0
-        return FakeResponse()
-
-    monkeypatch.setattr(assistant_module.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(assistant_module.httpx, "Client", FakeHttpxClient)
     settings = Settings(
         R2L_DATA_DIR=tmp_path,
         R2L_ASSISTANT_ENDPOINT="https://assistant.example.invalid/v1/responses",

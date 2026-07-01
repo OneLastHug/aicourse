@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
 import type { RepoContext } from "../types";
@@ -103,7 +104,43 @@ function deriveName(repo: string, localPath: string): string {
 }
 /** Directory name a repo URL is cloned into under workDir. Exported so the
  *  server can locate (and clean up) a clone without re-deriving the rule. */
+export function canonicalRepoUrl(url: string): string {
+  const text = url.trim();
+  const ssh = text.match(/^([^@\s]+)@([^:\s]+):([^\s]+)$/);
+  if (ssh) {
+    const user = ssh[1]!;
+    const rawHost = ssh[2]!;
+    const rawPath = ssh[3]!;
+    const host = rawHost.toLowerCase();
+    let path = rawPath.replace(/^\/+|\/+$/g, "").replace(/\.git$/i, "");
+    if (host === "github.com") path = path.toLowerCase();
+    return `${user}@${host}:${path}`;
+  }
+
+  try {
+    const parsed = new URL(text);
+    if ((parsed.protocol === "http:" || parsed.protocol === "https:") && parsed.host) {
+      const protocol = parsed.protocol.toLowerCase();
+      const host = parsed.host.toLowerCase();
+      let path = parsed.pathname.replace(/\/+$/g, "").replace(/\.git$/i, "");
+      if (parsed.hostname.toLowerCase() === "github.com") path = path.toLowerCase();
+      return `${protocol}//${host}${path}`;
+    }
+  } catch {
+    // Fall through to suffix-only normalization for non-URL local-ish inputs.
+  }
+
+  return text.replace(/\/+$/g, "").replace(/\.git$/i, "");
+}
+
+export function repoIdForUrl(url: string): string {
+  const canonical = canonicalRepoUrl(url);
+  const base = canonical.split(/[\/:]/).filter(Boolean).pop() ?? "repo";
+  const slug = base.replace(/\.git$/i, "").replace(/[^a-z0-9_-]+/gi, "-").slice(0, 40).toLowerCase().replace(/^-+|-+$/g, "");
+  const hash = createHash("sha1").update(canonical).digest("hex").slice(0, 6);
+  return `${slug || "repo"}-${hash}`;
+}
+
 export function dirNameForUrl(url: string): string {
-  const base = url.split(/[\/:]/).filter(Boolean).pop() ?? "repo";
-  return base.replace(/\.git$/, "").replace(/[^a-z0-9_-]+/gi, "-");
+  return repoIdForUrl(url);
 }

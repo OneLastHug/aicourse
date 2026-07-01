@@ -1,8 +1,7 @@
 import { mkdir, readFile, writeFile, readdir, rm } from "node:fs/promises";
-import { createHash } from "node:crypto";
 import { join, isAbsolute } from "node:path";
 import type { Course } from "repo2learn/src/types";
-import { dirNameForUrl } from "repo2learn/src/util/repo";
+import { dirNameForUrl, repoIdForUrl } from "repo2learn/src/util/repo";
 import { fetchPythonJson } from "./python-backend";
 
 /** All on-disk state lives under one directory (override with R2L_DATA_DIR). */
@@ -21,10 +20,7 @@ export interface CourseMeta {
 }
 
 export function repoIdFor(url: string): string {
-  const base = url.split(/[\/:]/).filter(Boolean).pop()?.replace(/\.git$/, "") || "repo";
-  const slug = base.replace(/[^a-z0-9_-]+/gi, "-").slice(0, 40).toLowerCase().replace(/^-+|-+$/g, "");
-  const h = createHash("sha1").update(url).digest("hex").slice(0, 6);
-  return `${slug || "repo"}-${h}`;
+  return repoIdForUrl(url);
 }
 
 export async function saveCourse(repoId: string, course: Course, meta: CourseMeta): Promise<void> {
