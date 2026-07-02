@@ -379,6 +379,25 @@ def test_zh_course_validation_catches_mermaid_and_placeholder_quality() -> None:
     assert any("placeholder" in issue for issue in issues)
 
 
+def test_zh_course_validation_allows_technical_placeholders_and_repeated_paths() -> None:
+    from app.core.schemas import ZhLesson, ZhOutline
+
+    fixture = build_mock_course("https://github.com/chalk/chalk")
+    outline = ZhOutline.model_validate(_zh_outline_from_fixture(fixture))
+    lesson = _zh_lesson_from_fixture(fixture, "s01")
+    lesson["problem"] = "源码解释 `Optional[T]` 和 `...` 这类语法时，读者需要把它们当成真实代码符号，而不是未完成草稿。"
+    lesson["deepSource"] = (
+        "回到 `src/index.ts` 先看入口，再回到 `src/index.ts` 对照请求解析，最后继续看 `src/index.ts` "
+        "如何把结果交给任务创建逻辑。这种重复路径是源码讲解的正常写法。"
+    )
+    lessons = {"s01": ZhLesson.model_validate(lesson)}
+
+    issues = validate_zh_course_schema(outline, lessons)
+
+    assert not any("placeholder" in issue for issue in issues)
+    assert not any("repeats the same wording" in issue for issue in issues)
+
+
 def test_zh_course_validation_requires_english_title_fields() -> None:
     from app.core.schemas import ZhLesson, ZhOutline
 

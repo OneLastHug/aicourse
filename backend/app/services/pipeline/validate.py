@@ -17,7 +17,7 @@ MERMAID_START_RE = re.compile(
 )
 UNSAFE_FLOW_LABEL_RE = re.compile(r"[()[\]{}<>|/@*#:]")
 PLACEHOLDER_RE = re.compile(
-    r"(\.\.\.|TODO|TBD|FIXME|<[^>]+>|待补充|这里写|示例文本|占位|lorem ipsum)",
+    r"(TODO|TBD|FIXME|待补充|这里写|示例文本|占位|lorem ipsum|<\s*(?:TODO|TBD|FIXME|placeholder|待补充)\s*>)",
     re.IGNORECASE,
 )
 CHINESE_RE = re.compile(r"[\u4e00-\u9fff]")
@@ -229,16 +229,32 @@ def validate_zh_course_quality(outline: ZhOutline, lessons: dict[str, ZhLesson])
     for lesson_id, lesson in lessons.items():
         if lesson.status != "ok":
             continue
-        issues.extend(_validate_zh_text(lesson.problem, f"{lesson_id}.problem", min_chars=20, max_chars=260))
+        issues.extend(_validate_zh_text(lesson.problem, f"{lesson_id}.problem", min_chars=20, max_chars=360))
         if lesson.solution:
-            issues.extend(_validate_zh_text(lesson.solution, f"{lesson_id}.solution", min_chars=16, max_chars=180))
+            issues.extend(_validate_zh_text(lesson.solution, f"{lesson_id}.solution", min_chars=16, max_chars=320))
         if lesson.principle:
-            issues.extend(_validate_zh_text(lesson.principle, f"{lesson_id}.principle", min_chars=8, max_chars=48))
+            issues.extend(_validate_zh_text(lesson.principle, f"{lesson_id}.principle", min_chars=8, max_chars=140))
         if lesson.teachingScope:
-            issues.extend(_validate_zh_text(lesson.teachingScope, f"{lesson_id}.teachingScope", min_chars=16, max_chars=180))
-        issues.extend(_validate_zh_text(lesson.deepDive, f"{lesson_id}.deepDive", min_chars=120, max_chars=2200))
+            issues.extend(_validate_zh_text(lesson.teachingScope, f"{lesson_id}.teachingScope", min_chars=16, max_chars=320))
+        issues.extend(
+            _validate_zh_text(
+                lesson.deepDive,
+                f"{lesson_id}.deepDive",
+                min_chars=120,
+                max_chars=3600,
+                check_repeated=False,
+            )
+        )
         if lesson.deepSource:
-            issues.extend(_validate_zh_text(lesson.deepSource, f"{lesson_id}.deepSource", min_chars=60, max_chars=2200))
+            issues.extend(
+                _validate_zh_text(
+                    lesson.deepSource,
+                    f"{lesson_id}.deepSource",
+                    min_chars=60,
+                    max_chars=3600,
+                    check_repeated=False,
+                )
+            )
         for idx, step in enumerate(lesson.howItWorks, start=1):
             issues.extend(
                 _validate_english_title(
@@ -248,7 +264,7 @@ def validate_zh_course_quality(outline: ZhOutline, lessons: dict[str, ZhLesson])
                     max_chars=48,
                 )
             )
-            issues.extend(_validate_zh_text(step.desc, f"{lesson_id}.howItWorks[{idx}].desc", min_chars=18, max_chars=280))
+            issues.extend(_validate_zh_text(step.desc, f"{lesson_id}.howItWorks[{idx}].desc", min_chars=18, max_chars=420))
             if _looks_like_sentence_title(step.title):
                 issues.append(f"{lesson_id}.howItWorks[{idx}].title should be a compact label, not a full sentence")
         if lesson.tryIt is not None:
@@ -270,7 +286,7 @@ def _validate_outline_lesson_quality(
     issues: list[str] = []
     issues.extend(_validate_english_title(title, f"{lesson_id}.title", min_chars=2, max_chars=50))
     issues.extend(_validate_zh_text(problem, f"{lesson_id}.theProblem", min_chars=18, max_chars=180))
-    issues.extend(_validate_zh_text(objective, f"{lesson_id}.objective", min_chars=16, max_chars=140))
+    issues.extend(_validate_zh_text(objective, f"{lesson_id}.objective", min_chars=16, max_chars=220))
     if _looks_like_sentence_title(title):
         issues.append(f"{lesson_id}.title should be short but understandable, not a full sentence")
     return issues
@@ -303,7 +319,14 @@ def _validate_bi_english_title(title: Bi, label: str, *, max_chars: int) -> list
     return issues
 
 
-def _validate_zh_text(text: str, label: str, *, min_chars: int, max_chars: int) -> list[str]:
+def _validate_zh_text(
+    text: str,
+    label: str,
+    *,
+    min_chars: int,
+    max_chars: int,
+    check_repeated: bool = True,
+) -> list[str]:
     value = (text or "").strip()
     issues: list[str] = []
     if len(value) < min_chars:
@@ -314,7 +337,7 @@ def _validate_zh_text(text: str, label: str, *, min_chars: int, max_chars: int) 
         issues.append(f"{label} contains placeholder or unfinished text")
     if not CHINESE_RE.search(value):
         issues.append(f"{label} should contain Chinese user-facing prose")
-    if _has_repeated_fragment(value):
+    if check_repeated and _has_repeated_fragment(value):
         issues.append(f"{label} repeats the same wording too much")
     if _has_unbalanced_cjk_punctuation(value):
         issues.append(f"{label} has unbalanced Chinese punctuation or brackets")
