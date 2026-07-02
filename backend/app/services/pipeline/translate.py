@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 import json
 from pathlib import Path
+from typing import Any
 
 from app.core.config import Settings
-from app.core.schemas import Course, Lesson, Outline, ZhLesson, ZhOutline
+from app.core.schemas import Course, Lesson, Outline, ZhLesson, ZhOutline, ZhOutlineLesson
 from app.prompts.translate import translate_lesson_prompt, translate_outline_prompt
 from app.services.cache import Cache
 from app.services.pipeline.call import CodexDriverLike, codex_json
@@ -92,18 +93,19 @@ async def translate_outline(
     )
     cached = cache.get(key)
     if cached is not None:
-        outline = Outline.model_validate(cached)
+        outline = Outline.model_validate(_normalize_translated_outline_payload(cached, zh_outline))
         outline.lessons = [lesson for section in outline.sections for lesson in section.lessons]
         return outline
 
-    outline = await codex_json(
+    raw_outline = await codex_json(
         driver=driver,
         label="translate:outline",
         prompt=translate_outline_prompt(json_for_prompt(zh_outline)),
         cwd=Path(ctx.localPath),
-        model=Outline,
+        model=dict[str, Any],
         settings=settings,
     )
+    outline = Outline.model_validate(_normalize_translated_outline_payload(raw_outline, zh_outline))
     outline.lessons = [lesson for section in outline.sections for lesson in section.lessons]
     cache.set(key, outline.model_dump(mode="json", exclude_none=True))
     return outline
@@ -167,6 +169,65 @@ def missing_lesson(lesson_id: str, error: str) -> Lesson:
             "error": error,
         }
     )
+
+
+def _normalize_translated_outline_payload(payload: dict[str, Any], zh_outline: ZhOutline) -> dict[str, Any]:
+    lesson_fallbacks = {lesson.id: _fallback_outline_lesson(lesson) for lesson in zh_outline.lessons}
+    lesson_objects: dict[str, dict[str, Any]] = {}
+
+    for item in payload.get("lessons", []):
+        lesson = _coerce_outline_lesson(item, lesson_fallbacks)
+        if lesson is not None:
+            lesson_objects[lesson["id"]] = lesson
+
+    for section in payload.get("sections", []):
+        if not isinstance(section, dict):
+            continue
+        normalized_lessons = []
+        for item in section.get("lessons", []):
+            lesson = _coerce_outline_lesson(item, lesson_objects) or _coerce_outline_lesson(item, lesson_fallbacks)
+            if lesson is not None:
+                lesson_objects[lesson["id"]] = lesson
+                normalized_lessons.append(lesson)
+        section["lessons"] = normalized_lessons
+
+    payload["lessons"] = [lesson for section in payload.get("sections", []) for lesson in section.get("lessons", [])]
+    return payload
+
+
+def _coerce_outline_lesson(
+    item: Any,
+    lesson_by_id: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    if isinstance(item, str):
+        return lesson_by_id.get(item)
+    if not isinstance(item, dict):
+        return None
+    lesson = dict(item)
+    lesson_id = lesson.get("id")
+    if not isinstance(lesson_id, str) or not lesson_id:
+        return None
+    if "keyFiles" not in lesson and "filesToRead" in lesson:
+        lesson["keyFiles"] = lesson["filesToRead"]
+    return lesson
+
+
+def _fallback_outline_lesson(lesson: ZhOutlineLesson) -> dict[str, Any]:
+    fallback: dict[str, Any] = {
+        "id": lesson.id,
+        "title": {"zh": lesson.title, "en": lesson.title},
+        "difficulty": lesson.difficulty,
+        "theProblem": {"zh": lesson.theProblem, "en": lesson.theProblem},
+        "objective": {"zh": lesson.objective, "en": lesson.objective},
+        "keyFiles": list(lesson.filesToRead),
+        "prereq": list(lesson.prereq),
+        "tags": list(lesson.tags),
+    }
+    for field in ("mechanism", "whyNow", "missingBefore", "nextPressure"):
+        value = getattr(lesson, field)
+        if value is not None:
+            fallback[field] = {"zh": value, "en": value}
+    return fallback
 
 
 def json_for_prompt(value: ZhOutline | ZhLesson) -> str:

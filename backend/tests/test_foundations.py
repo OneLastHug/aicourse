@@ -12,6 +12,7 @@ from app.services.codex_driver import CodexResult, generation_codex_env
 from app.services.generator import generate_course
 from app.services.json_parse import extract_json
 from app.services.pipeline.call import get_generation_limiter
+from app.services.pipeline.translate import _normalize_translated_outline_payload
 from app.services.pipeline.validate import (
     CourseValidationError,
     validate_course_alignment,
@@ -178,6 +179,23 @@ def test_generation_codex_api_key_can_be_separate_from_sidebar(tmp_path: Path) -
     assert auth["OPENAI_API_KEY"] == "generation-secret"
     assert "assistant-secret" not in json.dumps(auth)
     assert 'openai_base_url = "https://codex.ciii.club/v1"' in config
+
+
+def test_translate_outline_normalizes_section_lesson_ids() -> None:
+    from app.core.schemas import Outline, ZhOutline
+
+    fixture = build_mock_course("https://github.com/chalk/chalk")
+    zh_outline = ZhOutline.model_validate(_zh_outline_from_fixture(fixture))
+    payload = json.loads(json.dumps(fixture["outline"]))
+    for section in payload["sections"]:
+        section["lessons"] = [lesson["id"] for lesson in section["lessons"]]
+
+    normalized = _normalize_translated_outline_payload(payload, zh_outline)
+    outline = Outline.model_validate(normalized)
+
+    assert [lesson.id for lesson in outline.sections[0].lessons] == ["s01", "s02"]
+    assert outline.sections[0].lessons[0].title.zh == fixture["outline"]["sections"][0]["lessons"][0]["title"]["zh"]
+    assert outline.lessons[0].id == "s01"
 
 
 @pytest.mark.asyncio
