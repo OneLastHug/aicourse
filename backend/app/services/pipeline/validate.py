@@ -16,8 +16,12 @@ MERMAID_START_RE = re.compile(
     re.IGNORECASE,
 )
 UNSAFE_FLOW_LABEL_RE = re.compile(r"[()[\]{}<>|/@*#:]")
-PLACEHOLDER_RE = re.compile(
-    r"(TODO|TBD|FIXME|待补充|这里写|示例文本|占位|lorem ipsum|<\s*(?:TODO|TBD|FIXME|placeholder|待补充)\s*>)",
+PLACEHOLDER_EXACT_RE = re.compile(
+    r"^\s*(?:TODO|TBD|FIXME|待补充|这里写|示例文本|占位文本|lorem ipsum|<\s*(?:TODO|TBD|FIXME|placeholder|待补充)\s*>)\s*[:：。.!-]*\s*$",
+    re.IGNORECASE,
+)
+PLACEHOLDER_SHORT_RE = re.compile(
+    r"^\s*(?:TODO|TBD|FIXME|待补充|这里写|示例文本|占位文本|lorem ipsum)\b",
     re.IGNORECASE,
 )
 CHINESE_RE = re.compile(r"[\u4e00-\u9fff]")
@@ -233,7 +237,7 @@ def validate_zh_course_quality(outline: ZhOutline, lessons: dict[str, ZhLesson])
         if lesson.solution:
             issues.extend(_validate_zh_text(lesson.solution, f"{lesson_id}.solution", min_chars=16, max_chars=320))
         if lesson.principle:
-            issues.extend(_validate_zh_text(lesson.principle, f"{lesson_id}.principle", min_chars=8, max_chars=140))
+            issues.extend(_validate_zh_text(lesson.principle, f"{lesson_id}.principle", min_chars=8, max_chars=220))
         if lesson.teachingScope:
             issues.extend(_validate_zh_text(lesson.teachingScope, f"{lesson_id}.teachingScope", min_chars=16, max_chars=320))
         issues.extend(
@@ -264,7 +268,15 @@ def validate_zh_course_quality(outline: ZhOutline, lessons: dict[str, ZhLesson])
                     max_chars=48,
                 )
             )
-            issues.extend(_validate_zh_text(step.desc, f"{lesson_id}.howItWorks[{idx}].desc", min_chars=18, max_chars=420))
+            issues.extend(
+                _validate_zh_text(
+                    step.desc,
+                    f"{lesson_id}.howItWorks[{idx}].desc",
+                    min_chars=18,
+                    max_chars=420,
+                    check_repeated=False,
+                )
+            )
             if _looks_like_sentence_title(step.title):
                 issues.append(f"{lesson_id}.howItWorks[{idx}].title should be a compact label, not a full sentence")
         if lesson.tryIt is not None:
@@ -299,7 +311,7 @@ def _validate_english_title(text: str, label: str, *, min_chars: int, max_chars:
         issues.append(f"{label} is too terse for a readable English title")
     if len(value) > max_chars:
         issues.append(f"{label} is too long; keep the English title compact")
-    if PLACEHOLDER_RE.search(value):
+    if _has_placeholder_text(value):
         issues.append(f"{label} contains placeholder or unfinished text")
     if CHINESE_RE.search(value):
         issues.append(f"{label} must use English, even in the Chinese course version")
@@ -333,7 +345,7 @@ def _validate_zh_text(
         issues.append(f"{label} is too terse for a readable Chinese technical explanation")
     if len(value) > max_chars:
         issues.append(f"{label} is too long; keep it concise like a technical blog")
-    if PLACEHOLDER_RE.search(value):
+    if _has_placeholder_text(value):
         issues.append(f"{label} contains placeholder or unfinished text")
     if not CHINESE_RE.search(value):
         issues.append(f"{label} should contain Chinese user-facing prose")
@@ -342,6 +354,13 @@ def _validate_zh_text(
     if _has_unbalanced_cjk_punctuation(value):
         issues.append(f"{label} has unbalanced Chinese punctuation or brackets")
     return issues
+
+
+def _has_placeholder_text(value: str) -> bool:
+    stripped = value.strip()
+    if PLACEHOLDER_EXACT_RE.search(stripped):
+        return True
+    return len(stripped) <= 80 and bool(PLACEHOLDER_SHORT_RE.search(stripped))
 
 
 def _validate_flowchart_labels(diagram: str, label: str) -> list[str]:

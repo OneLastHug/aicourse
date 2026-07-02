@@ -386,6 +386,11 @@ def test_zh_course_validation_allows_technical_placeholders_and_repeated_paths()
     outline = ZhOutline.model_validate(_zh_outline_from_fixture(fixture))
     lesson = _zh_lesson_from_fixture(fixture, "s01")
     lesson["problem"] = "源码解释 `Optional[T]` 和 `...` 这类语法时，读者需要把它们当成真实代码符号，而不是未完成草稿。"
+    lesson["deepDive"] = (
+        "真实源码里经常会出现 `TODO: remove soon` 这样的注释。教程应该能解释这类注释的上下文，"
+        "而不是把它当成生成结果没有写完。这里重点是说明注释为什么存在、它影响哪条执行路径、"
+        "以及读者排查问题时应该把它视为维护信号，而不是课程正文的缺口。"
+    )
     lesson["deepSource"] = (
         "回到 `src/index.ts` 先看入口，再回到 `src/index.ts` 对照请求解析，最后继续看 `src/index.ts` "
         "如何把结果交给任务创建逻辑。这种重复路径是源码讲解的正常写法。"
