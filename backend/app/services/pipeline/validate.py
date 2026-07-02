@@ -233,7 +233,7 @@ def validate_zh_course_quality(outline: ZhOutline, lessons: dict[str, ZhLesson])
     for lesson_id, lesson in lessons.items():
         if lesson.status != "ok":
             continue
-        issues.extend(_validate_zh_text(lesson.problem, f"{lesson_id}.problem", min_chars=20, max_chars=360))
+        issues.extend(_validate_zh_text(lesson.problem, f"{lesson_id}.problem", min_chars=20, max_chars=520))
         if lesson.solution:
             issues.extend(_validate_zh_text(lesson.solution, f"{lesson_id}.solution", min_chars=16, max_chars=320))
         if lesson.principle:

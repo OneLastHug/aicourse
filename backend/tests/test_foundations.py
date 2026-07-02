@@ -386,6 +386,12 @@ def test_zh_course_validation_allows_technical_placeholders_and_repeated_paths()
     outline = ZhOutline.model_validate(_zh_outline_from_fixture(fixture))
     lesson = _zh_lesson_from_fixture(fixture, "s01")
     lesson["problem"] = "源码解释 `Optional[T]` 和 `...` 这类语法时，读者需要把它们当成真实代码符号，而不是未完成草稿。"
+    lesson["problem"] += (
+        "实际工程里，一个 `Agent` 往往已经带着自己的 `model`、`model_settings`、`tools`、"
+        "`handoffs` 和 `output_type`，而调用 `Runner.run()` 时又会塞进 `RunConfig`。"
+        "新读者通常只记得一句覆盖优先，但解释不了 provider、默认设置、工具、handoff filter "
+        "和 sandbox 为什么分别在不同边界生效。"
+    )
     lesson["deepDive"] = (
         "真实源码里经常会出现 `TODO: remove soon` 这样的注释。教程应该能解释这类注释的上下文，"
         "而不是把它当成生成结果没有写完。这里重点是说明注释为什么存在、它影响哪条执行路径、"
