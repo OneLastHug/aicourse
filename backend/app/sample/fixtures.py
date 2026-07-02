@@ -26,7 +26,7 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
     lessons = [
         {
             "id": "s01",
-            "title": _bi("仓库入口", "Repository Entry Point"),
+            "title": _bi("Repository Entry Point", "Repository Entry Point"),
             "difficulty": "beginner",
             "theProblem": _bi(
                 "读一个新仓库时，最先卡住的是不知道从哪里进入。",
@@ -49,7 +49,7 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
         },
         {
             "id": "s02",
-            "title": _bi("状态与任务", "State and Jobs"),
+            "title": _bi("State and Jobs", "State and Jobs"),
             "difficulty": "beginner",
             "theProblem": _bi(
                 "长任务不能只靠一次 HTTP 请求完成，需要可查询、可恢复的状态。",
@@ -78,7 +78,7 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
     course: dict[str, Any] = {
         "outline": {
             "course": {
-                "title": _bi(f"{repo_name} 代码阅读课", f"{repo_name} Code Reading Course"),
+                "title": _bi(f"{repo_name} Code Reading Course", f"{repo_name} Code Reading Course"),
                 "tagline": _bi(
                     "从入口、状态到渲染，按真实执行路径读懂仓库。",
                     "Read the repository by following the real execution path: entry, state, rendering.",
@@ -115,7 +115,7 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
             "sections": [
                 {
                     "id": "l01",
-                    "title": _bi("主流程", "Main Flow"),
+                    "title": _bi("Main Flow", "Main Flow"),
                     "summary": _bi(
                         "先读懂用户请求、任务状态和课程输出之间的主链路。",
                         "First understand the main chain from user request to job state and course output.",
@@ -180,7 +180,7 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
                 },
                 "howItWorks": [
                     {
-                        "title": _bi("接收仓库地址", "Receive the repository URL"),
+                        "title": _bi("Receive the Repository URL", "Receive the Repository URL"),
                         "desc": _bi(
                             "请求体仍然只需要 `repoUrl`，这样前端表单无需改变。",
                             "The request body still only needs `repoUrl`, so the frontend form does not change.",
@@ -194,7 +194,7 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
                         },
                     },
                     {
-                        "title": _bi("创建任务", "Create a job"),
+                        "title": _bi("Create a Job", "Create a Job"),
                         "desc": _bi(
                             "后端返回 job id，进度页继续通过 SSE 监听。",
                             "The backend returns a job id, and the progress page keeps listening over SSE.",
@@ -291,7 +291,7 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
                 },
                 "howItWorks": [
                     {
-                        "title": _bi("保存摘要", "Persist the summary"),
+                        "title": _bi("Persist the Summary", "Persist the Summary"),
                         "desc": _bi(
                             "job record 只保存仪表盘需要的摘要，课程本体单独写入 `course.json`。",
                             "The job record stores dashboard summary data; the course body is written separately to `course.json`.",
@@ -305,7 +305,7 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
                         },
                     },
                     {
-                        "title": _bi("推送事件", "Push events"),
+                        "title": _bi("Push Events", "Push Events"),
                         "desc": _bi(
                             "SSE 连接先回放历史事件，再订阅后续事件。",
                             "The SSE connection replays historical events first, then subscribes to new ones.",
@@ -360,4 +360,3 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
     }
 
     return deepcopy(course)
-

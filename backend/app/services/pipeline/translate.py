@@ -25,7 +25,7 @@ async def run_translate_stage(
 
     key = cache.key(
         {
-            "stage": "translate-course-v1",
+            "stage": "translate-course-v2",
             "repo": ctx.url,
             "sha": ctx.sha,
             "outline": zh_outline.model_dump(mode="json", exclude_none=True),
@@ -82,7 +82,7 @@ async def translate_outline(
 ) -> Outline:
     key = cache.key(
         {
-            "stage": "translate-outline-v1",
+            "stage": "translate-outline-v2",
             "repo": ctx.url,
             "sha": ctx.sha,
             "outline": zh_outline.model_dump(mode="json", exclude_none=True),
@@ -119,7 +119,7 @@ async def translate_lesson(
 ) -> Lesson:
     key = cache.key(
         {
-            "stage": "translate-lesson-v1",
+            "stage": "translate-lesson-v2",
             "repo": ctx.url,
             "sha": ctx.sha,
             "lesson": zh_lesson.model_dump(mode="json", exclude_none=True),

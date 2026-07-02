@@ -23,7 +23,7 @@ async def run_curriculum_stage(
 
     key = cache.key(
         {
-            "stage": "curriculum-zh-v1",
+            "stage": "curriculum-zh-v2",
             "repo": ctx.url,
             "sha": ctx.sha,
             "analysis": analysis,

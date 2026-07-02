@@ -26,7 +26,9 @@ COURSE DESIGN RULES
 - All keyFiles must be real repository paths.
 - Use concise learn-by-reading style: problem -> mechanism -> steps -> source comparison.
 - "Concise" means technical-blog concise: clear context, causal explanation, and readable transitions. Do not make Chinese prose cryptic just to keep it short.
-- Titles should be compact but understandable, not one-word riddles and not full sentences.
+- Title-like fields must be English even on the Chinese side: course.title.zh/en, section.title.zh/en, lesson.title.zh/en, and howItWorks[].title.zh/en must all be English.
+- For those title-like fields, set zh and en to the same English title unless a tiny casing cleanup is needed. Do not create Chinese titles.
+- Titles should be compact but understandable, usually 2-6 English words, not one-word riddles and not full sentences.
 - Code snippets must come from real repository files when possible. Keep snippets short.
 - If you cannot safely quote a file, use a small teaching snippet and mark it as spine.
 - The final JSON must already be bilingual: {{ "zh": "...", "en": "..." }}.

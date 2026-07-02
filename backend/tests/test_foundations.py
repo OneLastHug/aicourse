@@ -330,6 +330,23 @@ def test_course_validation_catches_missing_lesson_body() -> None:
     assert issues == ["missing lesson bodies: s02"]
 
 
+def test_course_validation_requires_english_bilingual_titles() -> None:
+    from app.core.schemas import Course
+
+    course = Course.model_validate(build_mock_course("https://github.com/chalk/chalk"))
+    course.outline.course.title.zh = "代码阅读课"
+    course.outline.sections[0].title.zh = "主流程"
+    course.outline.sections[0].lessons[0].title.zh = "仓库入口"
+    course.lessons["s01"].howItWorks[0].title.zh = "创建任务"
+
+    issues = validate_course_schema(course)
+
+    assert any("outline.course.title.zh must use English" in issue for issue in issues)
+    assert any("section l01 title.zh must use English" in issue for issue in issues)
+    assert any("s01.title.zh must use English" in issue for issue in issues)
+    assert any("s01.howItWorks[1].title.zh must use English" in issue for issue in issues)
+
+
 def test_mermaid_validation_catches_unquoted_sensitive_flowchart_labels() -> None:
     bad = "flowchart TD\n  A[OS 启动] --> B[main.main()]\n  B --> C[/api/generate]"
     good = 'flowchart TD\n  A["OS 启动"] --> B["main.main()"]\n  B --> C["/api/generate"]'
@@ -360,6 +377,29 @@ def test_zh_course_validation_catches_mermaid_and_placeholder_quality() -> None:
 
     assert any("Mermaid-sensitive" in issue for issue in issues)
     assert any("placeholder" in issue for issue in issues)
+
+
+def test_zh_course_validation_requires_english_title_fields() -> None:
+    from app.core.schemas import ZhLesson, ZhOutline
+
+    fixture = build_mock_course("https://github.com/chalk/chalk")
+    outline = ZhOutline.model_validate(_zh_outline_from_fixture(fixture))
+    lessons = {
+        lesson_id: ZhLesson.model_validate(_zh_lesson_from_fixture(fixture, lesson_id))
+        for lesson_id in ["s01", "s02"]
+    }
+    outline.course.title = "代码阅读课"
+    outline.sections[0].title = "主流程"
+    outline.sections[0].lessons[0].title = "仓库入口"
+    outline.lessons[0].title = "仓库入口"
+    lessons["s01"].howItWorks[0].title = "创建任务"
+
+    issues = validate_zh_course_schema(outline, lessons)
+
+    assert any("course.title must use English" in issue for issue in issues)
+    assert any("section l01 title must use English" in issue for issue in issues)
+    assert any("s01.title must use English" in issue for issue in issues)
+    assert any("s01.howItWorks[1].title must use English" in issue for issue in issues)
 
 
 def test_course_alignment_warns_for_missing_repo_paths(tmp_path: Path) -> None:

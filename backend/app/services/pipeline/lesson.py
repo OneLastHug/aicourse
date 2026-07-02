@@ -25,7 +25,7 @@ async def run_lesson_stage(
         lesson_id = outline_lesson.id
         key = cache.key(
             {
-                "stage": "lesson-zh-v1",
+                "stage": "lesson-zh-v2",
                 "repo": ctx.url,
                 "sha": ctx.sha,
                 "id": lesson_id,

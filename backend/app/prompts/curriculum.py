@@ -24,8 +24,10 @@ ANALYSIS
 - 每节只讲一个机制，并推动读者沿真实执行路径理解仓库。
 - filesToRead 必须是真实仓库路径，不能编造路径。
 - prereq 只能引用更早的 lesson id。
-- 面向用户的文本全部使用简体中文；id、difficulty、repo、paths 保持原样。
-- 标题短、机制明确，但不能短到像谜语；像技术博客的小标题，4-12 个中文字符或 2-5 个英文词最合适，不要用整句当标题。
+- 除标题类字段外，面向用户的正文文本全部使用简体中文；id、difficulty、repo、paths 保持原样。
+- 标题类字段一律使用英文，即使这是中文版本：course.title、section.title、lesson.title 都必须是英文。
+- 英文标题要短、机制明确，但不能短到像谜语；像技术博客的小标题，2-6 个英文词最合适，不要用整句当标题。
+- 不要把常见技术概念强行翻成中文标题；优先使用自然英文术语，例如 "Request Entry"、"State Merge"、"Retry Loop"。
 - theProblem/objective/whyNow/nextPressure 用自然中文写清因果，不要为了简洁省掉上下文。
 - 中英混排要自然：开发者口头常用英文术语如 token、API、CLI、SDK、payload、agent 可保留英文。
 - 若生成或保留 Mermaid flowchart，所有节点 label 一律双引号，例如 A["main.go"] --> B["cmd.NewCLI()"]；包含 /、()、[]、*、@、路径、函数名、中文标点的 label 必须加引号。

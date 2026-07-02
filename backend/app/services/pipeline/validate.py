@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from app.core.schemas import Course, ZhLesson, ZhOutline
+from app.core.schemas import Bi, Course, ZhLesson, ZhOutline
 from app.services.repo import RepoContext
 
 
@@ -48,6 +48,7 @@ def validate_course_schema(course: Course) -> list[str]:
         if lesson.status != "ok" and not lesson.error:
             issues.append(f"failed lesson {lesson_id} is missing error")
 
+    issues.extend(validate_course_title_language(course))
     issues.extend(validate_course_mermaid(course))
     return issues
 
@@ -180,6 +181,25 @@ def validate_course_mermaid(course: Course) -> list[str]:
     return issues
 
 
+def validate_course_title_language(course: Course) -> list[str]:
+    issues: list[str] = []
+    issues.extend(_validate_bi_english_title(course.outline.course.title, "outline.course.title", max_chars=72))
+    for section in course.outline.sections:
+        issues.extend(_validate_bi_english_title(section.title, f"section {section.id} title", max_chars=48))
+        for lesson in section.lessons:
+            issues.extend(_validate_bi_english_title(lesson.title, f"{lesson.id}.title", max_chars=50))
+    for lesson_id, lesson in course.lessons.items():
+        for idx, step in enumerate(lesson.howItWorks, start=1):
+            issues.extend(
+                _validate_bi_english_title(
+                    step.title,
+                    f"{lesson_id}.howItWorks[{idx}].title",
+                    max_chars=48,
+                )
+            )
+    return issues
+
+
 def validate_mermaid_text(diagram: str, label: str) -> list[str]:
     text = diagram.strip()
     issues: list[str] = []
@@ -196,12 +216,12 @@ def validate_mermaid_text(diagram: str, label: str) -> list[str]:
 
 def validate_zh_course_quality(outline: ZhOutline, lessons: dict[str, ZhLesson]) -> list[str]:
     issues: list[str] = []
-    issues.extend(_validate_zh_text(outline.course.title, "course.title", min_chars=4, max_chars=36))
+    issues.extend(_validate_english_title(outline.course.title, "course.title", min_chars=4, max_chars=72))
     issues.extend(_validate_zh_text(outline.course.tagline, "course.tagline", min_chars=18, max_chars=120))
     if outline.course.thesis:
         issues.extend(_validate_zh_text(outline.course.thesis, "course.thesis", min_chars=12, max_chars=180))
     for section in outline.sections:
-        issues.extend(_validate_zh_text(section.title, f"section {section.id} title", min_chars=3, max_chars=30))
+        issues.extend(_validate_english_title(section.title, f"section {section.id} title", min_chars=2, max_chars=48))
         issues.extend(_validate_zh_text(section.summary, f"section {section.id} summary", min_chars=18, max_chars=160))
         for lesson in section.lessons:
             issues.extend(_validate_outline_lesson_quality(lesson.id, lesson.title, lesson.theProblem, lesson.objective))
@@ -220,7 +240,14 @@ def validate_zh_course_quality(outline: ZhOutline, lessons: dict[str, ZhLesson])
         if lesson.deepSource:
             issues.extend(_validate_zh_text(lesson.deepSource, f"{lesson_id}.deepSource", min_chars=60, max_chars=2200))
         for idx, step in enumerate(lesson.howItWorks, start=1):
-            issues.extend(_validate_zh_text(step.title, f"{lesson_id}.howItWorks[{idx}].title", min_chars=2, max_chars=18))
+            issues.extend(
+                _validate_english_title(
+                    step.title,
+                    f"{lesson_id}.howItWorks[{idx}].title",
+                    min_chars=2,
+                    max_chars=48,
+                )
+            )
             issues.extend(_validate_zh_text(step.desc, f"{lesson_id}.howItWorks[{idx}].desc", min_chars=18, max_chars=280))
             if _looks_like_sentence_title(step.title):
                 issues.append(f"{lesson_id}.howItWorks[{idx}].title should be a compact label, not a full sentence")
@@ -241,11 +268,38 @@ def _validate_outline_lesson_quality(
     objective: str,
 ) -> list[str]:
     issues: list[str] = []
-    issues.extend(_validate_zh_text(title, f"{lesson_id}.title", min_chars=2, max_chars=30))
+    issues.extend(_validate_english_title(title, f"{lesson_id}.title", min_chars=2, max_chars=50))
     issues.extend(_validate_zh_text(problem, f"{lesson_id}.theProblem", min_chars=18, max_chars=180))
     issues.extend(_validate_zh_text(objective, f"{lesson_id}.objective", min_chars=16, max_chars=140))
     if _looks_like_sentence_title(title):
         issues.append(f"{lesson_id}.title should be short but understandable, not a full sentence")
+    return issues
+
+
+def _validate_english_title(text: str, label: str, *, min_chars: int, max_chars: int) -> list[str]:
+    value = (text or "").strip()
+    issues: list[str] = []
+    if len(value) < min_chars:
+        issues.append(f"{label} is too terse for a readable English title")
+    if len(value) > max_chars:
+        issues.append(f"{label} is too long; keep the English title compact")
+    if PLACEHOLDER_RE.search(value):
+        issues.append(f"{label} contains placeholder or unfinished text")
+    if CHINESE_RE.search(value):
+        issues.append(f"{label} must use English, even in the Chinese course version")
+    if value and not re.search(r"[A-Za-z]", value):
+        issues.append(f"{label} should contain English words or technical terms")
+    if _has_repeated_fragment(value):
+        issues.append(f"{label} repeats the same wording too much")
+    if _has_unbalanced_cjk_punctuation(value):
+        issues.append(f"{label} has unbalanced Chinese punctuation or brackets")
+    return issues
+
+
+def _validate_bi_english_title(title: Bi, label: str, *, max_chars: int) -> list[str]:
+    issues: list[str] = []
+    issues.extend(_validate_english_title(title.zh, f"{label}.zh", min_chars=2, max_chars=max_chars))
+    issues.extend(_validate_english_title(title.en, f"{label}.en", min_chars=2, max_chars=max_chars))
     return issues
 
 
