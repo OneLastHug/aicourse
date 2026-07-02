@@ -571,7 +571,7 @@ def _validate_snippet_matches_file(
     snippet_lines = [line.strip() for line in snippet.splitlines() if line.strip()]
     if snippet_lines:
         matched = sum(1 for line in snippet_lines if line and line in source)
-        if matched / len(snippet_lines) >= 0.75:
+        if matched >= 3 and matched / len(snippet_lines) >= 0.60:
             return []
     return [f"{label} code snippet does not match real file contents: {file}"]
 
