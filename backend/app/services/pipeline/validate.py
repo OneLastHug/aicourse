@@ -409,11 +409,12 @@ def _validate_flowchart_labels(diagram: str, label: str) -> list[str]:
                     issues.append(f"{label} line {line_no} has an unclosed Mermaid node label for {ident}")
                     break
                 stripped = content.strip()
-                if stripped and not _is_quoted_label(stripped) and not _is_shape_wrapped_label(stripped):
-                    if UNSAFE_FLOW_LABEL_RE.search(stripped):
-                        issues.append(
-                            f'{label} line {line_no} node {ident} label contains Mermaid-sensitive characters; quote it as {ident}["{_escape_mermaid_label(stripped)}"]'
-                        )
+                if stripped and _is_quoted_label(stripped):
+                    issues.extend(_validate_flowchart_quoted_label(stripped, label, line_no, f"node {ident} label"))
+                elif stripped and not _is_shape_wrapped_label(stripped) and UNSAFE_FLOW_LABEL_RE.search(stripped):
+                    issues.append(
+                        f'{label} line {line_no} node {ident} label contains Mermaid-sensitive characters; quote it as {ident}["{_escape_mermaid_label(stripped)}"]'
+                    )
                 idx = end + 1
                 continue
             if opener == "{":
@@ -422,7 +423,9 @@ def _validate_flowchart_labels(diagram: str, label: str) -> list[str]:
                     issues.append(f"{label} line {line_no} has an unclosed Mermaid decision label for {ident}")
                     break
                 stripped = content.strip()
-                if stripped and not _is_quoted_label(stripped) and UNSAFE_FLOW_LABEL_RE.search(stripped):
+                if stripped and _is_quoted_label(stripped):
+                    issues.extend(_validate_flowchart_quoted_label(stripped, label, line_no, f"decision {ident} label"))
+                elif stripped and UNSAFE_FLOW_LABEL_RE.search(stripped):
                     issues.append(
                         f'{label} line {line_no} decision {ident} label contains Mermaid-sensitive characters; quote or simplify the label'
                     )
@@ -465,7 +468,9 @@ def _validate_flowchart_edge_labels(line: str, label: str, line_no: int) -> list
 
         if in_pipe_label:
             content = line[pipe_start:idx].strip()
-            if content and not _is_quoted_label(content) and UNSAFE_FLOW_LABEL_RE.search(content):
+            if content and _is_quoted_label(content):
+                issues.extend(_validate_flowchart_quoted_label(content, label, line_no, "edge label"))
+            elif content and UNSAFE_FLOW_LABEL_RE.search(content):
                 issues.append(
                     f'{label} line {line_no} edge label contains Mermaid-sensitive characters; quote it as |"{_escape_mermaid_label(content)}"|'
                 )
@@ -509,6 +514,16 @@ def _is_quoted_label(value: str) -> bool:
     return len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}
 
 
+def _validate_flowchart_quoted_label(value: str, label: str, line_no: int, subject: str) -> list[str]:
+    quote = value[0]
+    inner = value[1:-1]
+    if f"\\{quote}" not in inner:
+        return []
+    return [
+        f"{label} line {line_no} {subject} uses a backslash-escaped quote, which Mermaid 11 flowcharts do not parse reliably; use the other quote character inside the label or &quot; instead"
+    ]
+
+
 def _is_shape_wrapped_label(value: str) -> bool:
     return len(value) >= 2 and value[0] in {"(", "[", "{", "/"} and value[-1] in {")",
         "]",
@@ -518,7 +533,7 @@ def _is_shape_wrapped_label(value: str) -> bool:
 
 
 def _escape_mermaid_label(value: str) -> str:
-    return value.replace("\\", "\\\\").replace('"', '\\"')
+    return value.replace("\\", "\\\\").replace('"', "&quot;")
 
 
 def _looks_like_sentence_title(value: str) -> bool:

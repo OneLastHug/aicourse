@@ -404,6 +404,14 @@ def test_mermaid_validation_catches_unquoted_sensitive_edge_labels() -> None:
     assert validate_mermaid_text(good, "lesson.diagram") == []
 
 
+def test_mermaid_validation_catches_backslash_escaped_quotes_in_labels() -> None:
+    bad = 'flowchart TD\n  A["tryImport(\\"./dist/entry.js|mjs\\")"] --> B["entry"]'
+    good = 'flowchart TD\n  A["tryImport(\'./dist/entry.js|mjs\')"] --> B["entry"]'
+
+    assert any("backslash-escaped quote" in issue for issue in validate_mermaid_text(bad, "lesson.diagram"))
+    assert validate_mermaid_text(good, "lesson.diagram") == []
+
+
 def test_zh_course_validation_catches_mermaid_and_placeholder_quality() -> None:
     from app.core.schemas import ZhLesson, ZhOutline
 
