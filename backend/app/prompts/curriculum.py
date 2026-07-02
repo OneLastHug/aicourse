@@ -25,8 +25,10 @@ ANALYSIS
 - filesToRead 必须是真实仓库路径，不能编造路径。
 - prereq 只能引用更早的 lesson id。
 - 面向用户的文本全部使用简体中文；id、difficulty、repo、paths 保持原样。
-- 标题短、机制明确，不要用整句当标题。
+- 标题短、机制明确，但不能短到像谜语；像技术博客的小标题，4-12 个中文字符或 2-5 个英文词最合适，不要用整句当标题。
+- theProblem/objective/whyNow/nextPressure 用自然中文写清因果，不要为了简洁省掉上下文。
 - 中英混排要自然：开发者口头常用英文术语如 token、API、CLI、SDK、payload、agent 可保留英文。
+- 若生成或保留 Mermaid flowchart，所有节点 label 一律双引号，例如 A["main.go"] --> B["cmd.NewCLI()"]；包含 /、()、[]、*、@、路径、函数名、中文标点的 label 必须加引号。
 
 返回 STRICT JSON ONLY，匹配这个 ZhOutline 形状：
 {{
@@ -42,7 +44,7 @@ ANALYSIS
   "archDiagram": {{
     "kind": "mermaid",
     "caption": "...",
-    "diagram": "flowchart TD..."
+    "diagram": "flowchart TD\\n  A[\\"入口\\"] --> B[\\"核心机制\\"]"
   }},
   "sections": [
     {{

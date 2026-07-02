@@ -28,8 +28,13 @@ Return STRICT JSON ONLY:
   "archDiagram": {{
     "kind": "mermaid",
     "caption": "short architecture caption",
-    "diagram": "flowchart TD..."
+    "diagram": "flowchart TD\\n  A[\\"entry main()\\"] --> B[\\"router /api/*\\"]"
   }}
 }}
-"""
 
+Mermaid rules:
+- Prefer flowchart TD for archDiagram.
+- Every flowchart node label must be double-quoted, e.g. A["cmd.NewCLI()"], not A[cmd.NewCLI()].
+- Quote labels containing /, (), [], *, @, file paths, function calls, or Chinese punctuation.
+- Keep labels short enough to render; use multiple nodes instead of one long sentence.
+"""

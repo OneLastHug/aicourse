@@ -16,6 +16,7 @@ from app.services.pipeline.validate import (
     CourseValidationError,
     validate_course_alignment,
     validate_course_schema,
+    validate_mermaid_text,
     validate_zh_course_alignment,
     validate_zh_course_schema,
 )
@@ -46,6 +47,35 @@ def fixture_lesson_files(fixture: dict[str, object], lesson_id: str) -> list[str
         if lesson["id"] == lesson_id:
             return list(lesson["keyFiles"])
     return []
+
+
+def write_fixture_repo_files(repo: Path) -> None:
+    files = {
+        "src/index.ts": "payload = await request.json()\nrepo_url = payload.get('repoUrl', '').strip()\n",
+        "backend/app/api/generate.py": "payload = await request.json()\nrepo_url = payload.get('repoUrl', '').strip()\n",
+        "backend/app/services/jobs.py": (
+            "job_id = job_manager.create(repo_url, repo_id)\n"
+            "return {'ready': False, 'id': job_id}\n"
+            "for event in job.state.events:\n"
+            "    yield sse(event)\n"
+            "async for event in subscribe:\n"
+            "    yield sse(event)\n"
+        ),
+        "site/lib/server/jobs.ts": (
+            "job_id = job_manager.create(repo_url, repo_id)\n"
+            "return {'ready': False, 'id': job_id}\n"
+            "for event in job.state.events:\n"
+            "    yield sse(event)\n"
+            "async for event in subscribe:\n"
+            "    yield sse(event)\n"
+        ),
+        "backend/app/services/store.py": "save_job_record(job.state)\nsave_course(repo_id, course, meta)\n",
+        "site/lib/server/store.ts": "save_job_record(job.state)\nsave_course(repo_id, course, meta)\n",
+    }
+    for rel, content in files.items():
+        path = repo / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
 
 
 def _zh_lesson_from_fixture(fixture: dict[str, object], lesson_id: str) -> dict[str, object]:
@@ -92,7 +122,18 @@ def test_generation_defaults_and_pool_are_ten_slots(tmp_path: Path) -> None:
     assert settings.r2l_codex_model == "gpt-5.4"
     assert settings.r2l_codex_reasoning_effort == "xhigh"
     assert settings.r2l_codex_concurrency == 10
+    assert settings.r2l_validate is True
     assert limiter._value == 10
+
+
+def test_generation_validation_env_can_disable_explicitly(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("R2L_VALIDATE", "0")
+    settings = Settings(R2L_DATA_DIR=tmp_path / "data")
+
+    assert settings.r2l_validate is False
 
 
 def test_generation_codex_env_isolated_from_host_codex(
@@ -163,6 +204,7 @@ async def test_non_mock_pipeline_can_generate_with_codex_driver(
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "README.md").write_text("# Demo", encoding="utf-8")
+    write_fixture_repo_files(repo)
     events: list[dict[str, object]] = []
 
     async def on_progress(event: dict[str, object]) -> None:
@@ -288,6 +330,38 @@ def test_course_validation_catches_missing_lesson_body() -> None:
     assert issues == ["missing lesson bodies: s02"]
 
 
+def test_mermaid_validation_catches_unquoted_sensitive_flowchart_labels() -> None:
+    bad = "flowchart TD\n  A[OS 启动] --> B[main.main()]\n  B --> C[/api/generate]"
+    good = 'flowchart TD\n  A["OS 启动"] --> B["main.main()"]\n  B --> C["/api/generate"]'
+
+    assert any("quote it" in issue for issue in validate_mermaid_text(bad, "lesson.diagram"))
+    assert validate_mermaid_text(good, "lesson.diagram") == []
+
+
+def test_mermaid_validation_catches_unquoted_sensitive_edge_labels() -> None:
+    bad = "flowchart TD\n  A -->|ToolCall[]| B"
+    good = 'flowchart TD\n  A -->|"ToolCall[]"| B'
+
+    assert any("edge label" in issue for issue in validate_mermaid_text(bad, "lesson.diagram"))
+    assert validate_mermaid_text(good, "lesson.diagram") == []
+
+
+def test_zh_course_validation_catches_mermaid_and_placeholder_quality() -> None:
+    from app.core.schemas import ZhLesson, ZhOutline
+
+    fixture = build_mock_course("https://github.com/chalk/chalk")
+    outline = ZhOutline.model_validate(_zh_outline_from_fixture(fixture))
+    lesson = _zh_lesson_from_fixture(fixture, "s01")
+    lesson["diagram"]["diagram"] = "flowchart TD\n  A[入口] --> B[main.main()]"
+    lesson["deepDive"] = "TODO"
+    lessons = {"s01": ZhLesson.model_validate(lesson)}
+
+    issues = validate_zh_course_schema(outline, lessons)
+
+    assert any("Mermaid-sensitive" in issue for issue in issues)
+    assert any("placeholder" in issue for issue in issues)
+
+
 def test_course_alignment_warns_for_missing_repo_paths(tmp_path: Path) -> None:
     from app.core.schemas import Course
     from app.services.repo import RepoContext
@@ -348,3 +422,41 @@ def test_zh_course_alignment_warns_for_missing_repo_paths(tmp_path: Path) -> Non
     issues = validate_zh_course_alignment(outline, lessons, ctx)
 
     assert any("filesToRead references missing path" in issue for issue in issues)
+
+
+def test_zh_course_alignment_catches_fabricated_snippet(tmp_path: Path) -> None:
+    from app.core.schemas import ZhLesson, ZhOutline
+    from app.services.repo import RepoContext
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    write_fixture_repo_files(repo)
+    fixture = build_mock_course("https://github.com/chalk/chalk")
+    outline = ZhOutline.model_validate(_zh_outline_from_fixture(fixture))
+    lesson_data = _zh_lesson_from_fixture(fixture, "s01")
+    lesson_data["howItWorks"][0]["code"]["snippet"] = "const fabricatedValue = callSomethingThatDoesNotExist();"
+    lesson_data["howItWorks"][0]["code"]["isSpine"] = False
+    lessons = {"s01": ZhLesson.model_validate(lesson_data)}
+    ctx = RepoContext(
+        url="https://github.com/chalk/chalk",
+        localPath=str(repo),
+        sha="abc123",
+        name="chalk",
+        defaultBranch="main",
+        summary="",
+        loc=0,
+        languages={},
+        tree=[
+            "README.md",
+            "src/index.ts",
+            "backend/app/api/generate.py",
+            "backend/app/services/jobs.py",
+            "site/lib/server/jobs.ts",
+            "backend/app/services/store.py",
+            "site/lib/server/store.ts",
+        ],
+    )
+
+    issues = validate_zh_course_alignment(outline, lessons, ctx)
+
+    assert any("code snippet does not match real file contents" in issue for issue in issues)

@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     )
     r2l_codex_concurrency: int = Field(default=10, alias="R2L_CODEX_CONCURRENCY")
     r2l_codex_timeout_ms: int = Field(default=300 * 60 * 1000, alias="R2L_CODEX_TIMEOUT_MS")
+    r2l_validate: bool = Field(default=True, alias="R2L_VALIDATE")
     r2l_codex_home: Path | None = Field(default=None, alias="R2L_CODEX_HOME")
     r2l_codex_base_url: str | None = Field(default=None, alias="R2L_CODEX_BASE_URL")
     r2l_codex_api_key: str | None = Field(default=None, alias="R2L_CODEX_API_KEY")

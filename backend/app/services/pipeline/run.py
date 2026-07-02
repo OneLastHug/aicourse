@@ -85,20 +85,26 @@ async def run_pipeline(
     await on_progress({"type": "stage", "stage": "spine", "label": "Materializing the runnable spine"})
     await emit_zh_spine_events(zh_lessons, on_progress)
 
-    await on_progress({"type": "stage", "stage": "validate1", "label": "Chinese course schema validation"})
-    issues = validate_zh_course_schema(zh_outline, zh_lessons)
-    if issues:
-        await on_progress({"type": "validation", "round": 1, "passed": False, "issueCount": len(issues)})
-        await on_progress({"type": "log", "level": "error", "message": "; ".join(issues)})
-        raise CourseValidationError("; ".join(issues))
-    await on_progress({"type": "validation", "round": 1, "passed": True, "issueCount": 0})
+    if settings.r2l_validate:
+        await on_progress({"type": "stage", "stage": "validate1", "label": "Chinese course quality validation"})
+        issues = validate_zh_course_schema(zh_outline, zh_lessons)
+        if issues:
+            await on_progress({"type": "validation", "round": 1, "passed": False, "issueCount": len(issues)})
+            await on_progress({"type": "log", "level": "error", "message": "; ".join(issues)})
+            raise CourseValidationError("; ".join(issues))
+        await on_progress({"type": "validation", "round": 1, "passed": True, "issueCount": 0})
 
-    await on_progress({"type": "stage", "stage": "validate2", "label": "Repository alignment validation"})
-    issues = validate_zh_course_alignment(zh_outline, zh_lessons, ctx)
-    if issues:
-        await on_progress({"type": "validation", "round": 2, "passed": False, "issueCount": len(issues)})
-        await on_progress({"type": "log", "level": "warn", "message": "; ".join(issues)})
+        await on_progress({"type": "stage", "stage": "validate2", "label": "Repository alignment validation"})
+        issues = validate_zh_course_alignment(zh_outline, zh_lessons, ctx)
+        if issues:
+            await on_progress({"type": "validation", "round": 2, "passed": False, "issueCount": len(issues)})
+            await on_progress({"type": "log", "level": "error", "message": "; ".join(issues)})
+            raise CourseValidationError("; ".join(issues))
+        await on_progress({"type": "validation", "round": 2, "passed": True, "issueCount": 0})
     else:
+        await on_progress({"type": "stage", "stage": "validate1", "label": "Validation skipped (R2L_VALIDATE=0)"})
+        await on_progress({"type": "validation", "round": 1, "passed": True, "issueCount": 0})
+        await on_progress({"type": "stage", "stage": "validate2", "label": "Validation skipped (R2L_VALIDATE=0)"})
         await on_progress({"type": "validation", "round": 2, "passed": True, "issueCount": 0})
 
     await on_progress({"type": "stage", "stage": "translate", "label": "Translating the Chinese course to English"})
@@ -116,7 +122,8 @@ async def run_pipeline(
         raise CourseValidationError("; ".join(issues))
     alignment_issues = validate_course_alignment(course, ctx)
     if alignment_issues:
-        await on_progress({"type": "log", "level": "warn", "message": "; ".join(alignment_issues)})
+        await on_progress({"type": "log", "level": "error", "message": "; ".join(alignment_issues)})
+        raise CourseValidationError("; ".join(alignment_issues))
 
     await on_progress({"type": "stage", "stage": "done", "label": "Done"})
     return course.model_dump(mode="json", exclude_none=True)

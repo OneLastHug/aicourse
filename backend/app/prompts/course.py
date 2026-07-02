@@ -25,9 +25,12 @@ COURSE DESIGN RULES
 - Use section groups. Each lesson teaches exactly one mechanism.
 - All keyFiles must be real repository paths.
 - Use concise learn-by-reading style: problem -> mechanism -> steps -> source comparison.
+- "Concise" means technical-blog concise: clear context, causal explanation, and readable transitions. Do not make Chinese prose cryptic just to keep it short.
+- Titles should be compact but understandable, not one-word riddles and not full sentences.
 - Code snippets must come from real repository files when possible. Keep snippets short.
 - If you cannot safely quote a file, use a small teaching snippet and mark it as spine.
 - The final JSON must already be bilingual: {{ "zh": "...", "en": "..." }}.
+- Mermaid must parse in Mermaid 11. For flowcharts, quote every node label: A["main.main()"], never A[main.main()]. Labels containing /, (), [], *, @, paths, function names, or Chinese punctuation must be double-quoted.
 
 Return STRICT JSON ONLY with this exact top-level shape:
 {{
@@ -44,7 +47,7 @@ Return STRICT JSON ONLY with this exact top-level shape:
     "archDiagram": {{
       "kind": "mermaid",
       "caption": {{"zh": "...", "en": "..."}},
-      "diagram": "flowchart TD..."
+      "diagram": "flowchart TD\\n  A[\\"入口 main()\\"] --> B[\\"核心机制\\"]"
     }},
     "sections": [
       {{
@@ -87,7 +90,7 @@ Return STRICT JSON ONLY with this exact top-level shape:
       "diagram": {{
         "kind": "mermaid",
         "caption": {{"zh": "...", "en": "..."}},
-        "diagram": "flowchart TD..."
+        "diagram": "flowchart TD\\n  A[\\"读取输入\\"] --> B[\\"调用 run()\\"]"
       }},
       "spine": {{
         "lessonId": "s01",
@@ -151,4 +154,3 @@ Important:
 - Omit fields only if optional. Required arrays may be empty.
 - Return JSON only.
 """
-
