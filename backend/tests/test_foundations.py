@@ -395,6 +395,11 @@ def test_zh_course_validation_allows_technical_placeholders_and_repeated_paths()
         "回到 `src/index.ts` 先看入口，再回到 `src/index.ts` 对照请求解析，最后继续看 `src/index.ts` "
         "如何把结果交给任务创建逻辑。这种重复路径是源码讲解的正常写法。"
     )
+    lesson["solution"] = (
+        "Hermes 把 `state.db` 作为 canonical session store：turn 结束时先修正 transcript 尾部，"
+        "再经由 `_persist_session()` 和 `_flush_messages_to_session_db()` 追加到 `SessionDB`。"
+        "`SessionDB` 同时维护 `sessions` 元数据和历史索引，所以 durable state 能被 CLI 直接复用。"
+    )
     lessons = {"s01": ZhLesson.model_validate(lesson)}
 
     issues = validate_zh_course_schema(outline, lessons)

@@ -516,6 +516,8 @@ def _has_repeated_fragment(value: str) -> bool:
         seen: dict[str, int] = {}
         for idx in range(0, len(compact) - size + 1, size):
             part = compact[idx : idx + size]
+            if not CHINESE_RE.search(part):
+                continue
             seen[part] = seen.get(part, 0) + 1
             if seen[part] >= 3:
                 return True
