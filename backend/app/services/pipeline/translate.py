@@ -185,7 +185,7 @@ def _normalize_translated_outline_payload(payload: dict[str, Any], zh_outline: Z
             continue
         normalized_lessons = []
         for item in section.get("lessons", []):
-            lesson = _coerce_outline_lesson(item, lesson_objects) or _coerce_outline_lesson(item, lesson_fallbacks)
+            lesson = _coerce_outline_lesson(item, lesson_fallbacks | lesson_objects)
             if lesson is not None:
                 lesson_objects[lesson["id"]] = lesson
                 normalized_lessons.append(lesson)
@@ -207,6 +207,9 @@ def _coerce_outline_lesson(
     lesson_id = lesson.get("id")
     if not isinstance(lesson_id, str) or not lesson_id:
         return None
+    fallback = lesson_by_id.get(lesson_id)
+    if fallback is not None:
+        lesson = fallback | lesson
     if "keyFiles" not in lesson and "filesToRead" in lesson:
         lesson["keyFiles"] = lesson["filesToRead"]
     return lesson

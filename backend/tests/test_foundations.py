@@ -198,6 +198,27 @@ def test_translate_outline_normalizes_section_lesson_ids() -> None:
     assert outline.lessons[0].id == "s01"
 
 
+def test_translate_outline_merges_partial_section_lessons_with_fallbacks() -> None:
+    from app.core.schemas import Outline, ZhOutline
+
+    fixture = build_mock_course("https://github.com/chalk/chalk")
+    zh_outline = ZhOutline.model_validate(_zh_outline_from_fixture(fixture))
+    payload = json.loads(json.dumps(fixture["outline"]))
+    for section in payload["sections"]:
+        section["lessons"] = [
+            {"id": lesson["id"], "title": lesson["title"], "difficulty": lesson["difficulty"]}
+            for lesson in section["lessons"]
+        ]
+    payload["lessons"] = [lesson for section in payload["sections"] for lesson in section["lessons"]]
+
+    normalized = _normalize_translated_outline_payload(payload, zh_outline)
+    outline = Outline.model_validate(normalized)
+
+    assert outline.sections[0].lessons[0].keyFiles
+    assert outline.sections[0].lessons[0].objective.zh == zh_outline.sections[0].lessons[0].objective
+    assert outline.lessons[0].tags == zh_outline.sections[0].lessons[0].tags
+
+
 @pytest.mark.asyncio
 async def test_ingest_local_repo(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
