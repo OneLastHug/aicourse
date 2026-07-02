@@ -70,7 +70,8 @@ def validate_course_alignment(course: Course, ctx: RepoContext) -> list[str]:
 
     for lesson in course.outline.lessons:
         for file in lesson.keyFiles:
-            if file and file not in tree:
+            rel_file = _repo_relative_path(file, ctx)
+            if file and rel_file not in tree:
                 issues.append(f"{lesson.id} keyFiles references missing path: {file}")
 
     for lesson_id, lesson in course.lessons.items():
@@ -78,13 +79,14 @@ def validate_course_alignment(course: Course, ctx: RepoContext) -> list[str]:
             code = step.code
             if code is None or code.isSpine:
                 continue
-            if code.file and code.file not in tree:
+            rel_file = _repo_relative_path(code.file, ctx)
+            if code.file and rel_file not in tree:
                 issues.append(f"{lesson_id} step {idx + 1} code references missing path: {code.file}")
             elif code.file and code.snippet:
                 issues.extend(
                     _validate_snippet_matches_file(
                         ctx=ctx,
-                        file=code.file,
+                        file=rel_file,
                         snippet=code.snippet,
                         label=f"{lesson_id} step {idx + 1}",
                     )
@@ -133,30 +135,46 @@ def validate_zh_course_alignment(outline: ZhOutline, lessons: dict[str, ZhLesson
 
     for lesson in outline.lessons:
         for file in lesson.filesToRead:
-            if file and file not in tree:
+            rel_file = _repo_relative_path(file, ctx)
+            if file and rel_file not in tree:
                 issues.append(f"{lesson.id} filesToRead references missing path: {file}")
 
     for lesson_id, lesson in lessons.items():
         for file in lesson.filesUsed:
-            if file and file not in tree:
+            rel_file = _repo_relative_path(file, ctx)
+            if file and rel_file not in tree:
                 issues.append(f"{lesson_id} filesUsed references missing path: {file}")
         for idx, step in enumerate(lesson.howItWorks):
             code = step.code
             if code is None or code.isSpine:
                 continue
-            if code.file and code.file not in tree:
+            rel_file = _repo_relative_path(code.file, ctx)
+            if code.file and rel_file not in tree:
                 issues.append(f"{lesson_id} step {idx + 1} code references missing path: {code.file}")
             elif code.file and code.snippet:
                 issues.extend(
                     _validate_snippet_matches_file(
                         ctx=ctx,
-                        file=code.file,
+                        file=rel_file,
                         snippet=code.snippet,
                         label=f"{lesson_id} step {idx + 1}",
                     )
                 )
 
     return issues
+
+
+def _repo_relative_path(file: str | None, ctx: RepoContext) -> str:
+    value = (file or "").strip()
+    if not value:
+        return ""
+    path = Path(value)
+    if not path.is_absolute():
+        return value
+    try:
+        return path.resolve().relative_to(Path(ctx.localPath).resolve()).as_posix()
+    except ValueError:
+        return value
 
 
 def assert_valid_course(course: Course) -> None:

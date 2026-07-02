@@ -538,6 +538,44 @@ def test_zh_course_alignment_warns_for_missing_repo_paths(tmp_path: Path) -> Non
     assert any("filesToRead references missing path" in issue for issue in issues)
 
 
+def test_zh_course_alignment_accepts_absolute_paths_under_repo(tmp_path: Path) -> None:
+    from app.core.schemas import ZhLesson, ZhOutline
+    from app.services.repo import RepoContext
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    fixture = build_mock_course("https://github.com/chalk/chalk")
+    outline_data = _zh_outline_from_fixture(fixture)
+    tree = sorted(
+        {
+            file
+            for lesson in outline_data["lessons"]
+            for file in lesson.get("filesToRead", [])
+        }
+    )
+    for lesson in outline_data["lessons"]:
+        lesson["filesToRead"] = [str(repo / file) for file in lesson.get("filesToRead", [])]
+    lesson_data = _zh_lesson_from_fixture(fixture, "s01")
+    lesson_data["filesUsed"] = [str(repo / file) for file in lesson_data["filesUsed"]]
+    outline = ZhOutline.model_validate(outline_data)
+    lessons = {"s01": ZhLesson.model_validate(lesson_data)}
+    ctx = RepoContext(
+        url="https://github.com/chalk/chalk",
+        localPath=str(repo),
+        sha="abc123",
+        name="chalk",
+        defaultBranch="main",
+        summary="",
+        loc=0,
+        languages={},
+        tree=tree,
+    )
+
+    issues = validate_zh_course_alignment(outline, lessons, ctx)
+
+    assert not any("references missing path" in issue for issue in issues)
+
+
 def test_zh_course_alignment_catches_fabricated_snippet(tmp_path: Path) -> None:
     from app.core.schemas import ZhLesson, ZhOutline
     from app.services.repo import RepoContext
