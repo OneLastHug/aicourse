@@ -158,6 +158,8 @@ def test_generation_codex_env_isolated_from_host_codex(
     assert env["CODEX_HOME"] == str(settings.codex_home)
     assert env["HOME"] == str(settings.codex_home)
     assert env["CODEX_HOME"] != "/host/codex"
+    assert env["XDG_DATA_HOME"] != str(settings.codex_home / ".local" / "share")
+    assert env["NPM_CONFIG_STORE_DIR"].startswith("/tmp/aicourse-codex-runtime/")
     assert "OPENAI_API_KEY" not in env
     assert "R2L_ASSISTANT_API_KEY" not in env
     assert 'openai_base_url = "https://codex.ciii.club/v1"' in config

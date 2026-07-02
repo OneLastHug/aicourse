@@ -124,6 +124,17 @@ def generation_codex_env(settings: Settings) -> dict[str, str]:
 
     env["HOME"] = str(codex_home)
     env["CODEX_HOME"] = str(codex_home)
+    runtime_cache = Path(os.environ.get("R2L_CODEX_RUNTIME_CACHE_DIR", "/tmp/aicourse-codex-runtime"))
+    for child in ("cache", "data", "state", "npm", "pnpm-store", "pnpm-home", "pip"):
+        (runtime_cache / child).mkdir(parents=True, exist_ok=True)
+    env["XDG_CACHE_HOME"] = str(runtime_cache / "cache")
+    env["XDG_DATA_HOME"] = str(runtime_cache / "data")
+    env["XDG_STATE_HOME"] = str(runtime_cache / "state")
+    env["NPM_CONFIG_CACHE"] = str(runtime_cache / "npm")
+    env["NPM_CONFIG_STORE_DIR"] = str(runtime_cache / "pnpm-store")
+    env["PNPM_HOME"] = str(runtime_cache / "pnpm-home")
+    env["YARN_CACHE_FOLDER"] = str(runtime_cache / "cache" / "yarn")
+    env["PIP_CACHE_DIR"] = str(runtime_cache / "pip")
     return env
 
 
