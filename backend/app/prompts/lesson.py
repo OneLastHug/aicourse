@@ -85,11 +85,29 @@ code、文件路径、id、language、highlightLines、diagram.diagram、spine�
       }}
     ]
   }},
+  "simulation": {{
+    "kind": "agent-loop|request-lifecycle|command-lifecycle|state-flow|data-flow|control-loop|protocol-flow|generic-flow",
+    "title": "...",
+    "steps": [
+      {{
+        "label": "...",
+        "state": "...",
+        "detail": "..."
+      }}
+    ]
+  }},
   "tryIt": {{
     "setup": ["..."],
     "commands": ["..."],
     "observe": ["..."]
   }},
+  "practice": [
+    {{
+      "title": "...",
+      "prompt": "...",
+      "check": "..."
+    }}
+  ],
   "whatsNext": "...",
   "references": [{{"title":"...","url":"https://...","kind":"official","whyUsed":"..."}}],
   "compare": {{
@@ -111,7 +129,9 @@ code、文件路径、id、language、highlightLines、diagram.diagram、spine�
 - problem 要说清具体场景和痛点；solution 用 1-2 句点破思路，不要压成谜语。
 - howItWorks 需要 4-8 步；每一步标题用英文，desc 用自然中文解释这一步做什么、为什么在这里做、拿掉会怎样。desc 不要只有短语。
 - deepDive 讲设计取舍、边界和坑；deepSource 像技术博客带读者回到真实源码，说明该看哪段、为什么这段能证明本节结论。
+- simulation 把本节机制抽成一个可交互模拟器规格。kind 必须从 agent-loop, request-lifecycle, command-lifecycle, state-flow, data-flow, control-loop, protocol-flow, generic-flow 中选择；steps 3-7 步，每步说明当前状态和发生了什么。
 - tryIt.commands 是可执行命令或可复现实验，observe 是读者应该观察的现象。
+- practice 给 2-3 个练习任务。每个任务有 title / prompt / check；check 是读者完成后如何自查，不要写成空泛鼓励。
 - filesUsed 必须列出本节实际使用的真实仓库路径。
 - 代码片段必须足够短，适合 UI 展示。
 - Mermaid 必须能被 Mermaid 11 解析。flowchart 的所有节点 label 一律用双引号：写 A["main.main()"]，不要写 A[main.main()]；包含 /、()、[]、*、@、路径、函数名、中文标点的 label 必须加引号。边标签也保持简短。

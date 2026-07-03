@@ -19,6 +19,16 @@ ANALYSIS
 {analysis_json}
 
 设计规则：
+- 先判断项目原型 projectArchetype，必须从以下值选择一个：
+  agent, web-app, backend-service, library-framework, cli-tool, data-ml-pipeline, desktop-mobile-app, infra-operator, protocol-sdk, unknown。
+- 再选择课程主模式 primaryMode，必须从以下值选择一个：
+  progressive-builder, source-walkthrough, architecture-map, task-cookbook, runtime-trace, production-ops。
+- 可选 secondaryModes 选 0-2 个补充模式。
+- Agent / CLI / backend / framework 类项目优先 progressive-builder + source-walkthrough：先搭最小可运行机制，再回到真实源码。
+- Web / data / infra / protocol 类项目要围绕对应的运行链路讲：用户动作、请求、状态、数据流、reconcile loop 或协议消息。
+- conceptInventory 列出本课程应覆盖的 6-12 个核心概念；不要只列文件名。
+- learningOutcome 一句话说清学完整门课后能独立做什么。
+- globalViews 固定包含 ["timeline","layers","compare","source-map","practice-lab"]，除非项目极小。
 - 总课时约 {target_lessons} 节，按 beginner -> advanced 递进。
 - 课程分成 3-5 个 section，每层一个连贯主题。
 - 每节只讲一个机制，并推动读者沿真实执行路径理解仓库。
@@ -38,6 +48,12 @@ ANALYSIS
     "title": "...",
     "tagline": "...",
     "repo": {{"url": "{ctx.url}", "name": "{ctx.name}", "sha": "{ctx.sha}"}},
+    "projectArchetype": "agent|web-app|backend-service|library-framework|cli-tool|data-ml-pipeline|desktop-mobile-app|infra-operator|protocol-sdk|unknown",
+    "primaryMode": "progressive-builder|source-walkthrough|architecture-map|task-cookbook|runtime-trace|production-ops",
+    "secondaryModes": ["source-walkthrough"],
+    "learningOutcome": "...",
+    "conceptInventory": ["...", "..."],
+    "globalViews": ["timeline","layers","compare","source-map","practice-lab"],
     "spine": "...",
     "thesis": "...",
     "audience": "...",

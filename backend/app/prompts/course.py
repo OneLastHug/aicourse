@@ -25,6 +25,8 @@ COURSE DESIGN RULES
 - Use section groups. Each lesson teaches exactly one mechanism.
 - All keyFiles must be real repository paths.
 - Use concise learn-by-reading style: problem -> mechanism -> steps -> source comparison.
+- Choose `projectArchetype`, `primaryMode`, optional `secondaryModes`, `learningOutcome`, `conceptInventory`, and `globalViews` so the frontend can render overview, simulator, source-map, and practice-lab views.
+- `globalViews` should include ["timeline","layers","compare","source-map","practice-lab"] unless the repository is tiny.
 - "Concise" means technical-blog concise: clear context, causal explanation, and readable transitions. Do not make Chinese prose cryptic just to keep it short.
 - Title-like fields must be English even on the Chinese side: course.title.zh/en, section.title.zh/en, lesson.title.zh/en, and howItWorks[].title.zh/en must all be English.
 - For those title-like fields, set zh and en to the same English title unless a tiny casing cleanup is needed. Do not create Chinese titles.
@@ -41,6 +43,12 @@ Return STRICT JSON ONLY with this exact top-level shape:
       "title": {{"zh": "...", "en": "..."}},
       "tagline": {{"zh": "...", "en": "..."}},
       "repo": {{"url": "{ctx.url}", "name": "{ctx.name}", "sha": "{ctx.sha}"}},
+      "projectArchetype": "agent|web-app|backend-service|library-framework|cli-tool|data-ml-pipeline|desktop-mobile-app|infra-operator|protocol-sdk|unknown",
+      "primaryMode": "progressive-builder|source-walkthrough|architecture-map|task-cookbook|runtime-trace|production-ops",
+      "secondaryModes": ["source-walkthrough"],
+      "learningOutcome": {{"zh": "...", "en": "..."}},
+      "conceptInventory": [{{"zh": "...", "en": "..."}}],
+      "globalViews": ["timeline","layers","compare","source-map","practice-lab"],
       "spine": {{"zh": "...", "en": "..."}},
       "thesis": {{"zh": "...", "en": "..."}},
       "audience": {{"zh": "...", "en": "..."}},
@@ -131,11 +139,29 @@ Return STRICT JSON ONLY with this exact top-level shape:
           }}
         ]
       }},
+      "simulation": {{
+        "kind": "agent-loop|request-lifecycle|command-lifecycle|state-flow|data-flow|control-loop|protocol-flow|generic-flow",
+        "title": {{"zh": "...", "en": "..."}},
+        "steps": [
+          {{
+            "label": {{"zh": "...", "en": "..."}},
+            "state": {{"zh": "...", "en": "..."}},
+            "detail": {{"zh": "...", "en": "..."}}
+          }}
+        ]
+      }},
       "tryIt": {{
         "setup": [{{"zh": "...", "en": "..."}}],
         "commands": [{{"zh": "...", "en": "..."}}],
         "observe": [{{"zh": "...", "en": "..."}}]
       }},
+      "practice": [
+        {{
+          "title": {{"zh": "...", "en": "..."}},
+          "prompt": {{"zh": "...", "en": "..."}},
+          "check": {{"zh": "...", "en": "..."}}
+        }}
+      ],
       "whatsNext": {{"zh": "...", "en": "..."}},
       "references": [],
       "compare": {{

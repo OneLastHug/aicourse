@@ -84,6 +84,21 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
                     "Read the repository by following the real execution path: entry, state, rendering.",
                 ),
                 "repo": {"url": repo_url, "name": repo_name, "sha": "mock"},
+                "projectArchetype": "backend-service",
+                "primaryMode": "source-walkthrough",
+                "secondaryModes": ["architecture-map"],
+                "learningOutcome": _bi(
+                    "能沿真实请求链路定位入口、状态和课程输出。",
+                    "Be able to trace the real request path through entry, state, and course output.",
+                ),
+                "conceptInventory": [
+                    _bi("API 合同", "API contract"),
+                    _bi("任务状态", "job state"),
+                    _bi("SSE 进度", "SSE progress"),
+                    _bi("课程落盘", "course persistence"),
+                    _bi("源码对照", "source comparison"),
+                ],
+                "globalViews": ["timeline", "layers", "compare", "source-map", "practice-lab"],
                 "spine": _bi(
                     "一条从请求进入到课程落盘的最小主线。",
                     "A minimal path from request entry to persisted course output.",
@@ -231,10 +246,53 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
                         }
                     ],
                 },
+                "simulation": {
+                    "kind": "request-lifecycle",
+                    "title": _bi("Entry Request Flow", "Entry Request Flow"),
+                    "steps": [
+                        {
+                            "label": _bi("Submit URL", "Submit URL"),
+                            "state": _bi("浏览器持有一个 repoUrl。", "The browser holds one repoUrl."),
+                            "detail": _bi(
+                                "用户动作先被压缩成一个稳定的 JSON 请求体。",
+                                "The user action is first compressed into a stable JSON body.",
+                            ),
+                        },
+                        {
+                            "label": _bi("Create Job", "Create Job"),
+                            "state": _bi("后端生成 job id。", "The backend creates a job id."),
+                            "detail": _bi(
+                                "长任务被移出同步请求，前端只拿到可追踪的句柄。",
+                                "The long-running task leaves the synchronous request; the frontend receives a trackable handle.",
+                            ),
+                        },
+                        {
+                            "label": _bi("Stream Progress", "Stream Progress"),
+                            "state": _bi("进度页监听事件。", "The progress page listens for events."),
+                            "detail": _bi(
+                                "后续状态变化通过 SSE 回到同一个 job id。",
+                                "Later state changes return through SSE for the same job id.",
+                            ),
+                        },
+                    ],
+                },
                 "tryIt": {
                     "commands": [_bi("R2L_MOCK=1 uvicorn app.main:app --port 8000", "R2L_MOCK=1 uvicorn app.main:app --port 8000")],
                     "observe": [_bi("前端仍然跳转到同一个进度页。", "The frontend still navigates to the same progress page.")],
                 },
+                "practice": [
+                    {
+                        "title": _bi("Trace the Contract", "Trace the Contract"),
+                        "prompt": _bi(
+                            "找到前端提交 repoUrl 的位置，并写出后端响应里哪些字段不能随意改名。",
+                            "Find where the frontend submits repoUrl and list which backend response fields cannot be renamed casually.",
+                        ),
+                        "check": _bi(
+                            "你的答案应同时包含 repoUrl、ready、id 和 repoId，并说明它们各自服务哪个页面。",
+                            "Your answer should include repoUrl, ready, id, and repoId, and state which page each field serves.",
+                        ),
+                    }
+                ],
                 "whatsNext": _bi(
                     "入口稳定后，下一步要看长任务的状态如何保存和展示。",
                     "After the entry is stable, the next step is how long-running job state is stored and displayed.",
@@ -342,10 +400,53 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
                         }
                     ],
                 },
+                "simulation": {
+                    "kind": "state-flow",
+                    "title": _bi("Job State Flow", "Job State Flow"),
+                    "steps": [
+                        {
+                            "label": _bi("Record Created", "Record Created"),
+                            "state": _bi("job 处于 running。", "The job is running."),
+                            "detail": _bi(
+                                "摘要记录先落盘，让仪表盘和进度页能查到它。",
+                                "The summary record is persisted first so the dashboard and progress page can find it.",
+                            ),
+                        },
+                        {
+                            "label": _bi("Events Appended", "Events Appended"),
+                            "state": _bi("事件追加到 job history。", "Events are appended to job history."),
+                            "detail": _bi(
+                                "新订阅者先回放历史，再接收后续事件。",
+                                "New subscribers replay history before receiving later events.",
+                            ),
+                        },
+                        {
+                            "label": _bi("Course Saved", "Course Saved"),
+                            "state": _bi("job 变为 done。", "The job becomes done."),
+                            "detail": _bi(
+                                "课程本体和任务摘要分开保存，便于列表和详情各取所需。",
+                                "The course body and job summary are stored separately for list and detail views.",
+                            ),
+                        },
+                    ],
+                },
                 "tryIt": {
                     "commands": [_bi("curl http://127.0.0.1:8000/api/dashboard", "curl http://127.0.0.1:8000/api/dashboard")],
                     "observe": [_bi("任务从 running 变成 done。", "The job moves from running to done.")],
                 },
+                "practice": [
+                    {
+                        "title": _bi("Replay an Event", "Replay an Event"),
+                        "prompt": _bi(
+                            "说明为什么 SSE 连接建立后要先回放历史事件，再订阅新事件。",
+                            "Explain why an SSE connection should replay historical events before subscribing to new ones.",
+                        ),
+                        "check": _bi(
+                            "你的答案应覆盖刷新页面、断线重连和避免漏掉 done/error 三个场景。",
+                            "Your answer should cover page refresh, reconnects, and avoiding missed done/error events.",
+                        ),
+                    }
+                ],
                 "whatsNext": _bi(
                     "状态稳定后，就可以逐步把 mock 生成替换成真实 Codex pipeline。",
                     "Once state is stable, the mock generator can be replaced by the real Codex pipeline.",

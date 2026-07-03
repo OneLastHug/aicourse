@@ -6,6 +6,37 @@ from pydantic import BaseModel, ConfigDict, Field
 
 Difficulty = Literal["beginner", "intermediate", "advanced"]
 JobStatus = Literal["running", "done", "error"]
+ProjectArchetype = Literal[
+    "agent",
+    "web-app",
+    "backend-service",
+    "library-framework",
+    "cli-tool",
+    "data-ml-pipeline",
+    "desktop-mobile-app",
+    "infra-operator",
+    "protocol-sdk",
+    "unknown",
+]
+CourseMode = Literal[
+    "progressive-builder",
+    "source-walkthrough",
+    "architecture-map",
+    "task-cookbook",
+    "runtime-trace",
+    "production-ops",
+]
+CourseGlobalView = Literal["timeline", "layers", "compare", "source-map", "practice-lab"]
+SimulationKind = Literal[
+    "agent-loop",
+    "request-lifecycle",
+    "command-lifecycle",
+    "state-flow",
+    "data-flow",
+    "control-loop",
+    "protocol-flow",
+    "generic-flow",
+]
 
 
 class ApiModel(BaseModel):
@@ -63,6 +94,24 @@ class SourceCompare(ApiModel):
     simplified: Bi | None = None
     real: Bi | None = None
     gaps: list[SourceCompareGap]
+
+
+class SimulationStep(ApiModel):
+    label: Bi
+    state: Bi
+    detail: Bi
+
+
+class SimulationSpec(ApiModel):
+    kind: SimulationKind
+    title: Bi
+    steps: list[SimulationStep]
+
+
+class PracticeTask(ApiModel):
+    title: Bi
+    prompt: Bi
+    check: Bi
 
 
 class CodeBlock(ApiModel):
@@ -123,6 +172,24 @@ class ZhSourceCompare(ApiModel):
     simplified: str | None = None
     real: str | None = None
     gaps: list[ZhSourceCompareGap]
+
+
+class ZhSimulationStep(ApiModel):
+    label: str
+    state: str
+    detail: str
+
+
+class ZhSimulationSpec(ApiModel):
+    kind: SimulationKind
+    title: str
+    steps: list[ZhSimulationStep]
+
+
+class ZhPracticeTask(ApiModel):
+    title: str
+    prompt: str
+    check: str
 
 
 class ZhCodeBlock(ApiModel):
@@ -189,6 +256,12 @@ class CourseInfo(ApiModel):
     title: Bi
     tagline: Bi
     repo: RepoInfo
+    projectArchetype: ProjectArchetype | None = None
+    primaryMode: CourseMode | None = None
+    secondaryModes: list[CourseMode] | None = None
+    learningOutcome: Bi | None = None
+    conceptInventory: list[Bi] | None = None
+    globalViews: list[CourseGlobalView] | None = None
     spine: Bi | None = None
     thesis: Bi | None = None
     audience: Bi | None = None
@@ -214,6 +287,8 @@ class Lesson(ApiModel):
     deepDive: Bi
     deepSource: Bi | None = None
     sourceCompare: SourceCompare | None = None
+    simulation: SimulationSpec | None = None
+    practice: list[PracticeTask] | None = None
     tryIt: TryIt | None = None
     whatsNext: Bi | None = None
     references: list[Reference]
@@ -259,6 +334,12 @@ class ZhCourseInfo(ApiModel):
     title: str
     tagline: str
     repo: RepoInfo
+    projectArchetype: ProjectArchetype | None = None
+    primaryMode: CourseMode | None = None
+    secondaryModes: list[CourseMode] | None = None
+    learningOutcome: str | None = None
+    conceptInventory: list[str] | None = None
+    globalViews: list[CourseGlobalView] | None = None
     spine: str | None = None
     thesis: str | None = None
     audience: str | None = None
@@ -284,6 +365,8 @@ class ZhLesson(ApiModel):
     deepDive: str
     deepSource: str | None = None
     sourceCompare: ZhSourceCompare | None = None
+    simulation: ZhSimulationSpec | None = None
+    practice: list[ZhPracticeTask] | None = None
     tryIt: ZhTryIt | None = None
     whatsNext: str | None = None
     references: list[ZhReference]

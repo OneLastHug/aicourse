@@ -284,6 +284,10 @@ async def test_non_mock_pipeline_can_generate_with_codex_driver(
     )
 
     assert course["outline"]["course"]["repo"]["name"] == "repo"
+    assert course["outline"]["course"]["projectArchetype"] == "backend-service"
+    assert "practice-lab" in course["outline"]["course"]["globalViews"]
+    assert course["lessons"]["s01"]["simulation"]["steps"]
+    assert course["lessons"]["s01"]["practice"]
     assert any(event.get("type") == "plan" for event in events)
     stages = [event.get("stage") for event in events if event.get("type") == "stage"]
     assert stages == [
@@ -369,6 +373,22 @@ def test_course_validation_catches_missing_lesson_body() -> None:
     del data["lessons"]["s02"]
     issues = validate_course_schema(Course.model_validate(data))
     assert issues == ["missing lesson bodies: s02"]
+
+
+def test_course_validation_requires_global_design_and_interactions() -> None:
+    from app.core.schemas import Course
+
+    data = build_mock_course("https://github.com/chalk/chalk")
+    data["outline"]["course"].pop("projectArchetype")
+    data["outline"]["course"]["globalViews"] = ["timeline"]
+    data["lessons"]["s01"].pop("simulation")
+    data["lessons"]["s01"]["practice"] = []
+    issues = validate_course_schema(Course.model_validate(data))
+
+    assert "course.projectArchetype is required" in issues
+    assert any("course.globalViews is missing" in issue for issue in issues)
+    assert any("s01.simulation must include" in issue for issue in issues)
+    assert "s01.practice must include at least one task" in issues
 
 
 def test_course_validation_requires_english_bilingual_titles() -> None:

@@ -51,7 +51,10 @@ def validate_course_schema(course: Course) -> list[str]:
             issues.append(f"lesson key/id mismatch: {lesson_id} != {lesson.id}")
         if lesson.status != "ok" and not lesson.error:
             issues.append(f"failed lesson {lesson_id} is missing error")
+        if lesson.status == "ok":
+            issues.extend(_validate_lesson_interactions(lesson_id, lesson.simulation, lesson.practice))
 
+    issues.extend(_validate_course_global_design(course.outline.course))
     issues.extend(validate_course_title_language(course))
     issues.extend(validate_course_mermaid(course))
     return issues
@@ -123,10 +126,69 @@ def validate_zh_course_schema(outline: ZhOutline, lessons: dict[str, ZhLesson]) 
             issues.append(f"lesson {lesson_id} has no howItWorks steps")
         if lesson.status == "ok" and not lesson.deepDive.strip():
             issues.append(f"lesson {lesson_id} has empty deepDive")
+        if lesson.status == "ok":
+            issues.extend(_validate_lesson_interactions(lesson_id, lesson.simulation, lesson.practice))
 
+    issues.extend(_validate_course_global_design(outline.course))
     issues.extend(validate_zh_course_mermaid(outline, lessons))
     issues.extend(validate_zh_course_quality(outline, lessons))
     return issues
+
+
+def _validate_course_global_design(course_info) -> list[str]:
+    issues: list[str] = []
+    if not getattr(course_info, "projectArchetype", None):
+        issues.append("course.projectArchetype is required")
+    if not getattr(course_info, "primaryMode", None):
+        issues.append("course.primaryMode is required")
+    learning_outcome = getattr(course_info, "learningOutcome", None)
+    if learning_outcome is None:
+        issues.append("course.learningOutcome is required")
+    concept_inventory = getattr(course_info, "conceptInventory", None) or []
+    if len(concept_inventory) < 3:
+        issues.append("course.conceptInventory must include at least three concepts")
+    global_views = set(getattr(course_info, "globalViews", None) or [])
+    expected_views = {"timeline", "layers", "compare", "source-map", "practice-lab"}
+    missing_views = sorted(expected_views - global_views)
+    if missing_views:
+        issues.append("course.globalViews is missing: " + ", ".join(missing_views))
+    return issues
+
+
+def _validate_lesson_interactions(lesson_id: str, simulation, practice) -> list[str]:
+    issues: list[str] = []
+    steps = getattr(simulation, "steps", None) or []
+    if not getattr(simulation, "kind", None) or len(steps) < 2:
+        issues.append(f"{lesson_id}.simulation must include a kind and at least two state steps")
+    else:
+        for idx, step in enumerate(steps, start=1):
+            if not _nonempty_text(getattr(step, "label", None)):
+                issues.append(f"{lesson_id}.simulation.steps[{idx}].label must not be empty")
+            if not _nonempty_text(getattr(step, "state", None)):
+                issues.append(f"{lesson_id}.simulation.steps[{idx}].state must not be empty")
+            if not _nonempty_text(getattr(step, "detail", None)):
+                issues.append(f"{lesson_id}.simulation.steps[{idx}].detail must not be empty")
+    tasks = practice or []
+    if not tasks:
+        issues.append(f"{lesson_id}.practice must include at least one task")
+    for idx, task in enumerate(tasks, start=1):
+        if not _nonempty_text(getattr(task, "title", None)):
+            issues.append(f"{lesson_id}.practice[{idx}].title must not be empty")
+        if not _nonempty_text(getattr(task, "prompt", None)):
+            issues.append(f"{lesson_id}.practice[{idx}].prompt must not be empty")
+        if not _nonempty_text(getattr(task, "check", None)):
+            issues.append(f"{lesson_id}.practice[{idx}].check must not be empty")
+    return issues
+
+
+def _nonempty_text(value) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    zh = getattr(value, "zh", None)
+    en = getattr(value, "en", None)
+    return bool(str(zh or "").strip() and str(en or "").strip())
 
 
 def validate_zh_course_alignment(outline: ZhOutline, lessons: dict[str, ZhLesson], ctx: RepoContext) -> list[str]:

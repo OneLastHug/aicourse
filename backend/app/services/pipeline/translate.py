@@ -26,7 +26,7 @@ async def run_translate_stage(
 
     key = cache.key(
         {
-            "stage": "translate-course-v2",
+            "stage": "translate-course-v3",
             "repo": ctx.url,
             "sha": ctx.sha,
             "outline": zh_outline.model_dump(mode="json", exclude_none=True),
@@ -83,7 +83,7 @@ async def translate_outline(
 ) -> Outline:
     key = cache.key(
         {
-            "stage": "translate-outline-v2",
+            "stage": "translate-outline-v3",
             "repo": ctx.url,
             "sha": ctx.sha,
             "outline": zh_outline.model_dump(mode="json", exclude_none=True),
@@ -121,7 +121,7 @@ async def translate_lesson(
 ) -> Lesson:
     key = cache.key(
         {
-            "stage": "translate-lesson-v2",
+            "stage": "translate-lesson-v3",
             "repo": ctx.url,
             "sha": ctx.sha,
             "lesson": zh_lesson.model_dump(mode="json", exclude_none=True),
@@ -174,6 +174,8 @@ def missing_lesson(lesson_id: str, error: str) -> Lesson:
 def _normalize_translated_outline_payload(payload: dict[str, Any], zh_outline: ZhOutline) -> dict[str, Any]:
     lesson_fallbacks = {lesson.id: _fallback_outline_lesson(lesson) for lesson in zh_outline.lessons}
     lesson_objects: dict[str, dict[str, Any]] = {}
+    if isinstance(payload.get("course"), dict):
+        payload["course"] = _fallback_course_info(zh_outline) | payload["course"]
 
     for item in payload.get("lessons", []):
         lesson = _coerce_outline_lesson(item, lesson_fallbacks)
@@ -230,6 +232,29 @@ def _fallback_outline_lesson(lesson: ZhOutlineLesson) -> dict[str, Any]:
         value = getattr(lesson, field)
         if value is not None:
             fallback[field] = {"zh": value, "en": value}
+    return fallback
+
+
+def _fallback_course_info(outline: ZhOutline) -> dict[str, Any]:
+    course = outline.course
+    fallback: dict[str, Any] = {
+        "title": {"zh": course.title, "en": course.title},
+        "tagline": {"zh": course.tagline, "en": course.tagline},
+        "repo": course.repo.model_dump(mode="json"),
+    }
+    for field in ("spine", "thesis", "audience", "whyThisOrder", "learningOutcome"):
+        value = getattr(course, field)
+        if value is not None:
+            fallback[field] = {"zh": value, "en": value}
+    if course.conceptInventory:
+        fallback["conceptInventory"] = [
+            {"zh": item, "en": item}
+            for item in course.conceptInventory
+        ]
+    for field in ("projectArchetype", "primaryMode", "secondaryModes", "globalViews"):
+        value = getattr(course, field)
+        if value is not None:
+            fallback[field] = value
     return fallback
 
 
