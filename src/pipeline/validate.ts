@@ -87,6 +87,15 @@ function localCorrectnessChecks(lessonId: string, body: ZhLesson, cfg: Repo2Lear
     issues.push({ severity: "error", lessonId, problem: "tryIt must be structured with non-empty commands and observe arrays", fix: "Emit tryIt.commands[] and tryIt.observe[] with at least one item each." });
   }
 
+  const simulationSteps = body.simulation?.steps ?? [];
+  if (!body.simulation?.kind || !Array.isArray(simulationSteps) || simulationSteps.length < 2 || simulationSteps.some((s) => !String(s.label ?? "").trim() || !String(s.state ?? "").trim() || !String(s.detail ?? "").trim())) {
+    issues.push({ severity: "error", lessonId, problem: "simulation must include a kind and at least two labeled state steps", fix: "Emit simulation.kind and simulation.steps[] with label/state/detail." });
+  }
+
+  if (!Array.isArray(body.practice) || body.practice.length === 0 || body.practice.some((p) => !String(p.title ?? "").trim() || !String(p.prompt ?? "").trim() || !String(p.check ?? "").trim())) {
+    issues.push({ severity: "error", lessonId, problem: "practice tasks must include title, prompt, and check", fix: "Emit at least one practice task with a concrete self-check." });
+  }
+
   if (limitedResearch) {
     if (refs.length > cfg.research.maxReferencesPerLesson) {
       issues.push({ severity: "error", lessonId, problem: `References exceed max references (${refs.length} > ${cfg.research.maxReferencesPerLesson})`, fix: "Keep only the highest-signal sources for this lesson." });

@@ -97,3 +97,27 @@ test("validateCorrectness fails when limited research references omit whyUsed or
   assert.equal(res.passed, false);
   assert.match(JSON.stringify(res.issues), /whyUsed|tryIt/i);
 });
+
+test("validateCorrectness fails when simulation or practice is missing", async () => {
+  const cfg = resolveConfig({ noCache: true });
+  const zhCourse = {
+    outline: sampleZhOutline,
+    lessons: {
+      s01: {
+        ...sampleZhLessons.s01,
+        simulation: undefined,
+        practice: [],
+      },
+    },
+  };
+
+  const res = await validateCorrectness({
+    zhCourse,
+    driver: new NoopDriver(),
+    cfg,
+    cache: new Cache(cacheDir, false),
+  });
+
+  assert.equal(res.passed, false);
+  assert.match(JSON.stringify(res.issues), /simulation|practice/i);
+});

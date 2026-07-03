@@ -10,6 +10,34 @@
 /** Bilingual string — every user-facing text field in the FINAL output. */
 export interface Bi { zh: string; en: string; }
 export type Difficulty = "beginner" | "intermediate" | "advanced";
+export type ProjectArchetype =
+  | "agent"
+  | "web-app"
+  | "backend-service"
+  | "library-framework"
+  | "cli-tool"
+  | "data-ml-pipeline"
+  | "desktop-mobile-app"
+  | "infra-operator"
+  | "protocol-sdk"
+  | "unknown";
+export type CourseMode =
+  | "progressive-builder"
+  | "source-walkthrough"
+  | "architecture-map"
+  | "task-cookbook"
+  | "runtime-trace"
+  | "production-ops";
+export type CourseGlobalView = "timeline" | "layers" | "compare" | "source-map" | "practice-lab";
+export type SimulationKind =
+  | "agent-loop"
+  | "request-lifecycle"
+  | "command-lifecycle"
+  | "state-flow"
+  | "data-flow"
+  | "control-loop"
+  | "protocol-flow"
+  | "generic-flow";
 
 /* ===================== Shared (language-neutral) additions ===================== */
 /** Mermaid diagram. The `diagram` text is language-neutral (never translated);
@@ -80,6 +108,37 @@ export interface SourceCompare {
   gaps: SourceCompareGap[];
 }
 
+export interface ZhSimulationStep {
+  label: string;
+  state: string;
+  detail: string;
+}
+export interface SimulationStep {
+  label: Bi;
+  state: Bi;
+  detail: Bi;
+}
+export interface ZhSimulationSpec {
+  kind: SimulationKind;
+  title: string;
+  steps: ZhSimulationStep[];
+}
+export interface SimulationSpec {
+  kind: SimulationKind;
+  title: Bi;
+  steps: SimulationStep[];
+}
+export interface ZhPracticeTask {
+  title: string;
+  prompt: string;
+  check: string;
+}
+export interface PracticeTask {
+  title: Bi;
+  prompt: Bi;
+  check: Bi;
+}
+
 /* ============================ Repo context (Stage 0) ============================ */
 export interface RepoContext {
   url: string;
@@ -141,6 +200,12 @@ export interface Outline {
     title: Bi;
     tagline: Bi;
     repo: { url: string; name: string; sha: string };
+    projectArchetype?: ProjectArchetype;
+    primaryMode?: CourseMode;
+    secondaryModes?: CourseMode[];
+    learningOutcome?: Bi;
+    conceptInventory?: Bi[];
+    globalViews?: CourseGlobalView[];
     spine?: Bi;
     thesis?: Bi;
     audience?: Bi;
@@ -162,6 +227,8 @@ export interface Lesson {
   deepDive: Bi;
   deepSource?: Bi;
   sourceCompare?: SourceCompare;
+  simulation?: SimulationSpec;
+  practice?: PracticeTask[];
   tryIt?: TryIt;
   whatsNext?: Bi;
   references: Reference[];
@@ -203,6 +270,12 @@ export interface ZhOutline {
     title: string;
     tagline: string;
     repo: { url: string; name: string; sha: string };
+    projectArchetype?: ProjectArchetype;
+    primaryMode?: CourseMode;
+    secondaryModes?: CourseMode[];
+    learningOutcome?: string;
+    conceptInventory?: string[];
+    globalViews?: CourseGlobalView[];
     spine: string;
     thesis?: string;
     audience?: string;
@@ -231,6 +304,8 @@ export interface ZhLesson {
   deepDive: string;
   deepSource?: string;
   sourceCompare?: ZhSourceCompare;
+  simulation?: ZhSimulationSpec;
+  practice?: ZhPracticeTask[];
   tryIt?: ZhTryIt;
   whatsNext?: string;
   references: ZhReference[];

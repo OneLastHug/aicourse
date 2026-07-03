@@ -5,8 +5,9 @@ export function translateOutlinePrompt(zhOutlineJson: string): string {
 
 Rules:
 - Every user-facing text field becomes an object {"zh":"<原始中文>","en":"<English translation>"}: course.title, course.tagline, course.thesis, course.spine, course.audience, course.whyThisOrder, archDiagram.caption, each section.title/summary/spine/role/transitionIn/transitionOut, each lesson.title/theProblem/objective/mechanism/whyNow/missingBefore/nextPressure.
+- Also translate course.learningOutcome and each conceptInventory item into bilingual objects.
 - The "zh" value MUST be the original Chinese text unchanged; "en" is your faithful English translation.
-- archDiagram.diagram, ids, difficulty, keyFiles, prereq, tags, and repo.{url,name,sha} stay exactly as-is.
+- archDiagram.diagram, ids, difficulty, keyFiles, prereq, tags, projectArchetype, primaryMode, secondaryModes, globalViews, and repo.{url,name,sha} stay exactly as-is.
 - Keep the exact same JSON structure; only the listed leaf text fields become bilingual.
 - Do NOT include lesson bodies — outline only.
 
@@ -20,10 +21,10 @@ export function translateLessonPrompt(lessonId: string, zhLessonJson: string): s
   return `Translate this Chinese lesson body (${lessonId}) into English, producing a bilingual lesson. The Chinese is the ORIGINAL — keep it verbatim; add the English translation alongside.
 
 Rules:
-- Every user-facing text field becomes {"zh":"<原始中文>","en":"<English translation>"}: principle, teachingScope, problem, solution, diagram.caption, each howItWorks step's title/desc/anatomy, deepDive, deepSource, whatsNext, each compare.rows label, sourceCompare.simplified, sourceCompare.real, and every sourceCompare.gaps field (dimension/simplified/real/whySimplified).
+- Every user-facing text field becomes {"zh":"<原始中文>","en":"<English translation>"}: principle, teachingScope, problem, solution, diagram.caption, each howItWorks step's title/desc/anatomy, deepDive, deepSource, whatsNext, each compare.rows label, sourceCompare.simplified, sourceCompare.real, every sourceCompare.gaps field (dimension/simplified/real/whySimplified), simulation.title, every simulation step label/state/detail, and every practice task title/prompt/check.
 - tryIt becomes bilingual per element: setup/commands/observe arrays become arrays of Bi items, preserving order and count.
 - references.kind/title/url stay exactly as-is; references.whyUsed becomes bilingual.
-- Code snippets, code.file/language/highlightLines/isSpine/symbol, diagram.diagram, the entire spine object, badges, file paths, ids, URLs, compare.rows a/b, loc, filesUsed stay exactly as-is.
+- Code snippets, code.file/language/highlightLines/isSpine/symbol, diagram.diagram, the entire spine object, simulation.kind, badges, file paths, ids, URLs, compare.rows a/b, loc, filesUsed stay exactly as-is.
 - deepDive and deepSource may contain Markdown — keep ALL markers/table structure intact, translate only the text.
 - Keep the exact same JSON structure; only the listed leaf text fields become bilingual.
 

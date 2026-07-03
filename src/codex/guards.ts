@@ -16,7 +16,16 @@ export function isZhOutline(v: unknown): v is ZhOutline {
 }
 export function isZhLesson(v: unknown): v is ZhLesson {
   const l = v as ZhLesson;
-  return typeof v === "object" && v !== null && isStr(l.id) && isStr(l.problem) && Array.isArray(l.howItWorks);
+  return typeof v === "object"
+    && v !== null
+    && isStr(l.id)
+    && isStr(l.problem)
+    && Array.isArray(l.howItWorks)
+    && typeof l.simulation === "object"
+    && l.simulation !== null
+    && isStr(l.simulation.kind)
+    && Array.isArray(l.simulation.steps)
+    && Array.isArray(l.practice);
 }
 export function isSpineArtifact(v: unknown): v is SpineArtifact {
   const s = v as SpineArtifact;
@@ -42,6 +51,8 @@ export function isLesson(v: unknown): v is Lesson {
     if (t.setup && !isBiArray(t.setup)) return false;
   }
   if (l.sourceCompare?.gaps && !Array.isArray(l.sourceCompare.gaps)) return false;
+  if (!l.simulation || !isBi(l.simulation.title) || !Array.isArray(l.simulation.steps) || !l.simulation.steps.every((s) => isBi(s.label) && isBi(s.state) && isBi(s.detail))) return false;
+  if (!Array.isArray(l.practice) || !l.practice.every((p) => isBi(p.title) && isBi(p.prompt) && isBi(p.check))) return false;
   return true;
 }
 export function isCourse(v: unknown): v is Course {

@@ -38,7 +38,7 @@ export const sampleAnalysis = {
 
 /** Chinese generation output — the curriculum stage mock. */
 export const sampleZhOutline: ZhOutline = {
-  course: { title: "构建迷你 Agent", tagline: "一次只讲一个机制。", repo: { url: "local://nano-agent", name: "nano-agent", sha: "sample" }, spine: "一个随每节课长大的迷你 agent。", thesis: "所有 agent 都是同一个循环，逐个机制叠上去。", audience: "想从代码里真正看懂 agent 骨架的开发者。", whyThisOrder: "先让循环跑起来，再解释谁在驱动它、谁在约束它。" },
+  course: { title: "构建迷你 Agent", tagline: "一次只讲一个机制。", repo: { url: "local://nano-agent", name: "nano-agent", sha: "sample" }, projectArchetype: "agent", primaryMode: "progressive-builder", secondaryModes: ["source-walkthrough"], learningOutcome: "能从零搭出一个会循环、会受提示词约束的迷你 agent，并能回到真实源码定位对应实现。", conceptInventory: ["agent 循环", "系统提示词", "工具调用", "消息累积", "源码对照"], globalViews: ["timeline", "layers", "compare", "source-map", "practice-lab"], spine: "一个随每节课长大的迷你 agent。", thesis: "所有 agent 都是同一个循环，逐个机制叠上去。", audience: "想从代码里真正看懂 agent 骨架的开发者。", whyThisOrder: "先让循环跑起来，再解释谁在驱动它、谁在约束它。" },
   archDiagram: {
     kind: "mermaid",
     caption: "nano-agent 总体架构",
@@ -149,10 +149,23 @@ export const sampleZhLessons: Record<string, ZhLesson> = {
         { dimension: "错误恢复", simplified: "暂不处理", real: "有重试、降级与异常包装", whySimplified: "先别让工程噪音盖过主机制" }
       ]
     },
+    simulation: {
+      kind: "agent-loop",
+      title: "一次 agent 回合",
+      steps: [
+        { label: "用户输入", state: "messages = [user]", detail: "用户问题成为第一条消息，循环有了起点。" },
+        { label: "模型决策", state: "assistant -> tool_use?", detail: "模型要么直接回答，要么请求工具。" },
+        { label: "继续或停止", state: "no tool_use => done", detail: "没有工具调用就结束，有工具调用就把结果送回下一轮。" },
+      ],
+    },
     tryIt: {
       commands: ["npx tsx s01_agent_loop/code.ts", "让模型列出当前目录的 Python 文件"],
       observe: ["模型何时发出 tool_use", "什么时候循环继续，什么时候直接结束"],
     },
+    practice: [
+      { title: "加步数上限", prompt: "给教学版循环加一个 maxTurns 参数，超过后返回错误消息。", check: "运行后确认正常请求不受影响，故意让 stub 连续 tool_use 时能停止。" },
+      { title: "记录消息长度", prompt: "在每次模型调用前打印 messages.length。", check: "观察每一轮追加 assistant/tool 结果后长度如何变化。" },
+    ],
     whatsNext: "当循环能持续运行后，下一个问题就是：到底是什么规则在第一轮之前就把模型行为定住了？这正是系统提示词要回答的。",
     references: [{ title: "Building effective agents", url: "https://www.anthropic.com/research/building-effective-agents", kind: "official", whyUsed: "补充 agent 循环设计背景" }],
     compare: { rows: [{ label: "停止条件", a: "运行到超时", b: "模型自行停止" }] },
@@ -198,10 +211,23 @@ system 字段在第一轮之前就定下基调，权重高于普通用户消息�
         { dimension: "环境注入", simplified: "不带运行时信息", real: "注入 cwd、平台、时间等上下文", whySimplified: "先降低首节理解负担" }
       ]
     },
+    simulation: {
+      kind: "agent-loop",
+      title: "提示词进入回合",
+      steps: [
+        { label: "装载规则", state: "systemPrompt = constant", detail: "行为规则先于用户消息进入模型调用。" },
+        { label: "合并输入", state: "callModel({ systemPrompt, messages })", detail: "循环每一轮都把同一组规则交给模型。" },
+        { label: "稳定行为", state: "reply follows policy", detail: "模型输出受 system 约束，而不是只看用户当前措辞。" },
+      ],
+    },
     tryIt: {
       commands: ["修改 systemPrompt 的内容", "把关键规则同时放在开头和结尾，对比效果"],
       observe: ["模型行为是否变化", "首尾强调是否提高规则遵守度"],
     },
+    practice: [
+      { title: "改写角色", prompt: "把 systemPrompt 改成更严格的文件编辑助手，再运行同一条用户消息。", check: "比较改动前后回复是否更少闲聊、更聚焦文件操作。" },
+      { title: "拆分规则", prompt: "把一句 prompt 拆成身份、工具、边界三段字符串再拼接。", check: "确认运行结果不变，但代码更容易定位规则来源。" },
+    ],
     whatsNext: "当你知道规则写在 system prompt 里，下一步自然会追问：这些规则如何按工具、权限和场景被拼装出来。",
     references: [],
     compare: { rows: [] },
@@ -213,7 +239,7 @@ system 字段在第一轮之前就定下基调，权重高于普通用户消息�
  *  Chinese, en is the translation). */
 export const sampleCourse: Course = {
   outline: {
-    course: { title: { zh: "构建迷你 Agent", en: "Build a Mini Agent" }, tagline: { zh: "一次只讲一个机制。", en: "One mechanism at a time." }, repo: { url: "local://nano-agent", name: "nano-agent", sha: "sample" }, spine: { zh: "一个随每节课长大的迷你 agent。", en: "A tiny agent that grows each lesson." }, thesis: { zh: "所有 agent 都是同一个循环，逐个机制叠上去。", en: "Every agent is the same loop, with one mechanism stacked on at a time." }, audience: { zh: "想从代码里真正看懂 agent 骨架的开发者。", en: "Developers who want to really understand an agent skeleton from code." }, whyThisOrder: { zh: "先让循环跑起来，再解释谁在驱动它、谁在约束它。", en: "First make the loop run, then explain what drives it and what constrains it." } },
+    course: { title: { zh: "构建迷你 Agent", en: "Build a Mini Agent" }, tagline: { zh: "一次只讲一个机制。", en: "One mechanism at a time." }, repo: { url: "local://nano-agent", name: "nano-agent", sha: "sample" }, projectArchetype: "agent", primaryMode: "progressive-builder", secondaryModes: ["source-walkthrough"], learningOutcome: { zh: "能从零搭出一个会循环、会受提示词约束的迷你 agent，并能回到真实源码定位对应实现。", en: "Build a tiny agent with a loop and prompt constraints from scratch, then map each mechanism back to the real source." }, conceptInventory: [{ zh: "agent 循环", en: "agent loop" }, { zh: "系统提示词", en: "system prompt" }, { zh: "工具调用", en: "tool use" }, { zh: "消息累积", en: "message accumulation" }, { zh: "源码对照", en: "source mapping" }], globalViews: ["timeline", "layers", "compare", "source-map", "practice-lab"], spine: { zh: "一个随每节课长大的迷你 agent。", en: "A tiny agent that grows each lesson." }, thesis: { zh: "所有 agent 都是同一个循环，逐个机制叠上去。", en: "Every agent is the same loop, with one mechanism stacked on at a time." }, audience: { zh: "想从代码里真正看懂 agent 骨架的开发者。", en: "Developers who want to really understand an agent skeleton from code." }, whyThisOrder: { zh: "先让循环跑起来，再解释谁在驱动它、谁在约束它。", en: "First make the loop run, then explain what drives it and what constrains it." } },
     archDiagram: { kind: "mermaid", caption: { zh: "nano-agent 总体架构", en: "nano-agent architecture" }, diagram: 'flowchart TD\n  index["index.ts CLI"] --> loop["loop.ts 循环"]\n  prompt["prompt.ts 系统提示词"] --> loop\n  loop --> model["model.ts 调模型"]\n  loop --> tools["tools.ts 读写工具"]' },
     sections: [
       {
@@ -285,6 +311,15 @@ All of it hangs around the loop — the body is unchanged, so dropping it in the
           { dimension: { zh: "错误恢复", en: "error recovery" }, simplified: { zh: "暂不处理", en: "leave it unhandled" }, real: { zh: "有重试、降级与异常包装", en: "includes retry, fallback, and exception wrapping" }, whySimplified: { zh: "先别让工程噪音盖过主机制", en: "avoid letting engineering noise bury the core mechanism" } }
         ]
       },
+      simulation: {
+        kind: "agent-loop",
+        title: { zh: "一次 agent 回合", en: "One agent turn" },
+        steps: [
+          { label: { zh: "用户输入", en: "User input" }, state: { zh: "messages = [user]", en: "messages = [user]" }, detail: { zh: "用户问题成为第一条消息，循环有了起点。", en: "The user request becomes the first message, giving the loop a starting point." } },
+          { label: { zh: "模型决策", en: "Model decision" }, state: { zh: "assistant -> tool_use?", en: "assistant -> tool_use?" }, detail: { zh: "模型要么直接回答，要么请求工具。", en: "The model either answers directly or requests a tool." } },
+          { label: { zh: "继续或停止", en: "Continue or stop" }, state: { zh: "no tool_use => done", en: "no tool_use => done" }, detail: { zh: "没有工具调用就结束，有工具调用就把结果送回下一轮。", en: "No tool call ends the turn; a tool call feeds results into the next round." } },
+        ],
+      },
       tryIt: {
         commands: [
           { zh: "npx tsx s01_agent_loop/code.ts", en: "npx tsx s01_agent_loop/code.ts" },
@@ -295,6 +330,10 @@ All of it hangs around the loop — the body is unchanged, so dropping it in the
           { zh: "什么时候循环继续，什么时候直接结束", en: "When the loop continues versus ends immediately" }
         ]
       },
+      practice: [
+        { title: { zh: "加步数上限", en: "Add a turn cap" }, prompt: { zh: "给教学版循环加一个 maxTurns 参数，超过后返回错误消息。", en: "Add a maxTurns parameter to the teaching loop and return an error when it is exceeded." }, check: { zh: "运行后确认正常请求不受影响，故意让 stub 连续 tool_use 时能停止。", en: "Confirm normal requests still work, then force the stub to emit repeated tool_use and verify it stops." } },
+        { title: { zh: "记录消息长度", en: "Log message length" }, prompt: { zh: "在每次模型调用前打印 messages.length。", en: "Print messages.length before each model call." }, check: { zh: "观察每一轮追加 assistant/tool 结果后长度如何变化。", en: "Observe how the length changes after assistant/tool results are appended each round." } },
+      ],
       whatsNext: { zh: "当循环能持续运行后，下一个问题就是：到底是什么规则在第一轮之前就把模型行为定住了？这正是系统提示词要回答的。", en: "Once the loop can keep running, the next question is: what locks the model's behavior in before turn one? That's exactly what the system prompt answers." },
       references: [{ title: "Building effective agents", url: "https://www.anthropic.com/research/building-effective-agents", kind: "official", whyUsed: { zh: "补充 agent 循环设计背景", en: "Adds background on agent-loop design" } }],
       compare: { rows: [{ label: { zh: "停止条件", en: "Stop condition" }, a: "运行到超时", b: "模型自行停止" }] },
@@ -357,6 +396,15 @@ The teaching version keeps one line — enough to show "how it sets behavior bef
           { dimension: { zh: "环境注入", en: "environment injection" }, simplified: { zh: "不带运行时信息", en: "no runtime information" }, real: { zh: "注入 cwd、平台、时间等上下文", en: "inject cwd, platform, time, and other context" }, whySimplified: { zh: "先降低首节理解负担", en: "lower the cognitive load of the first lesson" } }
         ]
       },
+      simulation: {
+        kind: "agent-loop",
+        title: { zh: "提示词进入回合", en: "Prompt enters the turn" },
+        steps: [
+          { label: { zh: "装载规则", en: "Load rules" }, state: { zh: "systemPrompt = constant", en: "systemPrompt = constant" }, detail: { zh: "行为规则先于用户消息进入模型调用。", en: "Behavior rules enter the model call before the user message." } },
+          { label: { zh: "合并输入", en: "Merge input" }, state: { zh: "callModel({ systemPrompt, messages })", en: "callModel({ systemPrompt, messages })" }, detail: { zh: "循环每一轮都把同一组规则交给模型。", en: "Each loop round sends the same rule set to the model." } },
+          { label: { zh: "稳定行为", en: "Stabilize behavior" }, state: { zh: "reply follows policy", en: "reply follows policy" }, detail: { zh: "模型输出受 system 约束，而不是只看用户当前措辞。", en: "The model output is constrained by system, not only the user's current wording." } },
+        ],
+      },
       tryIt: {
         commands: [
           { zh: "修改 systemPrompt 的内容", en: "Edit the systemPrompt content" },
@@ -367,6 +415,10 @@ The teaching version keeps one line — enough to show "how it sets behavior bef
           { zh: "首尾强调是否提高规则遵守度", en: "Whether edge emphasis improves rule-following" }
         ]
       },
+      practice: [
+        { title: { zh: "改写角色", en: "Rewrite the role" }, prompt: { zh: "把 systemPrompt 改成更严格的文件编辑助手，再运行同一条用户消息。", en: "Change systemPrompt into a stricter file-editing assistant, then run the same user message." }, check: { zh: "比较改动前后回复是否更少闲聊、更聚焦文件操作。", en: "Compare whether the response has less chatter and focuses more on file operations." } },
+        { title: { zh: "拆分规则", en: "Split the rules" }, prompt: { zh: "把一句 prompt 拆成身份、工具、边界三段字符串再拼接。", en: "Split one prompt into identity, tools, and boundaries strings, then compose them." }, check: { zh: "确认运行结果不变，但代码更容易定位规则来源。", en: "Confirm behavior stays the same while the code makes each rule source easier to locate." } },
+      ],
       whatsNext: { zh: "当你知道规则写在 system prompt 里，下一步自然会追问：这些规则如何按工具、权限和场景被拼装出来。", en: "Once you know the rules live in the system prompt, the next natural question is how those rules are composed by toolset, permissions, and scenario." },
       references: [], compare: { rows: [] }, loc: 14, badges: { loc: 14, difficulty: "beginner", concepts: ["system-prompt", "behavior"] }, status: "ok",
     },

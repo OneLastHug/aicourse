@@ -14,6 +14,36 @@
         "name": "nano-agent",
         "sha": "sample"
       },
+      "projectArchetype": "agent",
+      "primaryMode": "progressive-builder",
+      "secondaryModes": [
+        "source-walkthrough"
+      ],
+      "learningOutcome": {
+        "zh": "能从零搭出一个会循环、会受提示词约束的迷你 agent，并能回到真实源码定位对应实现。",
+        "en": "Build a tiny agent with a loop and prompt constraints from scratch, then map each mechanism back to the real source."
+      },
+      "conceptInventory": [
+        {
+          "zh": "agent 循环",
+          "en": "agent loop"
+        },
+        {
+          "zh": "系统提示词",
+          "en": "system prompt"
+        },
+        {
+          "zh": "工具调用",
+          "en": "tool use"
+        }
+      ],
+      "globalViews": [
+        "timeline",
+        "layers",
+        "compare",
+        "source-map",
+        "practice-lab"
+      ],
       "spine": {
         "zh": "一个随每节课长大的迷你 agent。",
         "en": "A tiny agent that grows each lesson."
@@ -403,6 +433,43 @@
           }
         ]
       },
+      "simulation": {
+        "kind": "agent-loop",
+        "title": {
+          "zh": "一次 agent 回合",
+          "en": "One agent turn"
+        },
+        "steps": [
+          {
+            "label": {
+              "zh": "用户输入",
+              "en": "User input"
+            },
+            "state": {
+              "zh": "messages = [user]",
+              "en": "messages = [user]"
+            },
+            "detail": {
+              "zh": "用户问题成为第一条消息，循环有了起点。",
+              "en": "The user request becomes the first message, giving the loop a starting point."
+            }
+          },
+          {
+            "label": {
+              "zh": "模型决策",
+              "en": "Model decision"
+            },
+            "state": {
+              "zh": "assistant -> tool_use?",
+              "en": "assistant -> tool_use?"
+            },
+            "detail": {
+              "zh": "模型要么直接回答，要么请求工具。",
+              "en": "The model either answers directly or requests a tool."
+            }
+          }
+        ]
+      },
       "tryIt": {
         "commands": [
           {
@@ -425,6 +492,22 @@
           }
         ]
       },
+      "practice": [
+        {
+          "title": {
+            "zh": "加步数上限",
+            "en": "Add a turn cap"
+          },
+          "prompt": {
+            "zh": "给教学版循环加一个 maxTurns 参数，超过后返回错误消息。",
+            "en": "Add a maxTurns parameter to the teaching loop and return an error when it is exceeded."
+          },
+          "check": {
+            "zh": "运行后确认正常请求不受影响，故意让 stub 连续 tool_use 时能停止。",
+            "en": "Confirm normal requests still work, then force the stub to emit repeated tool_use and verify it stops."
+          }
+        }
+      ],
       "whatsNext": {
         "zh": "当循环能持续运行后，下一个问题就是：到底是什么规则在第一轮之前就把模型行为定住了？这正是系统提示词要回答的。",
         "en": "Once the loop can keep running, the next question is: what locks the model's behavior in before turn one? That's exactly what the system prompt answers."

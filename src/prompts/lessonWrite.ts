@@ -47,7 +47,9 @@ ${researchBlock}
 - deepDive：讲设计与权衡（约 250-450 字），必须包含：为什么这么设计、取舍与被否决方案、边界与坑。
 - deepSource：带读者看真实仓库里这个机制怎么实现，约 250-500 字 markdown。
 - sourceCompare：结构化产出教学版 vs 真实实现的差异，至少 3 条 gaps。每条 gap 要有 dimension / simplified / real / whySimplified。
+- simulation：把本节机制抽成一个可交互模拟器规格。kind 必须从 agent-loop, request-lifecycle, command-lifecycle, state-flow, data-flow, control-loop, protocol-flow, generic-flow 中选择；steps 3-7 步，每步说明当前状态和发生了什么。
 - tryIt：改成结构化实验：setup（可选）、commands、observe。commands 是可运行命令/提示词；observe 是你希望读者观察到的现象，而不是"运行成功"。
+- practice：2-3 个练习任务。每个任务有 title / prompt / check；check 是读者完成后如何自查，不要写成空泛鼓励。
 - whatsNext：1-3 句，明确说这一节解决了什么、又暴露了什么，因此下一节为什么存在。
 - compare：一张表，把本方案 vs 朴素/显然方案对比，rows 的 a/b 是短语不是长句。
 - references：0-${cfg.research.maxReferencesPerLesson} 条；每条包含 title/url/kind/whyUsed。只有确实提升本节深度时才引用。
@@ -75,11 +77,21 @@ ${researchBlock}
       {"dimension":"错误处理","simplified":"省略","real":"重试+降级","whySimplified":"先讲主干"}
     ]
   },
+  "simulation": {
+    "kind": "agent-loop",
+    "title": "...",
+    "steps": [
+      {"label":"...", "state":"...", "detail":"..."}
+    ]
+  },
   "tryIt": {
     "setup": ["..."],
     "commands": ["命令1", "命令2"],
     "observe": ["观察现象1", "观察现象2"]
   },
+  "practice": [
+    {"title":"...", "prompt":"...", "check":"..."}
+  ],
   "whatsNext": "...",
   "references": [{"title":"...","url":"https://...","kind":"official","whyUsed":"补充设计动机"}],
   "compare": {"rows":[{"label":"...","a":"朴素做法","b":"本节方案"}]},

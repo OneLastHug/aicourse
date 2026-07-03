@@ -6,6 +6,34 @@ export interface Bi {
 }
 export type Locale = "zh" | "en";
 export type Difficulty = "beginner" | "intermediate" | "advanced";
+export type ProjectArchetype =
+  | "agent"
+  | "web-app"
+  | "backend-service"
+  | "library-framework"
+  | "cli-tool"
+  | "data-ml-pipeline"
+  | "desktop-mobile-app"
+  | "infra-operator"
+  | "protocol-sdk"
+  | "unknown";
+export type CourseMode =
+  | "progressive-builder"
+  | "source-walkthrough"
+  | "architecture-map"
+  | "task-cookbook"
+  | "runtime-trace"
+  | "production-ops";
+export type CourseGlobalView = "timeline" | "layers" | "compare" | "source-map" | "practice-lab";
+export type SimulationKind =
+  | "agent-loop"
+  | "request-lifecycle"
+  | "command-lifecycle"
+  | "state-flow"
+  | "data-flow"
+  | "control-loop"
+  | "protocol-flow"
+  | "generic-flow";
 
 export interface OutlineLesson {
   id: string;
@@ -75,11 +103,35 @@ export interface SourceCompare {
   gaps: SourceCompareGap[];
 }
 
+export interface SimulationStep {
+  label: Bi;
+  state: Bi;
+  detail: Bi;
+}
+
+export interface SimulationSpec {
+  kind: SimulationKind;
+  title: Bi;
+  steps: SimulationStep[];
+}
+
+export interface PracticeTask {
+  title: Bi;
+  prompt: Bi;
+  check: Bi;
+}
+
 export interface Outline {
   course: {
     title: Bi;
     tagline: Bi;
     repo: { url: string; name: string; sha: string };
+    projectArchetype?: ProjectArchetype;
+    primaryMode?: CourseMode;
+    secondaryModes?: CourseMode[];
+    learningOutcome?: Bi;
+    conceptInventory?: Bi[];
+    globalViews?: CourseGlobalView[];
     spine?: Bi;
     thesis?: Bi;
     audience?: Bi;
@@ -126,6 +178,8 @@ export interface Lesson {
   deepDive: Bi;
   deepSource?: Bi;
   sourceCompare?: SourceCompare;
+  simulation?: SimulationSpec;
+  practice?: PracticeTask[];
   tryIt?: TryIt;
   whatsNext?: Bi;
   references: Reference[];

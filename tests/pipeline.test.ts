@@ -35,6 +35,11 @@ test("v2 pipeline runs end-to-end (mock): analyze→curriculum→lessons→valid
   assert.ok(course.outline.course.thesis?.zh, "course thesis exists");
   assert.ok(course.outline.course.spine?.zh, "course spine exists");
   assert.ok(course.outline.course.whyThisOrder?.zh, "course whyThisOrder exists");
+  assert.equal(course.outline.course.projectArchetype, "agent", "course archetype exists");
+  assert.equal(course.outline.course.primaryMode, "progressive-builder", "course primary mode exists");
+  assert.ok(course.outline.course.learningOutcome?.zh, "course learningOutcome exists");
+  assert.ok((course.outline.course.conceptInventory?.length ?? 0) >= 1, "course conceptInventory exists");
+  assert.ok(course.outline.course.globalViews?.includes("timeline"), "course globalViews exists");
 
   const section = course.outline.sections[0]!;
   assert.ok(section.role?.zh, "section role exists");
@@ -51,6 +56,8 @@ test("v2 pipeline runs end-to-end (mock): analyze→curriculum→lessons→valid
   assert.ok(lesson.whatsNext?.zh, "whatsNext exists");
   assert.ok(Array.isArray(lesson.tryIt?.commands), "tryIt.commands exists");
   assert.ok(Array.isArray(lesson.tryIt?.observe), "tryIt.observe exists");
+  assert.ok(lesson.simulation?.steps.length, "simulation steps exist");
+  assert.ok(lesson.practice?.length, "practice tasks exist");
   assert.ok(Array.isArray(lesson.sourceCompare?.gaps), "sourceCompare.gaps exists");
   assert.ok((lesson.sourceCompare?.gaps?.length ?? 0) >= 1, "sourceCompare has gaps");
   assert.ok(lesson.references[0]?.kind, "reference kind exists");
