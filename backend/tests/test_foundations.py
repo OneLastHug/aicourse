@@ -12,7 +12,10 @@ from app.services.codex_driver import CodexResult, generation_codex_env
 from app.services.generator import generate_course
 from app.services.json_parse import extract_json
 from app.services.pipeline.call import get_generation_limiter
-from app.services.pipeline.translate import _normalize_translated_outline_payload
+from app.services.pipeline.translate import (
+    _normalize_translated_outline_payload,
+    run_translate_stage,
+)
 from app.services.pipeline.validate import (
     CourseValidationError,
     validate_course_alignment,
@@ -219,6 +222,96 @@ def test_translate_outline_merges_partial_section_lessons_with_fallbacks() -> No
     assert outline.sections[0].lessons[0].keyFiles
     assert outline.sections[0].lessons[0].objective.zh == zh_outline.sections[0].lessons[0].objective
     assert outline.lessons[0].tags == zh_outline.sections[0].lessons[0].tags
+
+
+@pytest.mark.asyncio
+async def test_translate_stage_falls_back_when_codex_translation_fails(tmp_path: Path) -> None:
+    from app.core.config import Settings
+    from app.core.schemas import ZhLesson, ZhOutline
+    from app.services.repo import RepoContext
+
+    fixture = build_mock_course("https://github.com/chalk/chalk")
+    zh_outline = ZhOutline.model_validate(_zh_outline_from_fixture(fixture))
+    zh_lessons = {
+        lesson_id: ZhLesson.model_validate(_zh_lesson_from_fixture(fixture, lesson_id))
+        for lesson_id in ["s01", "s02"]
+    }
+
+    class FailingDriver:
+        async def run(self, _call):
+            raise RuntimeError("upstream disconnected")
+
+    ctx = RepoContext(
+        url="https://github.com/chalk/chalk",
+        localPath=str(tmp_path),
+        sha="abc123",
+        name="chalk",
+        defaultBranch="main",
+        summary="",
+        loc=0,
+        languages={},
+        tree=[],
+    )
+    course = await run_translate_stage(
+        ctx=ctx,
+        zh_outline=zh_outline,
+        zh_lessons=zh_lessons,
+        driver=FailingDriver(),
+        cache=Cache(tmp_path / "cache"),
+        settings=Settings(R2L_DATA_DIR=tmp_path / "data"),
+    )
+
+    assert course.outline.course.projectArchetype == fixture["outline"]["course"]["projectArchetype"]
+    assert course.outline.course.learningOutcome.zh == fixture["outline"]["course"]["learningOutcome"]["zh"]
+    assert "practice-lab" in course.outline.course.globalViews
+    assert course.lessons["s01"].simulation is not None
+    assert course.lessons["s01"].simulation.steps[0].label.zh
+    assert course.lessons["s01"].practice
+
+
+@pytest.mark.asyncio
+async def test_translate_stage_can_skip_codex_translation(tmp_path: Path) -> None:
+    from app.core.config import Settings
+    from app.core.schemas import ZhLesson, ZhOutline
+    from app.services.repo import RepoContext
+
+    fixture = build_mock_course("https://github.com/chalk/chalk")
+    zh_outline = ZhOutline.model_validate(_zh_outline_from_fixture(fixture))
+    zh_lessons = {
+        lesson_id: ZhLesson.model_validate(_zh_lesson_from_fixture(fixture, lesson_id))
+        for lesson_id in ["s01", "s02"]
+    }
+
+    class ShouldNotRunDriver:
+        async def run(self, _call):
+            raise AssertionError("translation driver should not run")
+
+    ctx = RepoContext(
+        url="https://github.com/chalk/chalk",
+        localPath=str(tmp_path),
+        sha="abc123",
+        name="chalk",
+        defaultBranch="main",
+        summary="",
+        loc=0,
+        languages={},
+        tree=[],
+    )
+    course = await run_translate_stage(
+        ctx=ctx,
+        zh_outline=zh_outline,
+        zh_lessons=zh_lessons,
+        driver=ShouldNotRunDriver(),
+        cache=Cache(tmp_path / "cache"),
+        settings=Settings(
+            R2L_DATA_DIR=tmp_path / "data",
+            R2L_TRANSLATE_WITH_CODEX=False,
+        ),
+    )
+
+    assert course.outline.course.primaryMode == fixture["outline"]["course"]["primaryMode"]
+    assert course.lessons["s02"].practice
+    assert course.lessons["s02"].tryIt is not None
 
 
 @pytest.mark.asyncio

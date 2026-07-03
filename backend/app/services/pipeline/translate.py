@@ -44,6 +44,18 @@ async def run_translate_stage(
         flatten_outline(course)
         return course
 
+    if not settings.r2l_translate_with_codex:
+        course = Course(
+            outline=fallback_outline_from_zh(zh_outline),
+            lessons={
+                lesson_id: fallback_lesson_from_zh(lesson)
+                for lesson_id, lesson in zh_lessons.items()
+            },
+        )
+        flatten_outline(course)
+        cache.set(key, course.model_dump(mode="json", exclude_none=True))
+        return course
+
     outline = await translate_outline(
         ctx=ctx,
         zh_outline=zh_outline,
@@ -97,15 +109,18 @@ async def translate_outline(
         outline.lessons = [lesson for section in outline.sections for lesson in section.lessons]
         return outline
 
-    raw_outline = await codex_json(
-        driver=driver,
-        label="translate:outline",
-        prompt=translate_outline_prompt(json_for_prompt(zh_outline)),
-        cwd=Path(ctx.localPath),
-        model=dict[str, Any],
-        settings=settings,
-    )
-    outline = Outline.model_validate(_normalize_translated_outline_payload(raw_outline, zh_outline))
+    try:
+        raw_outline = await codex_json(
+            driver=driver,
+            label="translate:outline",
+            prompt=translate_outline_prompt(json_for_prompt(zh_outline)),
+            cwd=Path(ctx.localPath),
+            model=dict[str, Any],
+            settings=settings,
+        )
+        outline = Outline.model_validate(_normalize_translated_outline_payload(raw_outline, zh_outline))
+    except RuntimeError:
+        outline = fallback_outline_from_zh(zh_outline)
     outline.lessons = [lesson for section in outline.sections for lesson in section.lessons]
     cache.set(key, outline.model_dump(mode="json", exclude_none=True))
     return outline
@@ -133,14 +148,17 @@ async def translate_lesson(
     if cached is not None:
         return Lesson.model_validate(cached)
 
-    lesson = await codex_json(
-        driver=driver,
-        label=f"translate:lesson:{zh_lesson.id}",
-        prompt=translate_lesson_prompt(zh_lesson.id, json_for_prompt(zh_lesson)),
-        cwd=Path(ctx.localPath),
-        model=Lesson,
-        settings=settings,
-    )
+    try:
+        lesson = await codex_json(
+            driver=driver,
+            label=f"translate:lesson:{zh_lesson.id}",
+            prompt=translate_lesson_prompt(zh_lesson.id, json_for_prompt(zh_lesson)),
+            cwd=Path(ctx.localPath),
+            model=Lesson,
+            settings=settings,
+        )
+    except RuntimeError:
+        lesson = fallback_lesson_from_zh(zh_lesson)
     if lesson.id != zh_lesson.id:
         lesson.id = zh_lesson.id
     lesson.status = "ok"
@@ -194,6 +212,145 @@ def _normalize_translated_outline_payload(payload: dict[str, Any], zh_outline: Z
         section["lessons"] = normalized_lessons
 
     payload["lessons"] = [lesson for section in payload.get("sections", []) for lesson in section.get("lessons", [])]
+    return payload
+
+
+def fallback_outline_from_zh(zh_outline: ZhOutline) -> Outline:
+    """Build a valid bilingual outline if Codex translation is unavailable."""
+
+    sections: list[dict[str, Any]] = []
+    for section in zh_outline.sections:
+        section_payload: dict[str, Any] = {
+            "id": section.id,
+            "title": _bi(section.title),
+            "summary": _bi(section.summary),
+            "lessons": [_fallback_outline_lesson(lesson) for lesson in section.lessons],
+        }
+        for field in ("spine", "role", "transitionIn", "transitionOut"):
+            value = getattr(section, field)
+            if value is not None:
+                section_payload[field] = _bi(value)
+        sections.append(section_payload)
+
+    payload: dict[str, Any] = {
+        "course": _fallback_course_info(zh_outline),
+        "sections": sections,
+        "lessons": [lesson for section in sections for lesson in section["lessons"]],
+    }
+    if zh_outline.archDiagram is not None:
+        payload["archDiagram"] = {
+            "kind": zh_outline.archDiagram.kind,
+            "caption": _bi(zh_outline.archDiagram.caption),
+            "diagram": zh_outline.archDiagram.diagram,
+        }
+    outline = Outline.model_validate(payload)
+    outline.lessons = [lesson for section in outline.sections for lesson in section.lessons]
+    return outline
+
+
+def fallback_lesson_from_zh(zh_lesson: ZhLesson) -> Lesson:
+    """Build a valid bilingual lesson if Codex translation is unavailable."""
+
+    payload: dict[str, Any] = {
+        "id": zh_lesson.id,
+        "problem": _bi(zh_lesson.problem),
+        "howItWorks": [_fallback_step(step) for step in zh_lesson.howItWorks],
+        "deepDive": _bi(zh_lesson.deepDive),
+        "references": [_fallback_reference(reference) for reference in zh_lesson.references],
+        "compare": {
+            "rows": [
+                {"label": _bi(row.label), "a": row.a, "b": row.b}
+                for row in zh_lesson.compare.rows
+            ]
+        },
+        "loc": zh_lesson.loc,
+        "status": zh_lesson.status,
+    }
+    for field in ("principle", "teachingScope", "solution", "deepSource", "whatsNext", "error"):
+        value = getattr(zh_lesson, field)
+        if value is not None:
+            payload[field] = _bi(value) if field != "error" else value
+    if zh_lesson.diagram is not None:
+        payload["diagram"] = {
+            "kind": zh_lesson.diagram.kind,
+            "caption": _bi(zh_lesson.diagram.caption),
+            "diagram": zh_lesson.diagram.diagram,
+        }
+    for field in ("spine", "badges"):
+        value = getattr(zh_lesson, field)
+        if value is not None:
+            payload[field] = _dump(value)
+    if zh_lesson.sourceCompare is not None:
+        payload["sourceCompare"] = {
+            "gaps": [
+                {
+                    "dimension": _bi(gap.dimension),
+                    "simplified": _bi(gap.simplified),
+                    "real": _bi(gap.real),
+                    "whySimplified": _bi(gap.whySimplified),
+                }
+                for gap in zh_lesson.sourceCompare.gaps
+            ]
+        }
+        if zh_lesson.sourceCompare.simplified is not None:
+            payload["sourceCompare"]["simplified"] = _bi(zh_lesson.sourceCompare.simplified)
+        if zh_lesson.sourceCompare.real is not None:
+            payload["sourceCompare"]["real"] = _bi(zh_lesson.sourceCompare.real)
+    if zh_lesson.simulation is not None:
+        payload["simulation"] = {
+            "kind": zh_lesson.simulation.kind,
+            "title": _bi(zh_lesson.simulation.title),
+            "steps": [
+                {
+                    "label": _bi(step.label),
+                    "state": _bi(step.state),
+                    "detail": _bi(step.detail),
+                }
+                for step in zh_lesson.simulation.steps
+            ],
+        }
+    if zh_lesson.practice is not None:
+        payload["practice"] = [
+            {
+                "title": _bi(task.title),
+                "prompt": _bi(task.prompt),
+                "check": _bi(task.check),
+            }
+            for task in zh_lesson.practice
+        ]
+    if zh_lesson.tryIt is not None:
+        payload["tryIt"] = {
+            "commands": [_bi(item) for item in zh_lesson.tryIt.commands],
+            "observe": [_bi(item) for item in zh_lesson.tryIt.observe],
+        }
+        if zh_lesson.tryIt.setup is not None:
+            payload["tryIt"]["setup"] = [_bi(item) for item in zh_lesson.tryIt.setup]
+    return Lesson.model_validate(payload)
+
+
+def _fallback_step(step) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "title": _bi(step.title),
+        "desc": _bi(step.desc),
+    }
+    for field in ("code", "beforeCode"):
+        value = getattr(step, field)
+        if value is not None:
+            payload[field] = _dump(value)
+    if step.anatomy is not None:
+        payload["anatomy"] = _bi(step.anatomy)
+    return payload
+
+
+def _fallback_reference(reference) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "title": reference.title,
+        "url": reference.url,
+    }
+    if reference.kind is not None:
+        payload["kind"] = reference.kind
+    if reference.whyUsed is not None:
+        payload["whyUsed"] = _bi(reference.whyUsed)
     return payload
 
 
@@ -256,6 +413,16 @@ def _fallback_course_info(outline: ZhOutline) -> dict[str, Any]:
         if value is not None:
             fallback[field] = value
     return fallback
+
+
+def _bi(value: str) -> dict[str, str]:
+    return {"zh": value, "en": value}
+
+
+def _dump(value) -> Any:
+    if hasattr(value, "model_dump"):
+        return value.model_dump(mode="json", exclude_none=True)
+    return value
 
 
 def json_for_prompt(value: ZhOutline | ZhLesson) -> str:
