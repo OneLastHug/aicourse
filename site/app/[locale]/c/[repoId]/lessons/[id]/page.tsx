@@ -336,7 +336,7 @@ function LessonTabs({ locale }: { locale: Locale }) {
     ["practice", t(locale, "lesson.tab.practice")],
   ] as const;
   return (
-    <nav className="sticky top-14 z-20 -mx-5 mt-5 border-b border-line bg-bg/90 px-5 py-3 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/90 sm:-mx-8 sm:px-8 lg:-mx-12 lg:px-12" aria-label="Lesson tabs">
+    <nav className="sticky top-14 z-20 mt-5 border-b border-line bg-bg/90 py-3 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/90" aria-label="Lesson tabs">
       <div className="flex gap-1 overflow-x-auto">
         {tabs.map(([id, label]) => (
           <a key={id} href={`#${id}`} className="whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium text-ink-soft transition hover:bg-white hover:text-brand dark:text-zinc-300 dark:hover:bg-zinc-900">
