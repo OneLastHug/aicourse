@@ -21,6 +21,7 @@ async def run_translate_stage(
     driver: CodexDriverLike,
     cache: Cache,
     settings: Settings,
+    cache_bust: str | None = None,
 ) -> Course:
     """Translate the Chinese-first course into the final bilingual Course."""
 
@@ -36,6 +37,7 @@ async def run_translate_stage(
             },
             "model": settings.r2l_codex_model,
             "effort": settings.r2l_codex_reasoning_effort,
+            "cacheBust": cache_bust,
         }
     )
     cached = cache.get(key)
@@ -62,6 +64,7 @@ async def run_translate_stage(
         driver=driver,
         cache=cache,
         settings=settings,
+        cache_bust=cache_bust,
     )
 
     async def translate_one(outline_lesson) -> tuple[str, Lesson]:
@@ -74,6 +77,7 @@ async def run_translate_stage(
             driver=driver,
             cache=cache,
             settings=settings,
+            cache_bust=cache_bust,
         )
         return outline_lesson.id, lesson
 
@@ -92,6 +96,7 @@ async def translate_outline(
     driver: CodexDriverLike,
     cache: Cache,
     settings: Settings,
+    cache_bust: str | None = None,
 ) -> Outline:
     key = cache.key(
         {
@@ -101,6 +106,7 @@ async def translate_outline(
             "outline": zh_outline.model_dump(mode="json", exclude_none=True),
             "model": settings.r2l_codex_model,
             "effort": settings.r2l_codex_reasoning_effort,
+            "cacheBust": cache_bust,
         }
     )
     cached = cache.get(key)
@@ -133,6 +139,7 @@ async def translate_lesson(
     driver: CodexDriverLike,
     cache: Cache,
     settings: Settings,
+    cache_bust: str | None = None,
 ) -> Lesson:
     key = cache.key(
         {
@@ -142,6 +149,7 @@ async def translate_lesson(
             "lesson": zh_lesson.model_dump(mode="json", exclude_none=True),
             "model": settings.r2l_codex_model,
             "effort": settings.r2l_codex_reasoning_effort,
+            "cacheBust": cache_bust,
         }
     )
     cached = cache.get(key)

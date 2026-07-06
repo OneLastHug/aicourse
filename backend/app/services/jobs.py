@@ -51,6 +51,7 @@ def progress_score_for_stage(stage: str, lessons_done: int) -> int:
 @dataclass
 class Job:
     state: JobState
+    cache_bust: str | None = None
     drafts: dict[str, Any] = field(default_factory=dict)
     subscribers: set[asyncio.Queue[dict[str, Any] | None]] = field(default_factory=set)
 
@@ -77,13 +78,13 @@ class JobManager:
                 record.updatedAt = now_ms()
                 save_job_record(record, self.settings)
 
-    def create(self, repo_url: str, repo_id: str) -> str:
+    def create(self, repo_url: str, repo_id: str, *, force_regenerate: bool = False) -> str:
         repo_url = canonical_repo_url(repo_url)
         repo_id = repo_id_for(repo_url)
         running = self.running_id(repo_id)
         if running:
             return running
-        self._cleanup_failed_for_repo_sync(repo_id)
+        failed_records = self._cleanup_failed_for_repo_sync(repo_id)
 
         job_id = str(uuid.uuid4())
         ts = now_ms()
@@ -99,7 +100,8 @@ class JobManager:
             startedAt=ts,
             updatedAt=ts,
         )
-        self.jobs[job_id] = Job(state=state)
+        cache_bust = job_id if force_regenerate or failed_records else None
+        self.jobs[job_id] = Job(state=state, cache_bust=cache_bust)
         self.running_by_repo[repo_id] = job_id
         save_job_record(state, self.settings)
         asyncio.create_task(self._run(job_id, repo_id))
@@ -149,11 +151,16 @@ class JobManager:
 
     def list_failed(self) -> list[JobRecord]:
         cutoff = now_ms() - 24 * 60 * 60 * 1000
-        return [
-            record
-            for record in list_job_records(self.settings)
-            if record.status == "error" and record.updatedAt > cutoff
-        ]
+        failed: list[JobRecord] = []
+        for record in list_job_records(self.settings):
+            if record.status != "error" or record.updatedAt <= cutoff:
+                continue
+            repo_id = repo_id_for(record.repoUrl)
+            if get_meta(record.repoId, self.settings) or get_meta(repo_id, self.settings):
+                remove_job_record(record.id, self.settings)
+                continue
+            failed.append(record)
+        return failed
 
     async def subscribe(self, job_id: str) -> asyncio.Queue[dict[str, Any] | None] | None:
         job = self.jobs.get(job_id)
@@ -213,10 +220,12 @@ class JobManager:
         if job is None:
             return
         try:
+            kwargs = {"cache_bust": job.cache_bust} if job.cache_bust else {}
             course = await generate_course(
                 job.state.repoUrl,
                 lambda event: self.emit(job_id, event),
                 self.settings,
+                **kwargs,
             )
             outline = course["outline"]
             course_info = outline["course"]
@@ -247,13 +256,16 @@ class JobManager:
             for queue in list(job.subscribers):
                 queue.put_nowait(None)
 
-    async def cleanup_failed_for_repo(self, repo_id: str) -> None:
-        self._cleanup_failed_for_repo_sync(repo_id)
+    async def cleanup_failed_for_repo(self, repo_id: str) -> list[JobRecord]:
+        return self._cleanup_failed_for_repo_sync(repo_id)
 
-    def _cleanup_failed_for_repo_sync(self, repo_id: str) -> None:
+    def _cleanup_failed_for_repo_sync(self, repo_id: str) -> list[JobRecord]:
+        removed: list[JobRecord] = []
         for record in list_job_records(self.settings):
             if self._record_matches_repo(record, repo_id) and record.status == "error":
                 remove_job_record(record.id, self.settings)
+                removed.append(record)
+        return removed
 
     @staticmethod
     def _record_matches_repo(record: JobRecord, repo_id: str) -> bool:
@@ -284,7 +296,7 @@ class JobManager:
 
             if self.running_id_for(repo_id):
                 continue
-            self.create(keeper.repoUrl, repo_id)
+            self.create(keeper.repoUrl, repo_id, force_regenerate=True)
 
     async def auto_cleanup(self) -> None:
         cutoff = now_ms() - 24 * 60 * 60 * 1000

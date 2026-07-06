@@ -15,6 +15,7 @@ async def generate_course(
     repo_url: str,
     on_progress: ProgressCallback,
     settings: Settings | None = None,
+    cache_bust: str | None = None,
 ) -> dict[str, Any]:
     """Generate a course.
 
@@ -25,7 +26,7 @@ async def generate_course(
 
     cfg = settings or get_settings()
     if not cfg.r2l_mock:
-        return await run_pipeline(repo_url, on_progress, cfg)
+        return await run_pipeline(repo_url, on_progress, cfg, cache_bust=cache_bust)
 
     course = build_mock_course(repo_url)
     lessons = course["outline"]["lessons"]

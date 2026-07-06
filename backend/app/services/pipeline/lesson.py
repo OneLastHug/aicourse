@@ -20,6 +20,7 @@ async def run_lesson_stage(
     cache: Cache,
     settings: Settings,
     on_progress: ProgressCallback,
+    cache_bust: str | None = None,
 ) -> dict[str, ZhLesson]:
     async def generate_one(outline_lesson) -> tuple[str, ZhLesson]:
         lesson_id = outline_lesson.id
@@ -31,6 +32,7 @@ async def run_lesson_stage(
                 "id": lesson_id,
                 "model": settings.r2l_codex_model,
                 "effort": settings.r2l_codex_reasoning_effort,
+                "cacheBust": cache_bust,
             }
         )
         cached = cache.get(key)

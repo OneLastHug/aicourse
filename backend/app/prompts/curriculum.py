@@ -4,10 +4,11 @@ import json
 from typing import Any
 
 from app.prompts.common import repo_context_block
+from app.services.pipeline.budget import LessonBudget
 from app.services.repo import RepoContext
 
 
-def curriculum_prompt(ctx: RepoContext, analysis: dict[str, Any], target_lessons: int = 8) -> str:
+def curriculum_prompt(ctx: RepoContext, analysis: dict[str, Any], budget: LessonBudget) -> str:
     analysis_json = json.dumps(analysis, ensure_ascii=False, indent=2)
     return f"""你是课程架构师。把仓库分析转成一套中文优先的分层教程大纲。
 
@@ -18,6 +19,15 @@ def curriculum_prompt(ctx: RepoContext, analysis: dict[str, Any], target_lessons
 ANALYSIS
 {analysis_json}
 
+课程预算（必须遵守）：
+- targetLessons: {budget.targetLessons}
+- allowedLessons: {budget.minLessons}-{budget.maxLessons}
+- allowedSections: {budget.minSections}-{budget.maxSections}
+- budgetSignals: {", ".join(budget.signals)}
+- budgetRationale: {budget.rationale}
+- 如果仓库复杂度与预算看起来冲突，优先覆盖真实核心执行路径，但 lesson 数必须落在 allowedLessons 范围内。
+- 小仓库不要灌水；大仓库不要把多个机制硬塞进一节。每节只承担一个清晰机制。
+
 设计规则：
 - 先判断项目原型 projectArchetype，必须从以下值选择一个：
   agent, web-app, backend-service, library-framework, cli-tool, data-ml-pipeline, desktop-mobile-app, infra-operator, protocol-sdk, unknown。
@@ -26,11 +36,12 @@ ANALYSIS
 - 可选 secondaryModes 选 0-2 个补充模式。
 - Agent / CLI / backend / framework 类项目优先 progressive-builder + source-walkthrough：先搭最小可运行机制，再回到真实源码。
 - Web / data / infra / protocol 类项目要围绕对应的运行链路讲：用户动作、请求、状态、数据流、reconcile loop 或协议消息。
-- conceptInventory 列出本课程应覆盖的 6-12 个核心概念；不要只列文件名。
+- conceptInventory 列出本课程应覆盖的 3-12 个核心概念；复杂项目通常应有 6-12 个，不要只列文件名。
 - learningOutcome 一句话说清学完整门课后能独立做什么。
 - globalViews 固定包含 ["timeline","layers","compare","source-map","practice-lab"]，除非项目极小。
-- 总课时约 {target_lessons} 节，按 beginner -> advanced 递进。
-- 课程分成 3-5 个 section，每层一个连贯主题。
+- 总课时约 {budget.targetLessons} 节，且必须在 {budget.minLessons}-{budget.maxLessons} 节之间，按 beginner -> advanced 递进。
+- 课程分成 {budget.minSections}-{budget.maxSections} 个 section，每层一个连贯主题。
+- 每个 section 通常 2-4 节；大型课程允许某层 5 节，但必须有明确递进理由。
 - 每节只讲一个机制，并推动读者沿真实执行路径理解仓库。
 - filesToRead 必须是真实仓库路径，不能编造路径。
 - prereq 只能引用更早的 lesson id。

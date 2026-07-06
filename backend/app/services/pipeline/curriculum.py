@@ -7,6 +7,7 @@ from app.core.config import Settings
 from app.core.schemas import ZhOutline
 from app.prompts.curriculum import curriculum_prompt
 from app.services.cache import Cache
+from app.services.pipeline.budget import estimate_lesson_budget, validate_outline_budget
 from app.services.pipeline.call import CodexDriverLike, codex_json
 from app.services.repo import RepoContext
 
@@ -18,32 +19,43 @@ async def run_curriculum_stage(
     driver: CodexDriverLike,
     cache: Cache,
     settings: Settings,
+    cache_bust: str | None = None,
 ) -> ZhOutline:
     """Generate the Chinese-first layered outline."""
 
+    budget = estimate_lesson_budget(ctx, analysis)
     key = cache.key(
         {
-            "stage": "curriculum-zh-v3",
+            "stage": "curriculum-zh-v4",
             "repo": ctx.url,
             "sha": ctx.sha,
             "analysis": analysis,
+            "budget": budget.model_dump(mode="json"),
             "model": settings.r2l_codex_model,
             "effort": settings.r2l_codex_reasoning_effort,
+            "cacheBust": cache_bust,
         }
     )
     cached = cache.get(key)
     if cached is not None:
-        return normalize_outline(ZhOutline.model_validate(cached))
+        normalized = normalize_outline(ZhOutline.model_validate(cached))
+        issues = validate_outline_budget(len(normalized.lessons), len(normalized.sections), budget)
+        if issues:
+            raise ValueError("; ".join(issues))
+        return normalized
 
     outline = await codex_json(
         driver=driver,
         label="curriculum",
-        prompt=curriculum_prompt(ctx, analysis),
+        prompt=curriculum_prompt(ctx, analysis, budget),
         cwd=Path(ctx.localPath),
         model=ZhOutline,
         settings=settings,
     )
     normalized = normalize_outline(outline)
+    issues = validate_outline_budget(len(normalized.lessons), len(normalized.sections), budget)
+    if issues:
+        raise ValueError("; ".join(issues))
     cache.set(key, normalized.model_dump(mode="json", exclude_none=True))
     return normalized
 

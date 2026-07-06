@@ -12,7 +12,7 @@ from app.main import create_app
 from app.sample.fixtures import build_mock_course
 from app.services import jobs as jobs_module
 from app.services.jobs import JobManager
-from app.services.store import list_job_records, save_job_record
+from app.services.store import list_job_records, repo_id_for, save_course, save_job_record
 
 
 @pytest.fixture()
@@ -78,7 +78,8 @@ async def test_generate_dedupes_canonical_repo_urls(isolated_app, monkeypatch: p
     app, manager = isolated_app
     release = asyncio.Event()
 
-    async def fake_generate_course(repo_url, _on_progress, _settings):
+    async def fake_generate_course(repo_url, _on_progress, _settings, *, cache_bust=None):
+        assert cache_bust is None
         await release.wait()
         return build_mock_course(repo_url)
 
@@ -127,7 +128,8 @@ async def test_auto_retry_collapses_legacy_canonical_duplicates(
     manager = JobManager(settings)
     release = asyncio.Event()
 
-    async def fake_generate_course(repo_url, _on_progress, _settings):
+    async def fake_generate_course(repo_url, _on_progress, _settings, *, cache_bust=None):
+        assert cache_bust is not None
         await release.wait()
         return build_mock_course(repo_url)
 
@@ -181,6 +183,91 @@ async def test_auto_retry_collapses_legacy_canonical_duplicates(
             break
         await asyncio.sleep(0.02)
     assert manager.get(running[0].id).status == "done"
+
+
+@pytest.mark.asyncio
+async def test_retry_after_failed_record_busts_generation_cache(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = Settings(R2L_DATA_DIR=tmp_path, R2L_MOCK=True)
+    manager = JobManager(settings)
+    cache_busts: list[str | None] = []
+
+    async def fake_generate_course(repo_url, _on_progress, _settings, *, cache_bust=None):
+        cache_busts.append(cache_bust)
+        return build_mock_course(repo_url)
+
+    monkeypatch.setattr(jobs_module, "generate_course", fake_generate_course)
+    repo_url = "https://github.com/acme/retry-demo"
+    repo_id = repo_id_for(repo_url)
+    ts = jobs_module.now_ms()
+    save_job_record(
+        {
+            "id": "failed",
+            "repoUrl": repo_url,
+            "repoId": repo_id,
+            "status": "error",
+            "stage": "validate2",
+            "lessonsDone": 8,
+            "lessonsTotal": 8,
+            "error": "snippet mismatch",
+            "startedAt": ts - 1,
+            "updatedAt": ts - 1,
+        },
+        settings,
+    )
+
+    job_id = manager.create(repo_url, repo_id)
+    for _ in range(40):
+        state = manager.get(job_id)
+        if state and state.status == "done":
+            break
+        await asyncio.sleep(0.02)
+
+    assert cache_busts == [job_id]
+    assert manager.get(job_id).status == "done"
+    assert [record for record in list_job_records(settings) if record.status == "error"] == []
+
+
+def test_failed_records_for_completed_courses_are_hidden_and_cleaned(tmp_path: Path) -> None:
+    settings = Settings(R2L_DATA_DIR=tmp_path, R2L_MOCK=True)
+    manager = JobManager(settings)
+    repo_url = "https://github.com/acme/already-done"
+    repo_id = repo_id_for(repo_url)
+    course = build_mock_course(repo_url)
+    save_course(
+        repo_id,
+        course,
+        {
+            "repoId": repo_id,
+            "url": repo_url,
+            "name": "already-done",
+            "title": "Already Done",
+            "createdAt": "2026-07-06T00:00:00Z",
+            "lessonCount": len(course["outline"]["lessons"]),
+        },
+        settings,
+    )
+    ts = jobs_module.now_ms()
+    save_job_record(
+        {
+            "id": "stale-failed",
+            "repoUrl": repo_url,
+            "repoId": repo_id,
+            "status": "error",
+            "stage": "validate2",
+            "lessonsDone": 8,
+            "lessonsTotal": 8,
+            "error": "old validation failure",
+            "startedAt": ts,
+            "updatedAt": ts,
+        },
+        settings,
+    )
+
+    assert manager.list_failed() == []
+    assert [record.id for record in list_job_records(settings)] == []
 
 
 @pytest.mark.asyncio

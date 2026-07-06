@@ -25,6 +25,7 @@ async def run_pipeline(
     repo_url: str,
     on_progress: ProgressCallback,
     settings: Settings,
+    cache_bust: str | None = None,
 ) -> dict[str, Any]:
     """Chinese-first real Python pipeline.
 
@@ -56,6 +57,7 @@ async def run_pipeline(
         driver=driver,
         cache=cache,
         settings=settings,
+        cache_bust=cache_bust,
     )
 
     await on_progress({"type": "stage", "stage": "lessons", "label": "Writing the Chinese course"})
@@ -80,6 +82,7 @@ async def run_pipeline(
         cache=cache,
         settings=settings,
         on_progress=on_progress,
+        cache_bust=cache_bust,
     )
 
     await on_progress({"type": "stage", "stage": "spine", "label": "Materializing the runnable spine"})
@@ -115,6 +118,7 @@ async def run_pipeline(
         driver=driver,
         cache=cache,
         settings=settings,
+        cache_bust=cache_bust,
     )
     issues = validate_course_schema(course)
     if issues:

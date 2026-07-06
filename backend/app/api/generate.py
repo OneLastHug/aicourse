@@ -34,12 +34,12 @@ async def generate(request: Request) -> dict[str, object]:
     repo_url = canonical_repo_url(repo_url)
     repo_id = repo_id_for(repo_url)
     if get_course(repo_id) is not None:
+        await job_manager.cleanup_failed_for_repo(repo_id)
         return {"ready": True, "repoId": repo_id}
 
     running = job_manager.running_id_for(repo_id)
     if running:
         return {"ready": False, "id": running, "repoId": repo_id}
 
-    await job_manager.cleanup_failed_for_repo(repo_id)
     job_id = job_manager.create(repo_url, repo_id)
     return {"ready": False, "id": job_id, "repoId": repo_id}

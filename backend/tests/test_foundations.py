@@ -11,6 +11,7 @@ from app.services.cache import Cache
 from app.services.codex_driver import CodexResult, generation_codex_env
 from app.services.generator import generate_course
 from app.services.json_parse import extract_json
+from app.services.pipeline.budget import estimate_lesson_budget, validate_outline_budget
 from app.services.pipeline.call import get_generation_limiter
 from app.services.pipeline.translate import (
     _normalize_translated_outline_payload,
@@ -184,6 +185,51 @@ def test_generation_codex_api_key_can_be_separate_from_sidebar(tmp_path: Path) -
     assert auth["OPENAI_API_KEY"] == "generation-secret"
     assert "assistant-secret" not in json.dumps(auth)
     assert 'openai_base_url = "https://codex.ciii.club/v1"' in config
+
+
+def test_lesson_budget_scales_with_repo_complexity(tmp_path: Path) -> None:
+    from app.services.repo import RepoContext
+
+    small = RepoContext(
+        url="https://github.com/acme/tiny",
+        localPath=str(tmp_path),
+        sha="abc123",
+        name="tiny",
+        defaultBranch="main",
+        summary="small utility",
+        loc=1_200,
+        languages={"TypeScript": 1.0},
+        tree=["README.md", "src/index.ts"],
+    )
+    large = RepoContext(
+        url="https://github.com/acme/agent-platform",
+        localPath=str(tmp_path),
+        sha="abc123",
+        name="agent-platform",
+        defaultBranch="main",
+        summary="agent CLI with plugins, providers, daemon, bridge, MCP, permissions and streaming",
+        loc=650_000,
+        languages={"TypeScript": 0.8, "Python": 0.2},
+        tree=[
+            *(f"packages/pkg{i}/src/index.ts" for i in range(1600)),
+            "src/entrypoints/cli.tsx",
+            "src/services/acp/entry.ts",
+            "src/daemon/main.ts",
+        ],
+    )
+    analysis = {
+        "entrypoints": [f"entry-{idx}" for idx in range(9)],
+        "coreFlows": [{"name": f"flow-{idx}"} for idx in range(6)],
+    }
+
+    small_budget = estimate_lesson_budget(small, {"entrypoints": ["src/index.ts"], "coreFlows": []})
+    large_budget = estimate_lesson_budget(large, analysis)
+
+    assert small_budget.targetLessons <= 7
+    assert 14 <= large_budget.targetLessons <= 18
+    assert large_budget.minLessons <= large_budget.targetLessons <= large_budget.maxLessons
+    assert validate_outline_budget(large_budget.targetLessons, large_budget.minSections, large_budget) == []
+    assert validate_outline_budget(8, large_budget.minSections, large_budget)
 
 
 def test_translate_outline_normalizes_section_lesson_ids() -> None:
