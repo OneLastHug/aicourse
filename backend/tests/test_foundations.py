@@ -232,6 +232,30 @@ def test_lesson_budget_scales_with_repo_complexity(tmp_path: Path) -> None:
     assert validate_outline_budget(8, large_budget.minSections, large_budget)
 
 
+def test_reference_kind_aliases_are_normalized() -> None:
+    from app.core.schemas import Bi, Reference, ZhReference
+
+    zh_reference = ZhReference.model_validate(
+        {
+            "title": "本地源码",
+            "url": "https://github.com/acme/repo",
+            "kind": "source",
+            "whyUsed": "补充源码背景",
+        }
+    )
+    reference = Reference.model_validate(
+        {
+            "title": "Local source",
+            "url": "https://github.com/acme/repo",
+            "kind": "documentation",
+            "whyUsed": Bi(zh="补充源码背景", en="Adds source context"),
+        }
+    )
+
+    assert zh_reference.kind == "other"
+    assert reference.kind == "other"
+
+
 def test_translate_outline_normalizes_section_lesson_ids() -> None:
     from app.core.schemas import Outline, ZhOutline
 

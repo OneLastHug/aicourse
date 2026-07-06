@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 Difficulty = Literal["beginner", "intermediate", "advanced"]
 JobStatus = Literal["running", "done", "error"]
@@ -76,11 +76,29 @@ class TryIt(ApiModel):
     observe: list[Bi]
 
 
+def _normalize_reference_kind(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        kind = value.strip().lower()
+        if not kind:
+            return None
+        if kind in {"official", "spec", "paper", "blog", "other"}:
+            return kind
+        return "other"
+    return value
+
+
 class Reference(ApiModel):
     title: str
     url: str
     kind: Literal["official", "spec", "paper", "blog", "other"] | None = None
     whyUsed: Bi | None = None
+
+    @field_validator("kind", mode="before")
+    @classmethod
+    def normalize_kind(cls, value: Any) -> str | None:
+        return _normalize_reference_kind(value)
 
 
 class SourceCompareGap(ApiModel):
@@ -159,6 +177,11 @@ class ZhReference(ApiModel):
     url: str
     kind: Literal["official", "spec", "paper", "blog", "other"] | None = None
     whyUsed: str | None = None
+
+    @field_validator("kind", mode="before")
+    @classmethod
+    def normalize_kind(cls, value: Any) -> str | None:
+        return _normalize_reference_kind(value)
 
 
 class ZhSourceCompareGap(ApiModel):
