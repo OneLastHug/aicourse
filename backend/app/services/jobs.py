@@ -290,13 +290,11 @@ class JobManager:
                 key=lambda item: progress_score_for_stage(item.stage, item.lessonsDone),
                 reverse=True,
             )
-            keeper = records[0]
             for record in records[1:]:
                 remove_job_record(record.id, self.settings)
-
-            if self.running_id_for(repo_id):
-                continue
-            self.create(keeper.repoUrl, repo_id, force_regenerate=True)
+            # Keep the most useful failure visible, but do not silently start
+            # a full regeneration. Validation failures are repaired in-pipeline;
+            # unresolved failures should remain inspectable until a user retries.
 
     async def auto_cleanup(self) -> None:
         cutoff = now_ms() - 24 * 60 * 60 * 1000

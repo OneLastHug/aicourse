@@ -120,20 +120,9 @@ async def test_generate_dedupes_canonical_repo_urls(isolated_app, monkeypatch: p
 
 
 @pytest.mark.asyncio
-async def test_auto_retry_collapses_legacy_canonical_duplicates(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_auto_retry_keeps_failed_jobs_without_regenerating(tmp_path: Path) -> None:
     settings = Settings(R2L_DATA_DIR=tmp_path, R2L_MOCK=True)
     manager = JobManager(settings)
-    release = asyncio.Event()
-
-    async def fake_generate_course(repo_url, _on_progress, _settings, *, cache_bust=None):
-        assert cache_bust is not None
-        await release.wait()
-        return build_mock_course(repo_url)
-
-    monkeypatch.setattr(jobs_module, "generate_course", fake_generate_course)
     ts = jobs_module.now_ms()
     save_job_record(
         {
@@ -171,18 +160,9 @@ async def test_auto_retry_collapses_legacy_canonical_duplicates(
     records = list_job_records(settings)
     running = [record for record in records if record.status == "running"]
     failed = [record for record in records if record.status == "error"]
-    assert len(running) == 1
-    assert failed == []
-    assert running[0].repoId == "evolver-655c54"
-    assert running[0].repoUrl == "https://github.com/evomap/evolver"
-
-    release.set()
-    for _ in range(40):
-        state = manager.get(running[0].id)
-        if state and state.status == "done":
-            break
-        await asyncio.sleep(0.02)
-    assert manager.get(running[0].id).status == "done"
+    assert running == []
+    assert [record.id for record in failed] == ["old-no-git"]
+    assert manager.jobs == {}
 
 
 @pytest.mark.asyncio
