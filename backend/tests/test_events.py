@@ -11,6 +11,25 @@ def test_validate_progress_event_strips_none_and_keeps_contract() -> None:
     assert event == {"type": "stage", "stage": "done"}
 
 
+def test_validate_progress_event_accepts_repair_events() -> None:
+    event = validate_progress_event(
+        {
+            "type": "repair",
+            "round": 2,
+            "attempt": 1,
+            "lessonIds": ["s02"],
+            "issueCount": 1,
+        }
+    )
+    assert event == {
+        "type": "repair",
+        "round": 2,
+        "attempt": 1,
+        "lessonIds": ["s02"],
+        "issueCount": 1,
+    }
+
+
 def test_validate_progress_event_rejects_unknown_stage() -> None:
     with pytest.raises(ValidationError):
         validate_progress_event({"type": "stage", "stage": "not-a-stage"})
@@ -27,4 +46,3 @@ def test_terminal_event_detection() -> None:
     assert is_terminal_event({"type": "stage", "stage": "done"})
     assert is_terminal_event({"type": "error", "message": "failed"})
     assert not is_terminal_event({"type": "stage", "stage": "lessons"})
-

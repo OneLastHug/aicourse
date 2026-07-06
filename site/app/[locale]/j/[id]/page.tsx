@@ -81,6 +81,10 @@ export default function ProgressPage() {
       const line = "spine " + e.id + " · " + e.status;
       setActivity(line);
       if (!silent) setLog((l) => l.concat([line]));
+    } else if (e.type === "repair") {
+      const line = `repair${e.round} attempt ${e.attempt} · ${e.lessonIds.join(", ")} · ${e.issueCount} issues`;
+      setActivity(line);
+      if (!silent) setLog((l) => l.concat([line]));
     } else if (e.type === "log") {
       const line = "[" + e.level + "] " + e.message;
       setActivity(line);

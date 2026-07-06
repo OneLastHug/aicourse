@@ -392,6 +392,7 @@ export type ProgressEvent =
   | { type: "lesson"; id: string; status: "start" | "ok" | "failed"; label?: string }
   | { type: "spine"; id: string; status: "start" | "ok" | "failed"; label?: string }
   | { type: "validation"; round: 1 | 2; passed: boolean; issueCount: number }
+  | { type: "repair"; round: 1 | 2; attempt: number; lessonIds: string[]; issueCount: number }
   | { type: "log"; level: "info" | "warn" | "error"; message: string }
   | { type: "lessonDraft"; id: string; body: unknown }
   | { type: "error"; message: string };

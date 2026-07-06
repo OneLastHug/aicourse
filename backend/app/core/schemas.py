@@ -475,6 +475,14 @@ class ValidationEvent(ApiModel):
     issueCount: int
 
 
+class RepairEvent(ApiModel):
+    type: Literal["repair"]
+    round: Literal[1, 2]
+    attempt: int
+    lessonIds: list[str]
+    issueCount: int
+
+
 class LogEvent(ApiModel):
     type: Literal["log"]
     level: Literal["info", "warn", "error"]
@@ -498,6 +506,7 @@ ProgressEvent = (
     | LessonEvent
     | SpineEvent
     | ValidationEvent
+    | RepairEvent
     | LogEvent
     | LessonDraftEvent
     | ErrorEvent

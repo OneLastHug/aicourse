@@ -529,6 +529,78 @@ async def test_non_mock_pipeline_emits_validation_failure(
     )
 
 
+@pytest.mark.asyncio
+async def test_non_mock_pipeline_repairs_snippet_alignment_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "README.md").write_text("# Demo", encoding="utf-8")
+    write_fixture_repo_files(repo)
+    events: list[dict[str, object]] = []
+    repair_calls: list[str] = []
+
+    async def on_progress(event: dict[str, object]) -> None:
+        events.append(event)
+
+    class FakeDriver:
+        def __init__(self, _settings) -> None:
+            pass
+
+        async def run(self, call):
+            fixture = build_mock_course(str(repo))
+            if call.label == "analyze":
+                return CodexResult(
+                    text='{"summary":"demo","entrypoints":["README.md"],"coreFlows":[],"teachingSpine":"demo","risks":[]}',
+                    duration_ms=1,
+                )
+            if call.label == "curriculum":
+                return CodexResult(text=json.dumps(_zh_outline_from_fixture(fixture)), duration_ms=1)
+            if call.label == "translate:outline":
+                return CodexResult(text=json.dumps(fixture["outline"]), duration_ms=1)
+            if call.label.startswith("translate:lesson:"):
+                lesson_id = call.label.rsplit(":", 1)[1]
+                return CodexResult(text=json.dumps(fixture["lessons"][lesson_id]), duration_ms=1)
+            if call.label.startswith("repair2:"):
+                repair_calls.append(call.label)
+                lesson_id = call.label.rsplit(":", 1)[1]
+                return CodexResult(text=json.dumps(_zh_lesson_from_fixture(fixture, lesson_id)), duration_ms=1)
+
+            lesson_id = call.label.split(":", 1)[1]
+            lesson = _zh_lesson_from_fixture(fixture, lesson_id)
+            if lesson_id == "s02":
+                lesson["howItWorks"][0]["code"]["file"] = "src/index.ts"
+                lesson["howItWorks"][0]["code"]["snippet"] = "const fabricated = notInTheRepository();"
+                lesson["howItWorks"][0]["code"]["isSpine"] = False
+            return CodexResult(text=json.dumps(lesson), duration_ms=1)
+
+    import app.services.pipeline.run as run_module
+
+    monkeypatch.setattr(run_module, "CliCodexDriver", FakeDriver)
+
+    course = await generate_course(
+        str(repo),
+        on_progress,
+        Settings(R2L_DATA_DIR=tmp_path / "data", R2L_MOCK=False),
+    )
+
+    assert course["lessons"]["s02"]["status"] == "ok"
+    assert repair_calls == ["repair2:s02"]
+    assert {
+        "type": "repair",
+        "round": 2,
+        "attempt": 1,
+        "lessonIds": ["s02"],
+        "issueCount": 1,
+    } in events
+    assert any(
+        event.get("type") == "validation" and event.get("round") == 2 and event.get("passed") is False
+        for event in events
+    )
+    assert events[-1] == {"type": "stage", "stage": "done", "label": "Done"}
+
+
 def test_course_validation_catches_missing_lesson_body() -> None:
     from app.core.schemas import Course
 

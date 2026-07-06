@@ -8,6 +8,7 @@ from app.services.codex_driver import CliCodexDriver
 from app.services.pipeline.analyze import run_analyze_stage
 from app.services.pipeline.curriculum import run_curriculum_stage
 from app.services.pipeline.lesson import run_lesson_stage
+from app.services.pipeline.repair import repair_zh_validation_round
 from app.services.pipeline.run_types import ProgressCallback
 from app.services.pipeline.spine import emit_zh_spine_events
 from app.services.pipeline.translate import run_translate_stage
@@ -93,16 +94,40 @@ async def run_pipeline(
         issues = validate_zh_course_schema(zh_outline, zh_lessons)
         if issues:
             await on_progress({"type": "validation", "round": 1, "passed": False, "issueCount": len(issues)})
-            await on_progress({"type": "log", "level": "error", "message": "; ".join(issues)})
-            raise CourseValidationError("; ".join(issues))
+            await on_progress({"type": "log", "level": "warn", "message": "; ".join(issues)})
+            zh_lessons, issues = await repair_zh_validation_round(
+                round_no=1,
+                ctx=ctx,
+                outline=zh_outline,
+                lessons=zh_lessons,
+                issues=issues,
+                driver=driver,
+                settings=settings,
+                on_progress=on_progress,
+            )
+            if issues:
+                await on_progress({"type": "log", "level": "error", "message": "; ".join(issues)})
+                raise CourseValidationError("; ".join(issues))
         await on_progress({"type": "validation", "round": 1, "passed": True, "issueCount": 0})
 
         await on_progress({"type": "stage", "stage": "validate2", "label": "Repository alignment validation"})
         issues = validate_zh_course_alignment(zh_outline, zh_lessons, ctx)
         if issues:
             await on_progress({"type": "validation", "round": 2, "passed": False, "issueCount": len(issues)})
-            await on_progress({"type": "log", "level": "error", "message": "; ".join(issues)})
-            raise CourseValidationError("; ".join(issues))
+            await on_progress({"type": "log", "level": "warn", "message": "; ".join(issues)})
+            zh_lessons, issues = await repair_zh_validation_round(
+                round_no=2,
+                ctx=ctx,
+                outline=zh_outline,
+                lessons=zh_lessons,
+                issues=issues,
+                driver=driver,
+                settings=settings,
+                on_progress=on_progress,
+            )
+            if issues:
+                await on_progress({"type": "log", "level": "error", "message": "; ".join(issues)})
+                raise CourseValidationError("; ".join(issues))
         await on_progress({"type": "validation", "round": 2, "passed": True, "issueCount": 0})
     else:
         await on_progress({"type": "stage", "stage": "validate1", "label": "Validation skipped (R2L_VALIDATE=0)"})
