@@ -98,7 +98,7 @@ test("validateCorrectness fails when limited research references omit whyUsed or
   assert.match(JSON.stringify(res.issues), /whyUsed|tryIt/i);
 });
 
-test("validateCorrectness fails when simulation or practice is missing", async () => {
+test("validateCorrectness fails when simulation is missing but allows omitted practice", async () => {
   const cfg = resolveConfig({ noCache: true });
   const zhCourse = {
     outline: sampleZhOutline,
@@ -119,5 +119,6 @@ test("validateCorrectness fails when simulation or practice is missing", async (
   });
 
   assert.equal(res.passed, false);
-  assert.match(JSON.stringify(res.issues), /simulation|practice/i);
+  assert.match(JSON.stringify(res.issues), /simulation/i);
+  assert.doesNotMatch(JSON.stringify(res.issues), /practice/i);
 });

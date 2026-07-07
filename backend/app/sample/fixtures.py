@@ -98,7 +98,7 @@ def build_mock_course(repo_url: str) -> dict[str, Any]:
                     _bi("课程落盘", "course persistence"),
                     _bi("源码对照", "source comparison"),
                 ],
-                "globalViews": ["timeline", "layers", "compare", "source-map", "practice-lab"],
+                "globalViews": ["layers", "compare", "source-map"],
                 "spine": _bi(
                     "一条从请求进入到课程落盘的最小主线。",
                     "A minimal path from request entry to persisted course output.",

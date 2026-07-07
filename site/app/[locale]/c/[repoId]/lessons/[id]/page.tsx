@@ -255,32 +255,10 @@ export default async function LessonPage({
             )}
           </section>
 
-          <section id="practice" className="scroll-mt-28 pt-10">
-            <SectionTitle label={t(loc, "lesson.tab.practice")} />
-            {lesson.tryIt && (
-              <Panel className="mb-5 border-zinc-800 bg-zinc-950 text-zinc-300 dark:bg-zinc-950">
-                {lesson.tryIt.setup?.length ? <TryBlock title="Setup" items={lesson.tryIt.setup.map((x) => pick(x, loc))} /> : null}
-                <TryBlock title="Commands" items={lesson.tryIt.commands.map((x) => pick(x, loc))} code />
-                <TryBlock title="Observe" items={lesson.tryIt.observe.map((x) => pick(x, loc))} />
-              </Panel>
-            )}
-            {lesson.practice?.length ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {lesson.practice.map((task, taskIdx) => (
-                  <Panel key={taskIdx}>
-                    <div className="font-mono text-[11px] text-ink-faint dark:text-zinc-500">{String(taskIdx + 1).padStart(2, "0")}</div>
-                    <h3 className="mt-1 text-base font-semibold">{pick(task.title, loc)}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-ink-soft dark:text-zinc-300">{pick(task.prompt, loc)}</p>
-                    <div className="mt-3 rounded-lg bg-bg-subtle p-3 text-sm dark:bg-zinc-800">
-                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint dark:text-zinc-500">{t(loc, "lesson.selfCheck")}</div>
-                      <p className="text-ink-soft dark:text-zinc-300">{pick(task.check, loc)}</p>
-                    </div>
-                  </Panel>
-                ))}
-              </div>
-            ) : null}
+          <section id="wrap-up" className="scroll-mt-28 pt-10">
+            <SectionTitle label={t(loc, "lesson.tab.wrapUp")} />
             {lesson.compare.rows.length > 0 && (
-              <div className="mt-6">
+              <div>
                 <SectionTitle label={t(loc, "lesson.compare")} />
                 <CompareTable rows={lesson.compare.rows} locale={loc} />
               </div>
@@ -333,7 +311,7 @@ function LessonTabs({ locale }: { locale: Locale }) {
     ["simulate", t(locale, "lesson.tab.simulate")],
     ["code", t(locale, "lesson.tab.code")],
     ["source", t(locale, "lesson.tab.source")],
-    ["practice", t(locale, "lesson.tab.practice")],
+    ["wrap-up", t(locale, "lesson.tab.wrapUp")],
   ] as const;
   return (
     <nav className="sticky top-14 z-20 mt-5 border-b border-line bg-bg/90 py-3 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/90" aria-label="Lesson tabs">
@@ -389,29 +367,6 @@ function MiniCard({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl border border-line bg-white/80 p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
       <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-faint dark:text-zinc-500">{label}</div>
       <div className="mt-1 text-sm leading-relaxed text-ink-soft dark:text-zinc-300">{value}</div>
-    </div>
-  );
-}
-
-function TryBlock({ title, items, code = false }: { title: string; items: string[]; code?: boolean }) {
-  if (!items.length) return null;
-  return (
-    <div className="mb-4 last:mb-0">
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">{title}</div>
-      <div className="space-y-2">
-        {items.map((item, idx) =>
-          code ? (
-            <HighlightedCode
-              key={idx}
-              code={item}
-              language="bash"
-              className="overflow-x-auto rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-[13px] leading-relaxed text-zinc-300"
-            />
-          ) : (
-            <p key={idx} className="text-[13px] leading-relaxed text-zinc-300">{item}</p>
-          ),
-        )}
-      </div>
     </div>
   );
 }

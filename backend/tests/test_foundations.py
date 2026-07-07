@@ -333,10 +333,9 @@ async def test_translate_stage_falls_back_when_codex_translation_fails(tmp_path:
 
     assert course.outline.course.projectArchetype == fixture["outline"]["course"]["projectArchetype"]
     assert course.outline.course.learningOutcome.zh == fixture["outline"]["course"]["learningOutcome"]["zh"]
-    assert "practice-lab" in course.outline.course.globalViews
+    assert course.outline.course.globalViews == ["layers", "compare", "source-map"]
     assert course.lessons["s01"].simulation is not None
     assert course.lessons["s01"].simulation.steps[0].label.zh
-    assert course.lessons["s01"].practice
 
 
 @pytest.mark.asyncio
@@ -380,8 +379,6 @@ async def test_translate_stage_can_skip_codex_translation(tmp_path: Path) -> Non
     )
 
     assert course.outline.course.primaryMode == fixture["outline"]["course"]["primaryMode"]
-    assert course.lessons["s02"].practice
-    assert course.lessons["s02"].tryIt is not None
 
 
 @pytest.mark.asyncio
@@ -448,9 +445,8 @@ async def test_non_mock_pipeline_can_generate_with_codex_driver(
 
     assert course["outline"]["course"]["repo"]["name"] == "repo"
     assert course["outline"]["course"]["projectArchetype"] == "backend-service"
-    assert "practice-lab" in course["outline"]["course"]["globalViews"]
+    assert course["outline"]["course"]["globalViews"] == ["layers", "compare", "source-map"]
     assert course["lessons"]["s01"]["simulation"]["steps"]
-    assert course["lessons"]["s01"]["practice"]
     assert any(event.get("type") == "plan" for event in events)
     stages = [event.get("stage") for event in events if event.get("type") == "stage"]
     assert stages == [
@@ -623,7 +619,7 @@ def test_course_validation_requires_global_design_and_interactions() -> None:
     assert "course.projectArchetype is required" in issues
     assert any("course.globalViews is missing" in issue for issue in issues)
     assert any("s01.simulation must include" in issue for issue in issues)
-    assert "s01.practice must include at least one task" in issues
+    assert not any("s01.practice must include" in issue for issue in issues)
 
 
 def test_course_validation_requires_english_bilingual_titles() -> None:

@@ -11,7 +11,7 @@ import { runPipeline } from "../src/pipeline/run";
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 test("v2 pipeline runs end-to-end (mock): analyze→curriculum→lessons→validate→translate", async () => {
-  const cfg = resolveConfig({ useMock: true });
+  const cfg = resolveConfig({ useMock: true, noCache: true });
   cfg.cacheDir = path.resolve(here, "..", ".repo2learn/cache-test-v2");
   cfg.workDir = path.resolve(here, "..", ".repo2learn/repos-test-v2");
   const driver = new MockCodexDriver({ responder: sampleResponder, delayMs: 1 });
@@ -39,7 +39,7 @@ test("v2 pipeline runs end-to-end (mock): analyze→curriculum→lessons→valid
   assert.equal(course.outline.course.primaryMode, "progressive-builder", "course primary mode exists");
   assert.ok(course.outline.course.learningOutcome?.zh, "course learningOutcome exists");
   assert.ok((course.outline.course.conceptInventory?.length ?? 0) >= 1, "course conceptInventory exists");
-  assert.ok(course.outline.course.globalViews?.includes("timeline"), "course globalViews exists");
+  assert.deepEqual(course.outline.course.globalViews, ["layers", "compare", "source-map"], "course globalViews match visible views");
 
   const section = course.outline.sections[0]!;
   assert.ok(section.role?.zh, "section role exists");
@@ -54,10 +54,7 @@ test("v2 pipeline runs end-to-end (mock): analyze→curriculum→lessons→valid
   const lesson = course.lessons["s01"]!;
   assert.ok(lesson.teachingScope?.zh, "teachingScope exists");
   assert.ok(lesson.whatsNext?.zh, "whatsNext exists");
-  assert.ok(Array.isArray(lesson.tryIt?.commands), "tryIt.commands exists");
-  assert.ok(Array.isArray(lesson.tryIt?.observe), "tryIt.observe exists");
   assert.ok(lesson.simulation?.steps.length, "simulation steps exist");
-  assert.ok(lesson.practice?.length, "practice tasks exist");
   assert.ok(Array.isArray(lesson.sourceCompare?.gaps), "sourceCompare.gaps exists");
   assert.ok((lesson.sourceCompare?.gaps?.length ?? 0) >= 1, "sourceCompare has gaps");
   assert.ok(lesson.references[0]?.kind, "reference kind exists");

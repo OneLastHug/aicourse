@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { pick } from "@/lib/content";
-import { t } from "@/lib/i18n";
 import { difficultyColor, difficultyLabel } from "@/lib/ui";
 import type { Locale, OutlineLesson, OutlineSection } from "@/lib/types";
 import { cn } from "@/lib/cn";
@@ -32,7 +31,7 @@ export function Sidebar({
   return (
     <nav className="space-y-5">
       <div className="px-2 text-[11px] font-semibold uppercase tracking-wider text-ink-faint dark:text-zinc-500">
-        {t(locale, "course.path")} · s01 → s{String(lessons.length).padStart(2, "0")}
+        s01 → s{String(lessons.length).padStart(2, "0")}
       </div>
       {groups.map((g, gi) => (
         <div key={gi} className="space-y-1">

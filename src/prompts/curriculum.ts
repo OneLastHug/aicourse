@@ -20,7 +20,7 @@ ${analysis}
 - Web / data / infra / protocol 类项目要围绕对应的运行链路讲：用户动作、请求、状态、数据流、reconcile loop 或协议消息。
 - conceptInventory 列出本课程应覆盖的 6-12 个核心概念；不要只列文件名。
 - learningOutcome 一句话说清学完整门课后能独立做什么。
-- globalViews 固定包含 ["timeline","layers","compare","source-map","practice-lab"]，除非项目极小。
+- globalViews 固定包含 ["layers","compare","source-map"]，除非项目极小。
 - 课分成 SECTIONS（层），每层一个连贯主题。3-5 层。
 - 每层 2-4 节；总课时约 ${target} 节；层间由 beginner→advanced。
 - 每节只讲一个机制，并推进运行示例 spine。
@@ -59,7 +59,7 @@ STYLE — 标题与措辞（极重要，模仿 learn.shareai.run）：
     "secondaryModes": ["source-walkthrough"],
     "learningOutcome": "...",
     "conceptInventory": ["...", "..."],
-    "globalViews": ["timeline","layers","compare","source-map","practice-lab"],
+    "globalViews": ["layers","compare","source-map"],
     "spine": "...",
     "audience": "...",
     "whyThisOrder": "...",

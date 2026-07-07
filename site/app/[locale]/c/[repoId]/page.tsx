@@ -6,7 +6,7 @@ import { CourseShell } from "@/components/CourseShell";
 import { Mermaid } from "@/components/Mermaid";
 import { pick } from "@/lib/content";
 import { t } from "@/lib/i18n";
-import { difficultyTheme, difficultyLabel } from "@/lib/ui";
+import { difficultyTheme } from "@/lib/ui";
 import {
   archetypeLabel,
   collectSourceMap,
@@ -40,7 +40,6 @@ export default async function CourseHome({
   const concepts = getConceptInventory(course, loc);
   const sourceMap = collectSourceMap(course);
   const runnableCount = course.outline.lessons.filter((l) => getLessonMetrics(course, l).hasRunnableSpine).length;
-  const practiceCount = course.outline.lessons.filter((l) => getLessonMetrics(course, l).hasPractice).length;
 
   return (
     <CourseShell course={course} locale={loc} repoId={repoId}>
@@ -73,11 +72,10 @@ export default async function CourseHome({
             )}
           </div>
 
-          <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-7 grid gap-3 sm:grid-cols-3">
             <Metric label={t(loc, "course.unit")} value={String(course.outline.lessons.length)} />
             <Metric label={t(loc, "course.sourceFiles")} value={String(sourceMap.length)} />
             <Metric label={t(loc, "course.runSnapshots")} value={String(runnableCount)} />
-            <Metric label={t(loc, "course.practiceReady")} value={String(practiceCount)} />
           </div>
 
           {(c.learningOutcome || c.spine || c.whyThisOrder || c.audience) && (
@@ -106,15 +104,6 @@ export default async function CourseHome({
             <Mermaid chart={course.outline.archDiagram.diagram} caption={pick(course.outline.archDiagram.caption, loc)} />
           </section>
         )}
-
-        <section id="timeline" className="mx-auto mt-12 max-w-5xl scroll-mt-24">
-          <SectionTitle eyebrow={t(loc, "course.timeline")} title={t(loc, "course.path")} />
-          <div className="space-y-3">
-            {course.outline.lessons.map((lesson, idx) => (
-              <TimelineRow key={lesson.id} course={course} lesson={lesson} idx={idx} locale={loc} repoId={repoId} />
-            ))}
-          </div>
-        </section>
 
         {!!course.outline.sections?.length && (
           <section id="layers" className="mx-auto mt-14 max-w-5xl scroll-mt-24">
@@ -151,7 +140,6 @@ export default async function CourseHome({
                   <th className="px-4 py-3">{t(loc, "course.mechanism")}</th>
                   <th className="px-4 py-3">{t(loc, "lesson.locUnit")}</th>
                   <th className="px-4 py-3">{t(loc, "course.sourceCoverage")}</th>
-                  <th className="px-4 py-3">{t(loc, "lesson.tryIt")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -165,7 +153,6 @@ export default async function CourseHome({
                       <td className="px-4 py-3 text-ink-soft dark:text-zinc-300">{lesson.mechanism ? pick(lesson.mechanism, loc) : lesson.tags.join(", ")}</td>
                       <td className="px-4 py-3 font-mono text-ink-faint dark:text-zinc-500">{metrics.loc || "—"}</td>
                       <td className="px-4 py-3 text-ink-soft dark:text-zinc-300">{metrics.sourceFiles.slice(0, 3).join(", ") || t(loc, "course.noSource")}</td>
-                      <td className="px-4 py-3 text-ink-faint dark:text-zinc-500">{metrics.hasPractice ? t(loc, "lesson.practice") : "—"}</td>
                     </tr>
                   );
                 })}
@@ -197,14 +184,6 @@ export default async function CourseHome({
           )}
         </section>
 
-        <section id="practice-lab" className="mx-auto mt-14 max-w-5xl scroll-mt-24">
-          <SectionTitle eyebrow={t(loc, "course.practiceLab")} title={t(loc, "lesson.practice")} />
-          <div className="grid gap-3 sm:grid-cols-2">
-            {course.outline.lessons.filter((lesson) => getLessonMetrics(course, lesson).hasPractice).map((lesson) => (
-              <LessonCard key={lesson.id} course={course} lesson={lesson} locale={loc} repoId={repoId} compact />
-            ))}
-          </div>
-        </section>
       </div>
     </CourseShell>
   );
@@ -222,32 +201,11 @@ function ViewNav({ views, locale }: { views: CourseGlobalView[]; locale: Locale 
   );
 }
 
-function TimelineRow({ course, lesson, idx, locale, repoId }: { course: Course; lesson: OutlineLesson; idx: number; locale: Locale; repoId: string }) {
+function LessonCard({ course, lesson, locale, repoId }: { course: Course; lesson: OutlineLesson; locale: Locale; repoId: string }) {
   const th = difficultyTheme(lesson.difficulty);
   const metrics = getLessonMetrics(course, lesson);
   return (
-    <Link href={`/${locale}/c/${repoId}/lessons/${lesson.id}`} className="group grid gap-3 rounded-xl border border-line bg-white p-4 transition hover:border-brand dark:border-zinc-800 dark:bg-zinc-900 md:grid-cols-[4rem_minmax(0,1fr)_12rem]">
-      <div className="flex items-center gap-3 md:block">
-        <span className={`inline-block h-2 w-2 rounded-full ${th.solid}`} />
-        <span className="font-mono text-sm font-semibold text-ink-faint dark:text-zinc-500">{String(idx + 1).padStart(2, "0")}</span>
-      </div>
-      <div className="min-w-0">
-        <h3 className="text-[15px] font-semibold group-hover:text-brand">{lesson.id} · {pick(lesson.title, locale)}</h3>
-        <p className="mt-1 line-clamp-2 text-sm text-ink-soft dark:text-zinc-400">{pick(lesson.theProblem, locale)}</p>
-      </div>
-      <div className="flex flex-wrap items-start gap-1.5 md:justify-end">
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${th.chip}`}>{difficultyLabel(lesson.difficulty, locale)}</span>
-        {metrics.hasRunnableSpine && <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-medium text-brand">code</span>}
-      </div>
-    </Link>
-  );
-}
-
-function LessonCard({ course, lesson, locale, repoId, compact = false }: { course: Course; lesson: OutlineLesson; locale: Locale; repoId: string; compact?: boolean }) {
-  const th = difficultyTheme(lesson.difficulty);
-  const metrics = getLessonMetrics(course, lesson);
-  return (
-    <Link href={`/${locale}/c/${repoId}/lessons/${lesson.id}`} className={`group rounded-xl border bg-white transition hover:-translate-y-0.5 dark:bg-zinc-900 ${th.border} ${compact ? "p-4" : "p-5"}`}>
+    <Link href={`/${locale}/c/${repoId}/lessons/${lesson.id}`} className={`group rounded-xl border bg-white p-5 transition hover:-translate-y-0.5 dark:bg-zinc-900 ${th.border}`}>
       <div className="flex items-start gap-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bg-subtle font-mono text-xs font-semibold text-ink-faint dark:bg-zinc-800 dark:text-zinc-400">{lesson.id}</span>
         <div className="min-w-0">

@@ -38,7 +38,7 @@ ANALYSIS
 - Web / data / infra / protocol 类项目要围绕对应的运行链路讲：用户动作、请求、状态、数据流、reconcile loop 或协议消息。
 - conceptInventory 列出本课程应覆盖的 3-12 个核心概念；复杂项目通常应有 6-12 个，不要只列文件名。
 - learningOutcome 一句话说清学完整门课后能独立做什么。
-- globalViews 固定包含 ["timeline","layers","compare","source-map","practice-lab"]，除非项目极小。
+- globalViews 固定包含 ["layers","compare","source-map"]，除非项目极小。
 - 总课时约 {budget.targetLessons} 节，且必须在 {budget.minLessons}-{budget.maxLessons} 节之间，按 beginner -> advanced 递进。
 - 课程分成 {budget.minSections}-{budget.maxSections} 个 section，每层一个连贯主题。
 - 每个 section 通常 2-4 节；大型课程允许某层 5 节，但必须有明确递进理由。
@@ -64,7 +64,7 @@ ANALYSIS
     "secondaryModes": ["source-walkthrough"],
     "learningOutcome": "...",
     "conceptInventory": ["...", "..."],
-    "globalViews": ["timeline","layers","compare","source-map","practice-lab"],
+    "globalViews": ["layers","compare","source-map"],
     "spine": "...",
     "thesis": "...",
     "audience": "...",

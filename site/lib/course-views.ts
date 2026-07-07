@@ -1,11 +1,13 @@
 import { pick } from "./content";
 import type { Course, CourseGlobalView, CourseMode, Locale, OutlineLesson, ProjectArchetype } from "./types";
 
-const DEFAULT_VIEWS: CourseGlobalView[] = ["timeline", "layers", "compare", "source-map", "practice-lab"];
+const DEFAULT_VIEWS: CourseGlobalView[] = ["layers", "compare", "source-map"];
+const REMOVED_VIEWS = new Set<CourseGlobalView>(["timeline", "practice-lab"]);
 
 export function getCourseViews(course: Course): CourseGlobalView[] {
   const views = course.outline.course.globalViews;
-  return views?.length ? views : DEFAULT_VIEWS;
+  const visible = (views?.length ? views : DEFAULT_VIEWS).filter((view) => !REMOVED_VIEWS.has(view));
+  return visible.length ? visible : DEFAULT_VIEWS;
 }
 
 export function getCourseArchetype(course: Course): ProjectArchetype {

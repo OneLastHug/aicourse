@@ -25,8 +25,8 @@ COURSE DESIGN RULES
 - Use section groups. Each lesson teaches exactly one mechanism.
 - All keyFiles must be real repository paths.
 - Use concise learn-by-reading style: problem -> mechanism -> steps -> source comparison.
-- Choose `projectArchetype`, `primaryMode`, optional `secondaryModes`, `learningOutcome`, `conceptInventory`, and `globalViews` so the frontend can render overview, simulator, source-map, and practice-lab views.
-- `globalViews` should include ["timeline","layers","compare","source-map","practice-lab"] unless the repository is tiny.
+- Choose `projectArchetype`, `primaryMode`, optional `secondaryModes`, `learningOutcome`, `conceptInventory`, and `globalViews` so the frontend can render layers, compare, and source-map views.
+- `globalViews` should include ["layers","compare","source-map"] unless the repository is tiny.
 - "Concise" means technical-blog concise: clear context, causal explanation, and readable transitions. Do not make Chinese prose cryptic just to keep it short.
 - Title-like fields must be English even on the Chinese side: course.title.zh/en, section.title.zh/en, lesson.title.zh/en, and howItWorks[].title.zh/en must all be English.
 - For those title-like fields, set zh and en to the same English title unless a tiny casing cleanup is needed. Do not create Chinese titles.
@@ -48,7 +48,7 @@ Return STRICT JSON ONLY with this exact top-level shape:
       "secondaryModes": ["source-walkthrough"],
       "learningOutcome": {{"zh": "...", "en": "..."}},
       "conceptInventory": [{{"zh": "...", "en": "..."}}],
-      "globalViews": ["timeline","layers","compare","source-map","practice-lab"],
+      "globalViews": ["layers","compare","source-map"],
       "spine": {{"zh": "...", "en": "..."}},
       "thesis": {{"zh": "...", "en": "..."}},
       "audience": {{"zh": "...", "en": "..."}},
@@ -150,18 +150,6 @@ Return STRICT JSON ONLY with this exact top-level shape:
           }}
         ]
       }},
-      "tryIt": {{
-        "setup": [{{"zh": "...", "en": "..."}}],
-        "commands": [{{"zh": "...", "en": "..."}}],
-        "observe": [{{"zh": "...", "en": "..."}}]
-      }},
-      "practice": [
-        {{
-          "title": {{"zh": "...", "en": "..."}},
-          "prompt": {{"zh": "...", "en": "..."}},
-          "check": {{"zh": "...", "en": "..."}}
-        }}
-      ],
       "whatsNext": {{"zh": "...", "en": "..."}},
       "references": [],
       "compare": {{

@@ -21,8 +21,8 @@ export function translateLessonPrompt(lessonId: string, zhLessonJson: string): s
   return `Translate this Chinese lesson body (${lessonId}) into English, producing a bilingual lesson. The Chinese is the ORIGINAL — keep it verbatim; add the English translation alongside.
 
 Rules:
-- Every user-facing text field becomes {"zh":"<原始中文>","en":"<English translation>"}: principle, teachingScope, problem, solution, diagram.caption, each howItWorks step's title/desc/anatomy, deepDive, deepSource, whatsNext, each compare.rows label, sourceCompare.simplified, sourceCompare.real, every sourceCompare.gaps field (dimension/simplified/real/whySimplified), simulation.title, every simulation step label/state/detail, and every practice task title/prompt/check.
-- tryIt becomes bilingual per element: setup/commands/observe arrays become arrays of Bi items, preserving order and count.
+- Every user-facing text field becomes {"zh":"<原始中文>","en":"<English translation>"}: principle, teachingScope, problem, solution, diagram.caption, each howItWorks step's title/desc/anatomy, deepDive, deepSource, whatsNext, each compare.rows label, sourceCompare.simplified, sourceCompare.real, every sourceCompare.gaps field (dimension/simplified/real/whySimplified), and simulation.title plus every simulation step label/state/detail.
+- If optional legacy tryIt or practice fields are present, translate their user-facing text into bilingual values; do not create those fields when absent.
 - references.kind/title/url stay exactly as-is; references.whyUsed becomes bilingual.
 - Code snippets, code.file/language/highlightLines/isSpine/symbol, diagram.diagram, the entire spine object, simulation.kind, badges, file paths, ids, URLs, compare.rows a/b, loc, filesUsed stay exactly as-is.
 - deepDive and deepSource may contain Markdown — keep ALL markers/table structure intact, translate only the text.

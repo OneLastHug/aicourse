@@ -148,7 +148,7 @@ def _validate_course_global_design(course_info) -> list[str]:
     if len(concept_inventory) < 3:
         issues.append("course.conceptInventory must include at least three concepts")
     global_views = set(getattr(course_info, "globalViews", None) or [])
-    expected_views = {"timeline", "layers", "compare", "source-map", "practice-lab"}
+    expected_views = {"layers", "compare", "source-map"}
     missing_views = sorted(expected_views - global_views)
     if missing_views:
         issues.append("course.globalViews is missing: " + ", ".join(missing_views))
@@ -168,10 +168,7 @@ def _validate_lesson_interactions(lesson_id: str, simulation, practice) -> list[
                 issues.append(f"{lesson_id}.simulation.steps[{idx}].state must not be empty")
             if not _nonempty_text(getattr(step, "detail", None)):
                 issues.append(f"{lesson_id}.simulation.steps[{idx}].detail must not be empty")
-    tasks = practice or []
-    if not tasks:
-        issues.append(f"{lesson_id}.practice must include at least one task")
-    for idx, task in enumerate(tasks, start=1):
+    for idx, task in enumerate(practice or [], start=1):
         if not _nonempty_text(getattr(task, "title", None)):
             issues.append(f"{lesson_id}.practice[{idx}].title must not be empty")
         if not _nonempty_text(getattr(task, "prompt", None)):

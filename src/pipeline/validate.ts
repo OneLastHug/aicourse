@@ -83,8 +83,8 @@ function localCorrectnessChecks(lessonId: string, body: ZhLesson, cfg: Repo2Lear
   const refs = Array.isArray(body.references) ? body.references : [];
   const limitedResearch = cfg.research.enabled && cfg.research.mode === "limited";
 
-  if (!body.tryIt || !Array.isArray(body.tryIt.commands) || body.tryIt.commands.length === 0 || !Array.isArray(body.tryIt.observe) || body.tryIt.observe.length === 0) {
-    issues.push({ severity: "error", lessonId, problem: "tryIt must be structured with non-empty commands and observe arrays", fix: "Emit tryIt.commands[] and tryIt.observe[] with at least one item each." });
+  if (body.tryIt && (!Array.isArray(body.tryIt.commands) || body.tryIt.commands.length === 0 || !Array.isArray(body.tryIt.observe) || body.tryIt.observe.length === 0)) {
+    issues.push({ severity: "error", lessonId, problem: "tryIt must be structured with non-empty commands and observe arrays", fix: "Either omit tryIt or emit tryIt.commands[] and tryIt.observe[] with at least one item each." });
   }
 
   const simulationSteps = body.simulation?.steps ?? [];
@@ -92,8 +92,8 @@ function localCorrectnessChecks(lessonId: string, body: ZhLesson, cfg: Repo2Lear
     issues.push({ severity: "error", lessonId, problem: "simulation must include a kind and at least two labeled state steps", fix: "Emit simulation.kind and simulation.steps[] with label/state/detail." });
   }
 
-  if (!Array.isArray(body.practice) || body.practice.length === 0 || body.practice.some((p) => !String(p.title ?? "").trim() || !String(p.prompt ?? "").trim() || !String(p.check ?? "").trim())) {
-    issues.push({ severity: "error", lessonId, problem: "practice tasks must include title, prompt, and check", fix: "Emit at least one practice task with a concrete self-check." });
+  if (Array.isArray(body.practice) && body.practice.some((p) => !String(p.title ?? "").trim() || !String(p.prompt ?? "").trim() || !String(p.check ?? "").trim())) {
+    issues.push({ severity: "error", lessonId, problem: "practice tasks must include title, prompt, and check", fix: "Either omit practice tasks or emit concrete title/prompt/check fields." });
   }
 
   if (limitedResearch) {

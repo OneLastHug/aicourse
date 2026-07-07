@@ -33,7 +33,8 @@ Keep every zh value verbatim and add faithful English translations.
 Rules:
 - Every user-facing text field becomes {{"zh":"<原始中文>","en":"<English translation>"}}.
 - Title-like fields are intentionally English even for the Chinese UI. For each howItWorks title, keep the `zh` value in English and set `en` to the same English title or a minimal casing cleanup. Do not create Chinese step titles.
-- Translate: principle, teachingScope, problem, solution, diagram.caption, each howItWorks desc/anatomy, deepDive, deepSource, sourceCompare.simplified, sourceCompare.real, every sourceCompare.gaps field, simulation.title, every simulation step label/state/detail, every practice task title/prompt/check, tryIt setup/commands/observe items, references.whyUsed, whatsNext, and compare.rows labels.
+- Translate: principle, teachingScope, problem, solution, diagram.caption, each howItWorks desc/anatomy, deepDive, deepSource, sourceCompare.simplified, sourceCompare.real, every sourceCompare.gaps field, simulation.title, every simulation step label/state/detail, references.whyUsed, whatsNext, and compare.rows labels.
+- If optional legacy tryIt or practice fields are present, translate their user-facing text into bilingual values; do not create those fields when absent.
 - Keep ids, code snippets, code.file/language/highlightLines/before/isSpine/symbol, diagram.diagram, spine, simulation.kind, references.title/url/kind, compare.rows a/b, badges, loc, status, error, and file paths exactly as-is.
 - `filesUsed` is an intermediate Chinese field and must not appear in the final Lesson.
 - If status is missing, set it to "ok".
