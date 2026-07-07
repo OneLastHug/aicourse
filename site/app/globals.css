@@ -75,6 +75,13 @@ html.dark .btn-primary { @apply bg-white text-zinc-900 hover:bg-zinc-200; }
 .syntax-fallback .syntax-function { color: #fbbf24; }
 .syntax-fallback .syntax-boolean { color: #a78bfa; }
 
+.source-preview-code code,
+.source-preview-code .line {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .step-panel { animation: fadeUp 0.3s ease both; }
 
 /* Animated sheen for in-progress bars (advances while running) */

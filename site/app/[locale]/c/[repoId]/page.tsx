@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { getCourse } from "@/lib/server/store";
 import { CourseShell } from "@/components/CourseShell";
 import { Mermaid } from "@/components/Mermaid";
+import { SourceMapExplorer } from "@/components/SourceMapExplorer";
 import { pick } from "@/lib/content";
 import { t } from "@/lib/i18n";
 import { difficultyTheme } from "@/lib/ui";
@@ -38,7 +39,7 @@ export default async function CourseHome({
   const archetype = getCourseArchetype(course);
   const modes = getCourseModes(course);
   const concepts = getConceptInventory(course, loc);
-  const sourceMap = collectSourceMap(course);
+  const sourceMap = collectSourceMap(course, loc);
   const runnableCount = course.outline.lessons.filter((l) => getLessonMetrics(course, l).hasRunnableSpine).length;
 
   return (
@@ -164,21 +165,7 @@ export default async function CourseHome({
         <section id="source-map" className="mx-auto mt-14 max-w-5xl scroll-mt-24">
           <SectionTitle eyebrow={t(loc, "course.sourceMap")} title={t(loc, "course.sourceFiles")} />
           {sourceMap.length ? (
-            <div className="grid gap-3 lg:grid-cols-2">
-              {sourceMap.map((entry) => (
-                <div key={entry.file} className="rounded-xl border border-line bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                  <div className="break-all font-mono text-xs text-ink dark:text-zinc-100">{entry.file}</div>
-                  {entry.symbols.length > 0 && <div className="mt-2 text-[11px] text-ink-faint dark:text-zinc-500">{entry.symbols.join(" · ")}</div>}
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {entry.lessons.map((lesson) => (
-                      <Link key={lesson.id} href={`/${loc}/c/${repoId}/lessons/${lesson.id}`} className="rounded-full bg-bg-subtle px-2 py-0.5 font-mono text-[11px] text-ink-faint hover:text-brand dark:bg-zinc-800 dark:text-zinc-400">
-                        {lesson.id}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <SourceMapExplorer entries={sourceMap} locale={loc} repoId={repoId} />
           ) : (
             <p className="lead">{t(loc, "course.noSource")}</p>
           )}

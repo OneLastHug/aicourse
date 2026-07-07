@@ -108,23 +108,54 @@ export function getLessonMetrics(course: Course, lesson: OutlineLesson) {
   };
 }
 
-export function collectSourceMap(course: Course) {
-  const byFile = new Map<string, { file: string; lessons: OutlineLesson[]; symbols: string[] }>();
+export interface SourceMapSnippet {
+  lesson: OutlineLesson;
+  title: string;
+  desc: string;
+  language: string;
+  snippet: string;
+  highlightLines: number[];
+  symbol?: string;
+}
+
+export interface SourceMapEntry {
+  file: string;
+  lessons: OutlineLesson[];
+  symbols: string[];
+  snippets: SourceMapSnippet[];
+}
+
+export function collectSourceMap(course: Course, locale: Locale): SourceMapEntry[] {
+  const byFile = new Map<string, SourceMapEntry>();
   for (const lesson of course.outline.lessons) {
     const body = course.lessons[lesson.id];
-    const entries = [
-      ...(lesson.keyFiles ?? []).map((file) => ({ file, symbol: "" })),
-      ...(body?.howItWorks ?? [])
-        .filter((step) => step.code?.file && step.code.isSpine !== true)
-        .map((step) => ({ file: step.code!.file, symbol: step.code!.symbol ?? "" })),
-    ];
-    for (const entry of entries) {
-      if (!entry.file) continue;
-      const current = byFile.get(entry.file) ?? { file: entry.file, lessons: [], symbols: [] };
-      if (!current.lessons.some((l) => l.id === lesson.id)) current.lessons.push(lesson);
-      if (entry.symbol && !current.symbols.includes(entry.symbol)) current.symbols.push(entry.symbol);
-      byFile.set(entry.file, current);
+    for (const file of lesson.keyFiles ?? []) {
+      addSourceEntry(byFile, file, lesson);
+    }
+    for (const step of body?.howItWorks ?? []) {
+      const code = step.code;
+      if (!code?.file || code.isSpine === true) continue;
+      const current = addSourceEntry(byFile, code.file, lesson);
+      if (code.symbol && !current.symbols.includes(code.symbol)) current.symbols.push(code.symbol);
+      if (code.snippet.trim()) {
+        current.snippets.push({
+          lesson,
+          title: pick(step.title, locale),
+          desc: pick(step.desc, locale),
+          language: code.language,
+          snippet: code.snippet,
+          highlightLines: code.highlightLines ?? [],
+          symbol: code.symbol,
+        });
+      }
     }
   }
   return [...byFile.values()].sort((a, b) => b.lessons.length - a.lessons.length || a.file.localeCompare(b.file));
+}
+
+function addSourceEntry(byFile: Map<string, SourceMapEntry>, file: string, lesson: OutlineLesson): SourceMapEntry {
+  const current = byFile.get(file) ?? { file, lessons: [], symbols: [], snippets: [] };
+  if (!current.lessons.some((l) => l.id === lesson.id)) current.lessons.push(lesson);
+  byFile.set(file, current);
+  return current;
 }
