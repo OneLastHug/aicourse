@@ -18,6 +18,7 @@ def create_app() -> FastAPI:
         settings.data_dir.mkdir(parents=True, exist_ok=True)
         await job_manager.startup()
         yield
+        job_manager.observability.shutdown()
 
     app = FastAPI(title="AICourse Python Backend", version="0.1.0", lifespan=lifespan)
 

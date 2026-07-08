@@ -11,6 +11,13 @@ from app.core.config import Settings, get_settings
 from app.core.events import validate_progress_event
 from app.core.schemas import CourseMeta, JobRecord, JobState
 from app.services.generator import generate_course
+from app.services.observability import (
+    build_observability,
+    current_observability,
+    observability_scope,
+    safe_exception,
+    short_hash,
+)
 from app.services.store import (
     canonical_repo_url,
     get_meta,
@@ -59,6 +66,7 @@ class Job:
 class JobManager:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
+        self.observability = build_observability(self.settings)
         self.jobs: dict[str, Job] = {}
         self.running_by_repo: dict[str, str] = {}
         self._background_started = False
@@ -219,42 +227,69 @@ class JobManager:
         job = self.jobs.get(job_id)
         if job is None:
             return
-        try:
-            kwargs = {"cache_bust": job.cache_bust} if job.cache_bust else {}
-            course = await generate_course(
-                job.state.repoUrl,
-                lambda event: self.emit(job_id, event),
-                self.settings,
-                **kwargs,
-            )
-            outline = course["outline"]
-            course_info = outline["course"]
-            lessons = outline["lessons"]
-            job.state.repoTitle = course_info["title"]["en"]
-            job.state.lessonsTotal = len(lessons)
-            job.state.status = "done"
-            job.state.stage = "done"
-            job.state.updatedAt = now_ms()
-            meta = CourseMeta(
-                repoId=repo_id,
-                url=job.state.repoUrl,
-                name=course_info["repo"]["name"],
-                title=course_info["title"]["en"],
-                createdAt=datetime.now(tz=UTC).isoformat().replace("+00:00", "Z"),
-                lessonCount=len(lessons),
-            )
-            save_course(repo_id, course, meta, self.settings)
-            save_job_record(job.state, self.settings)
-        except Exception as exc:
-            job.state.status = "error"
-            job.state.error = str(exc)
-            job.state.updatedAt = now_ms()
-            await self.emit(job_id, {"type": "error", "message": str(exc)})
-            save_job_record(job.state, self.settings)
-        finally:
-            self.running_by_repo.pop(repo_id, None)
-            for queue in list(job.subscribers):
-                queue.put_nowait(None)
+        with observability_scope(self.observability):
+            obs = current_observability()
+            try:
+                with obs.span(
+                    "course.generate",
+                    metadata={
+                        "job_id": job_id,
+                        "repo_id": repo_id,
+                        "repo_url_hash": short_hash(job.state.repoUrl),
+                        "cache_bust": bool(job.cache_bust),
+                        "model": self.settings.r2l_codex_model,
+                        "reasoning_effort": self.settings.r2l_codex_reasoning_effort,
+                        "validate_enabled": self.settings.r2l_validate,
+                        "translate_with_codex": self.settings.r2l_translate_with_codex,
+                    },
+                ):
+                    kwargs = {"cache_bust": job.cache_bust} if job.cache_bust else {}
+                    course = await generate_course(
+                        job.state.repoUrl,
+                        lambda event: self.emit(job_id, event),
+                        self.settings,
+                        **kwargs,
+                    )
+                    outline = course["outline"]
+                    course_info = outline["course"]
+                    lessons = outline["lessons"]
+                    job.state.repoTitle = course_info["title"]["en"]
+                    job.state.lessonsTotal = len(lessons)
+                    job.state.status = "done"
+                    job.state.stage = "done"
+                    job.state.updatedAt = now_ms()
+                    meta = CourseMeta(
+                        repoId=repo_id,
+                        url=job.state.repoUrl,
+                        name=course_info["repo"]["name"],
+                        title=course_info["title"]["en"],
+                        createdAt=datetime.now(tz=UTC).isoformat().replace("+00:00", "Z"),
+                        lessonCount=len(lessons),
+                    )
+                    obs.event(
+                        "job.done",
+                        metadata={
+                            "lesson_count": len(lessons),
+                            "repo_id": repo_id,
+                            "repo_name_hash": short_hash(course_info["repo"]["name"]),
+                        },
+                    )
+                    obs.score("job.success", 1, {"lesson_count": len(lessons)})
+                    save_course(repo_id, course, meta, self.settings)
+                    save_job_record(job.state, self.settings)
+            except Exception as exc:
+                obs.event("job.error", metadata={"error": safe_exception(exc, obs.capture)})
+                obs.score("job.success", 0, {"error_type": type(exc).__name__})
+                job.state.status = "error"
+                job.state.error = str(exc)
+                job.state.updatedAt = now_ms()
+                await self.emit(job_id, {"type": "error", "message": str(exc)})
+                save_job_record(job.state, self.settings)
+            finally:
+                obs.flush()
+                self.running_by_repo.pop(repo_id, None)
+                for queue in list(job.subscribers):
+                    queue.put_nowait(None)
 
     async def cleanup_failed_for_repo(self, repo_id: str) -> list[JobRecord]:
         return self._cleanup_failed_for_repo_sync(repo_id)

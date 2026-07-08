@@ -9,6 +9,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.core.config import Settings, get_settings
+from app.services.observability import (
+    current_observability,
+    safe_exception,
+    short_hash,
+    text_payload,
+)
 
 
 @dataclass(frozen=True)
@@ -32,6 +38,7 @@ class CliCodexDriver:
         self.settings = settings or get_settings()
 
     async def run(self, call: CodexCall) -> CodexResult:
+        obs = current_observability()
         started = time.monotonic()
         temp_dir: tempfile.TemporaryDirectory[str] | None = None
         if call.output_file is None:
@@ -54,44 +61,83 @@ class CliCodexDriver:
         ]
         env = generation_codex_env(self.settings)
 
-        proc = await asyncio.create_subprocess_exec(
-            *args,
-            cwd=str(call.cwd),
-            env=env,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-
-        try:
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(call.prompt.encode("utf-8")),
-                timeout=self.settings.r2l_codex_timeout_ms / 1000,
+        with obs.generation(
+            call.label,
+            model=self.settings.r2l_codex_model,
+            input=text_payload(call.prompt, obs.capture),
+            metadata={
+                "driver": self.kind,
+                "label": call.label,
+                "cwd_hash": short_hash(str(call.cwd)),
+                "prompt_chars": len(call.prompt),
+                "timeout_ms": self.settings.r2l_codex_timeout_ms,
+            },
+            model_parameters={"reasoning_effort": self.settings.r2l_codex_reasoning_effort},
+        ) as generation:
+            proc = await asyncio.create_subprocess_exec(
+                *args,
+                cwd=str(call.cwd),
+                env=env,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
-        except TimeoutError as exc:
-            proc.kill()
-            await proc.wait()
-            raise TimeoutError(
-                f"codex timed out after {self.settings.r2l_codex_timeout_ms}ms"
-            ) from exc
 
-        if proc.returncode != 0:
-            message = stderr.decode("utf-8", errors="replace")[-800:]
-            raise RuntimeError(f"codex exited {proc.returncode}: {message}")
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    proc.communicate(call.prompt.encode("utf-8")),
+                    timeout=self.settings.r2l_codex_timeout_ms / 1000,
+                )
+            except TimeoutError as exc:
+                proc.kill()
+                await proc.wait()
+                generation.update(
+                    level="ERROR",
+                    metadata={
+                        "duration_ms": int((time.monotonic() - started) * 1000),
+                        "error": safe_exception(exc, obs.capture),
+                    },
+                )
+                raise TimeoutError(
+                    f"codex timed out after {self.settings.r2l_codex_timeout_ms}ms"
+                ) from exc
 
-        text = stdout.decode("utf-8", errors="replace")
-        try:
-            final = output_file.read_text(encoding="utf-8").strip()
-        except OSError:
-            final = text.strip()
-        finally:
-            if temp_dir is not None:
-                temp_dir.cleanup()
+            if proc.returncode != 0:
+                message = stderr.decode("utf-8", errors="replace")[-800:]
+                exc = RuntimeError(f"codex exited {proc.returncode}: {message}")
+                generation.update(
+                    level="ERROR",
+                    metadata={
+                        "duration_ms": int((time.monotonic() - started) * 1000),
+                        "return_code": proc.returncode,
+                        "error": safe_exception(exc, obs.capture),
+                    },
+                )
+                raise exc
 
-        return CodexResult(
-            text=final or text.strip(),
-            duration_ms=int((time.monotonic() - started) * 1000),
-        )
+            text = stdout.decode("utf-8", errors="replace")
+            try:
+                final = output_file.read_text(encoding="utf-8").strip()
+            except OSError:
+                final = text.strip()
+            finally:
+                if temp_dir is not None:
+                    temp_dir.cleanup()
+
+            duration_ms = int((time.monotonic() - started) * 1000)
+            result_text = final or text.strip()
+            generation.update(
+                output=text_payload(result_text, obs.capture),
+                metadata={
+                    "duration_ms": duration_ms,
+                    "return_code": proc.returncode,
+                    "output_chars": len(result_text),
+                },
+            )
+            return CodexResult(
+                text=result_text,
+                duration_ms=duration_ms,
+            )
 
 
 def generation_codex_env(settings: Settings) -> dict[str, str]:

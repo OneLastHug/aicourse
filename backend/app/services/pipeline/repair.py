@@ -6,6 +6,7 @@ from collections import defaultdict
 from app.core.config import Settings
 from app.core.schemas import ZhLesson, ZhOutline, ZhOutlineLesson
 from app.prompts.repair import lesson_repair_prompt
+from app.services.observability import current_observability
 from app.services.pipeline.call import CodexDriverLike, codex_json
 from app.services.pipeline.repair_types import RepairIssue
 from app.services.pipeline.run_types import ProgressCallback
@@ -43,12 +44,26 @@ async def repair_zh_validation_round(
     settings: Settings,
     on_progress: ProgressCallback,
 ) -> tuple[dict[str, ZhLesson], list[str]]:
+    obs = current_observability()
     repairable = _repairable_issues(issues, round_no)
     if not repairable:
+        obs.event(
+            "repair.skipped",
+            metadata={"round": round_no, "reason": "no_repairable_issues", "issue_count": len(issues)},
+        )
         return lessons, issues
 
     lesson_ids = sorted({issue.lessonId for issue in repairable if issue.lessonId})
     if len(lesson_ids) > MAX_REPAIR_LESSONS:
+        obs.event(
+            "repair.skipped",
+            metadata={
+                "round": round_no,
+                "reason": "too_many_lessons",
+                "lesson_count": len(lesson_ids),
+                "limit": MAX_REPAIR_LESSONS,
+            },
+        )
         await on_progress(
             {
                 "type": "log",
@@ -66,73 +81,121 @@ async def repair_zh_validation_round(
     for attempt in range(1, MAX_REPAIR_ATTEMPTS + 1):
         grouped = _group_issues_for_existing_lessons(repairable, current)
         if not grouped:
+            obs.event("repair.done", metadata={"round": round_no, "attempt": attempt, "reason": "no_grouped_issues"})
             return current, remaining
 
         attempt_ids = sorted(grouped)
-        await on_progress(
-            {
-                "type": "repair",
+        with obs.span(
+            f"repair{round_no}.attempt",
+            metadata={
                 "round": round_no,
                 "attempt": attempt,
-                "lessonIds": attempt_ids,
-                "issueCount": sum(len(items) for items in grouped.values()),
-            }
-        )
-        await on_progress(
-            {
-                "type": "log",
-                "level": "warn",
-                "message": f"repair{round_no} attempt {attempt}: " + ", ".join(attempt_ids),
-            }
-        )
-
-        for lesson_id in attempt_ids:
-            outline_lesson = _find_outline_lesson(outline, lesson_id)
-            if outline_lesson is None:
-                continue
-            repaired = await codex_json(
-                driver=driver,
-                label=f"repair{round_no}:{lesson_id}",
-                prompt=lesson_repair_prompt(
-                    ctx,
-                    outline,
-                    outline_lesson,
-                    current[lesson_id],
-                    grouped[lesson_id],
-                    round_no=round_no,
-                ),
-                cwd=ctx.localPath,
-                model=ZhLesson,
-                settings=settings,
-            )
-            repaired.id = lesson_id
-            current[lesson_id] = repaired
-            _sync_outline_files_to_repaired_lesson(outline, lesson_id, repaired, ctx)
+                "lesson_ids": attempt_ids,
+                "issue_count": sum(len(items) for items in grouped.values()),
+            },
+        ):
             await on_progress(
                 {
-                    "type": "lessonDraft",
-                    "id": lesson_id,
-                    "body": repaired.model_dump(mode="json", exclude_none=True),
+                    "type": "repair",
+                    "round": round_no,
+                    "attempt": attempt,
+                    "lessonIds": attempt_ids,
+                    "issueCount": sum(len(items) for items in grouped.values()),
+                }
+            )
+            await on_progress(
+                {
+                    "type": "log",
+                    "level": "warn",
+                    "message": f"repair{round_no} attempt {attempt}: " + ", ".join(attempt_ids),
                 }
             )
 
-        local_issues = _local_issues_for_lessons(_validate_round(round_no, outline, current, ctx), attempt_ids)
-        if local_issues:
+            for lesson_id in attempt_ids:
+                outline_lesson = _find_outline_lesson(outline, lesson_id)
+                if outline_lesson is None:
+                    continue
+                with obs.span(
+                    "repair.lesson",
+                    metadata={"round": round_no, "attempt": attempt, "lesson_id": lesson_id},
+                ):
+                    repaired = await codex_json(
+                        driver=driver,
+                        label=f"repair{round_no}:{lesson_id}",
+                        prompt=lesson_repair_prompt(
+                            ctx,
+                            outline,
+                            outline_lesson,
+                            current[lesson_id],
+                            grouped[lesson_id],
+                            round_no=round_no,
+                        ),
+                        cwd=ctx.localPath,
+                        model=ZhLesson,
+                        settings=settings,
+                    )
+                    repaired.id = lesson_id
+                    current[lesson_id] = repaired
+                    _sync_outline_files_to_repaired_lesson(outline, lesson_id, repaired, ctx)
+                    await on_progress(
+                        {
+                            "type": "lessonDraft",
+                            "id": lesson_id,
+                            "body": repaired.model_dump(mode="json", exclude_none=True),
+                        }
+                    )
+
+            local_issues = _local_issues_for_lessons(_validate_round(round_no, outline, current, ctx), attempt_ids)
+            obs.event(
+                "repair.local_validation",
+                metadata={
+                    "round": round_no,
+                    "attempt": attempt,
+                    "passed": not local_issues,
+                    "issue_count": len(local_issues),
+                    "lesson_ids": attempt_ids,
+                },
+            )
+            if local_issues:
+                remaining = _validate_round(round_no, outline, current, ctx)
+                obs.event(
+                    "repair.global_validation",
+                    metadata={
+                        "round": round_no,
+                        "attempt": attempt,
+                        "passed": not remaining,
+                        "issue_count": len(remaining),
+                    },
+                )
+                repairable = _repairable_issues(local_issues, round_no)
+                if not repairable:
+                    return current, remaining
+                continue
+
             remaining = _validate_round(round_no, outline, current, ctx)
-            repairable = _repairable_issues(local_issues, round_no)
+            obs.event(
+                "repair.global_validation",
+                metadata={
+                    "round": round_no,
+                    "attempt": attempt,
+                    "passed": not remaining,
+                    "issue_count": len(remaining),
+                },
+            )
+            if not remaining:
+                obs.event("repair.done", metadata={"round": round_no, "attempt": attempt, "passed": True})
+                return current, []
+
+            repairable = _repairable_issues(remaining, round_no)
             if not repairable:
                 return current, remaining
-            continue
 
-        remaining = _validate_round(round_no, outline, current, ctx)
-        if not remaining:
-            return current, []
-
-        repairable = _repairable_issues(remaining, round_no)
-        if not repairable:
-            return current, remaining
-
-    return current, _validate_round(round_no, outline, current, ctx)
+    remaining = _validate_round(round_no, outline, current, ctx)
+    obs.event(
+        "repair.done",
+        metadata={"round": round_no, "attempts": MAX_REPAIR_ATTEMPTS, "passed": not remaining, "issue_count": len(remaining)},
+    )
+    return current, remaining
 
 
 def _validate_round(

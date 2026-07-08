@@ -62,6 +62,26 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
+Optional Langfuse observability should be configured as a private systemd
+drop-in, not committed to git:
+
+```ini
+# /etc/systemd/system/aicourse-backend.service.d/langfuse.conf
+[Service]
+Environment=R2L_OBSERVABILITY_PROVIDER=langfuse
+Environment=R2L_OBSERVABILITY_ENV=production
+Environment=R2L_OBSERVABILITY_CAPTURE=metadata
+Environment=LANGFUSE_PUBLIC_KEY=<set-in-private-environment>
+Environment=LANGFUSE_SECRET_KEY=<set-in-private-environment>
+Environment=LANGFUSE_HOST=https://cloud.langfuse.com
+```
+
+Keep `R2L_OBSERVABILITY_CAPTURE=metadata` in production unless a specific
+debugging window requires more detail. Metadata mode sends prompt/output hashes
+and lengths, not prompt/output bodies. If self-hosting Langfuse on the same VPS,
+bind the Langfuse web/API port to `127.0.0.1` or keep it behind an existing
+private reverse proxy; do not publish a new public port for Langfuse.
+
 ## systemd Frontend Unit
 
 ```ini

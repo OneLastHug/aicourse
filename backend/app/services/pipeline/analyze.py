@@ -5,6 +5,7 @@ from typing import Any
 
 from app.core.config import Settings
 from app.services.cache import Cache
+from app.services.observability import current_observability
 from app.services.pipeline.call import CodexDriverLike, codex_json
 from app.services.pipeline.prompts import analyze_prompt
 from app.services.repo import RepoContext
@@ -17,6 +18,7 @@ async def run_analyze_stage(
     cache: Cache,
     settings: Settings,
 ) -> dict[str, Any]:
+    obs = current_observability()
     key = cache.key(
         {
             "stage": "analyze-v1",
@@ -28,7 +30,9 @@ async def run_analyze_stage(
     )
     cached = cache.get(key)
     if cached is not None:
+        obs.event("cache.hit", metadata={"stage": "analyze", "key": key})
         return dict(cached)
+    obs.event("cache.miss", metadata={"stage": "analyze", "key": key})
 
     analysis = await codex_json(
         driver=driver,

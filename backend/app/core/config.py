@@ -37,6 +37,25 @@ class Settings(BaseSettings):
     r2l_assistant_api_key: str | None = Field(default=None, alias="R2L_ASSISTANT_API_KEY")
     r2l_assistant_model: str = Field(default="gpt-5.4-mini", alias="R2L_ASSISTANT_MODEL")
     r2l_assistant_timeout_ms: int = Field(default=90 * 1000, alias="R2L_ASSISTANT_TIMEOUT_MS")
+    r2l_observability_provider: str = Field(default="none", alias="R2L_OBSERVABILITY_PROVIDER")
+    r2l_observability_env: str = Field(default="production", alias="R2L_OBSERVABILITY_ENV")
+    r2l_observability_capture: str = Field(default="metadata", alias="R2L_OBSERVABILITY_CAPTURE")
+    r2l_observability_sample_rate: float = Field(
+        default=1.0,
+        alias="R2L_OBSERVABILITY_SAMPLE_RATE",
+    )
+    r2l_observability_error_sample_rate: float = Field(
+        default=1.0,
+        alias="R2L_OBSERVABILITY_ERROR_SAMPLE_RATE",
+    )
+    r2l_observability_flush_timeout_ms: int = Field(
+        default=2000,
+        alias="R2L_OBSERVABILITY_FLUSH_TIMEOUT_MS",
+    )
+    langfuse_public_key: str | None = Field(default=None, alias="LANGFUSE_PUBLIC_KEY")
+    langfuse_secret_key: str | None = Field(default=None, alias="LANGFUSE_SECRET_KEY")
+    langfuse_base_url: str | None = Field(default=None, alias="LANGFUSE_BASE_URL")
+    langfuse_host: str | None = Field(default=None, alias="LANGFUSE_HOST")
 
     @property
     def data_dir(self) -> Path:

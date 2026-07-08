@@ -9,6 +9,7 @@ from app.core.config import Settings
 from app.core.schemas import Course, Lesson, Outline, ZhLesson, ZhOutline, ZhOutlineLesson
 from app.prompts.translate import translate_lesson_prompt, translate_outline_prompt
 from app.services.cache import Cache
+from app.services.observability import current_observability
 from app.services.pipeline.call import CodexDriverLike, codex_json
 from app.services.repo import RepoContext
 
@@ -25,6 +26,7 @@ async def run_translate_stage(
 ) -> Course:
     """Translate the Chinese-first course into the final bilingual Course."""
 
+    obs = current_observability()
     key = cache.key(
         {
             "stage": "translate-course-v3",
@@ -42,11 +44,14 @@ async def run_translate_stage(
     )
     cached = cache.get(key)
     if cached is not None:
+        obs.event("cache.hit", metadata={"stage": "translate-course", "key": key})
         course = Course.model_validate(cached)
         flatten_outline(course)
         return course
+    obs.event("cache.miss", metadata={"stage": "translate-course", "key": key, "cache_bust": bool(cache_bust)})
 
     if not settings.r2l_translate_with_codex:
+        obs.event("translation.fallback", metadata={"reason": "disabled"})
         course = Course(
             outline=fallback_outline_from_zh(zh_outline),
             lessons={
@@ -98,6 +103,7 @@ async def translate_outline(
     settings: Settings,
     cache_bust: str | None = None,
 ) -> Outline:
+    obs = current_observability()
     key = cache.key(
         {
             "stage": "translate-outline-v3",
@@ -111,9 +117,11 @@ async def translate_outline(
     )
     cached = cache.get(key)
     if cached is not None:
+        obs.event("cache.hit", metadata={"stage": "translate-outline", "key": key})
         outline = Outline.model_validate(_normalize_translated_outline_payload(cached, zh_outline))
         outline.lessons = [lesson for section in outline.sections for lesson in section.lessons]
         return outline
+    obs.event("cache.miss", metadata={"stage": "translate-outline", "key": key, "cache_bust": bool(cache_bust)})
 
     try:
         raw_outline = await codex_json(
@@ -126,6 +134,7 @@ async def translate_outline(
         )
         outline = Outline.model_validate(_normalize_translated_outline_payload(raw_outline, zh_outline))
     except RuntimeError:
+        obs.event("translation.fallback", metadata={"stage": "outline", "reason": "codex_runtime_error"})
         outline = fallback_outline_from_zh(zh_outline)
     outline.lessons = [lesson for section in outline.sections for lesson in section.lessons]
     cache.set(key, outline.model_dump(mode="json", exclude_none=True))
@@ -141,6 +150,7 @@ async def translate_lesson(
     settings: Settings,
     cache_bust: str | None = None,
 ) -> Lesson:
+    obs = current_observability()
     key = cache.key(
         {
             "stage": "translate-lesson-v3",
@@ -154,7 +164,17 @@ async def translate_lesson(
     )
     cached = cache.get(key)
     if cached is not None:
+        obs.event("cache.hit", metadata={"stage": "translate-lesson", "lesson_id": zh_lesson.id, "key": key})
         return Lesson.model_validate(cached)
+    obs.event(
+        "cache.miss",
+        metadata={
+            "stage": "translate-lesson",
+            "lesson_id": zh_lesson.id,
+            "key": key,
+            "cache_bust": bool(cache_bust),
+        },
+    )
 
     try:
         lesson = await codex_json(
@@ -166,6 +186,7 @@ async def translate_lesson(
             settings=settings,
         )
     except RuntimeError:
+        obs.event("translation.fallback", metadata={"stage": "lesson", "lesson_id": zh_lesson.id, "reason": "codex_runtime_error"})
         lesson = fallback_lesson_from_zh(zh_lesson)
     if lesson.id != zh_lesson.id:
         lesson.id = zh_lesson.id

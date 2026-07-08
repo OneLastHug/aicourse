@@ -8,6 +8,7 @@ from pydantic import BaseModel, TypeAdapter
 from app.core.config import Settings, get_settings
 from app.services.codex_driver import CodexCall
 from app.services.json_parse import extract_json
+from app.services.observability import current_observability, safe_exception
 
 T = TypeVar("T")
 
@@ -41,19 +42,67 @@ async def codex_json(
     settings: Settings | None = None,
     attempts: int = 2,
 ) -> T:
+    obs = current_observability()
     last_error: Exception | None = None
     for attempt in range(1, attempts + 1):
+        obs.event(
+            "codex_json.attempt",
+            metadata={"label": label, "attempt": attempt, "attempts": attempts},
+        )
         try:
             async with get_generation_limiter(settings):
                 result = await driver.run(CodexCall(label=label, prompt=prompt, cwd=cwd))
-            parsed = extract_json(result.text)
-            if isinstance(model, type) and issubclass(model, BaseModel):
-                return model.model_validate(parsed)  # type: ignore[return-value]
-            return TypeAdapter(model).validate_python(parsed)
+            try:
+                parsed = extract_json(result.text)
+            except Exception as exc:
+                obs.event(
+                    "codex_json.error",
+                    metadata={
+                        "label": label,
+                        "attempt": attempt,
+                        "phase": "json_parse",
+                        "error": safe_exception(exc, obs.capture),
+                    },
+                )
+                raise
+            try:
+                if isinstance(model, type) and issubclass(model, BaseModel):
+                    value = model.model_validate(parsed)  # type: ignore[assignment]
+                else:
+                    value = TypeAdapter(model).validate_python(parsed)
+            except Exception as exc:
+                obs.event(
+                    "codex_json.error",
+                    metadata={
+                        "label": label,
+                        "attempt": attempt,
+                        "phase": "schema_validate",
+                        "error": safe_exception(exc, obs.capture),
+                    },
+                )
+                raise
+            obs.event(
+                "codex_json.ok",
+                metadata={
+                    "label": label,
+                    "attempt": attempt,
+                    "duration_ms": result.duration_ms,
+                },
+            )
+            return value  # type: ignore[return-value]
         except Exception as exc:
             last_error = exc
             if attempt == attempts:
                 break
+            obs.event(
+                "codex_json.retry",
+                metadata={
+                    "label": label,
+                    "attempt": attempt,
+                    "next_attempt": attempt + 1,
+                    "error": safe_exception(exc, obs.capture),
+                },
+            )
             prompt += (
                 "\n\nYour previous response did not parse as the required JSON shape. "
                 "Return STRICT JSON ONLY. Do not include markdown fences or prose."

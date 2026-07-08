@@ -79,6 +79,26 @@ deployment environment or a local untracked env file.
 fallback, so the frontend can be tested without a live model provider. This is
 separate from `R2L_MOCK`, which only controls course generation.
 
+## LLM Observability
+
+The backend can emit Langfuse traces for course generation without changing API
+contracts:
+
+```bash
+R2L_OBSERVABILITY_PROVIDER=langfuse
+R2L_OBSERVABILITY_ENV=production
+R2L_OBSERVABILITY_CAPTURE=metadata
+LANGFUSE_PUBLIC_KEY=<set-in-private-environment>
+LANGFUSE_SECRET_KEY=<set-in-private-environment>
+LANGFUSE_HOST=https://cloud.langfuse.com
+```
+
+`metadata` mode is the production default. It records stage names, model
+settings, durations, validation counts, cache events, and prompt/output hashes
+and lengths. It does not send full prompts, repository snippets, or generated
+lesson bodies. Store Langfuse keys in deployment environment files or systemd
+drop-ins outside git.
+
 ## Production Shape
 
 Run FastAPI and Next.js as separate services:

@@ -7,6 +7,7 @@ from app.core.config import Settings
 from app.core.schemas import ZhOutline
 from app.prompts.curriculum import curriculum_prompt
 from app.services.cache import Cache
+from app.services.observability import current_observability
 from app.services.pipeline.budget import estimate_lesson_budget, validate_outline_budget
 from app.services.pipeline.call import CodexDriverLike, codex_json
 from app.services.repo import RepoContext
@@ -23,6 +24,7 @@ async def run_curriculum_stage(
 ) -> ZhOutline:
     """Generate the Chinese-first layered outline."""
 
+    obs = current_observability()
     budget = estimate_lesson_budget(ctx, analysis)
     key = cache.key(
         {
@@ -38,11 +40,13 @@ async def run_curriculum_stage(
     )
     cached = cache.get(key)
     if cached is not None:
+        obs.event("cache.hit", metadata={"stage": "curriculum", "key": key})
         normalized = normalize_outline(ZhOutline.model_validate(cached))
         issues = validate_outline_budget(len(normalized.lessons), len(normalized.sections), budget)
         if issues:
             raise ValueError("; ".join(issues))
         return normalized
+    obs.event("cache.miss", metadata={"stage": "curriculum", "key": key, "cache_bust": bool(cache_bust)})
 
     outline = await codex_json(
         driver=driver,
